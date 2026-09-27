@@ -1,0 +1,184 @@
+"""`role-radar ui`: a local page with on/off switches for the laptop and Lambda runners.
+
+Serves on 127.0.0.1 only. The page reads and writes the same switches as
+`role-radar switch`, in the shared state store, so a change reaches a running
+laptop app within a minute and Lambda at its next run.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, Callable
+
+from role_radar.backends import Backend
+from role_radar.storage import RUNNERS, runner_on
+
+log = logging.getLogger(__name__)
+
+# Browsers can't add this header to a cross-site request without a CORS preflight,
+# which this server never approves, so other sites can't flip the switches.
+WRITE_HEADER = "X-Role-Radar"
+
+
+def snapshot(backend: Backend, laptop_pid: Callable[[], int | None]) -> dict[str, Any]:
+    switches = backend.store.load_switches()
+    lease = backend.lease.read()
+    return {
+        "switches": {runner: runner_on(switches, runner) for runner in RUNNERS},
+        "lease_holder": lease.holder if lease and lease.holder and lease.held(time.time()) else None,
+        "laptop_app_pid": laptop_pid(),
+        "last_runs": backend.store.last_runs(),
+    }
+
+
+def make_handler(backend: Backend, laptop_pid: Callable[[], int | None]) -> type[BaseHTTPRequestHandler]:
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path == "/":
+                self._send(200, PAGE.encode(), "text/html; charset=utf-8")
+            elif self.path == "/api/state":
+                self._json(200, snapshot(backend, laptop_pid))
+            else:
+                self._json(404, {"error": "not found"})
+
+        def do_POST(self) -> None:
+            if self.path != "/api/switch" or self.headers.get(WRITE_HEADER) != "1":
+                self._json(403, {"error": "forbidden"})
+                return
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                runner, on = body.get("runner"), body.get("on")
+                if runner not in RUNNERS or not isinstance(on, bool):
+                    raise ValueError(f"expected runner in {RUNNERS} and on: true/false")
+                backend.store.save_switch(runner, on)
+                log.info("Switched %s %s", runner, "on" if on else "off")
+                self._json(200, snapshot(backend, laptop_pid))
+            except ValueError as exc:
+                self._json(400, {"error": str(exc)})
+            except Exception as exc:  # e.g. DynamoDB unreachable
+                self._json(502, {"error": f"{type(exc).__name__}: {exc}"})
+
+        def _json(self, status: int, data: Any) -> None:
+            self._send(status, json.dumps(data).encode(), "application/json")
+
+        def _send(self, status: int, body: bytes, content_type: str) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: Any) -> None:  # quiet the default per-request lines
+            log.debug(format, *args)
+
+    return Handler
+
+
+def serve(backend: Backend, laptop_pid: Callable[[], int | None], port: int) -> ThreadingHTTPServer:
+    return ThreadingHTTPServer(("127.0.0.1", port), make_handler(backend, laptop_pid))
+
+
+PAGE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Role Radar runners</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f7f9; --card: #fff; --text: #1b1f24; --muted: #5f6b7a;
+          --line: #dde2e8; --on: #1f883d; --off: #9aa4b2; --warn: #b35900; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --card: #171b21; --text: #e6e9ee; --muted: #9aa4b2; --line: #2a313b;
+            --on: #3fb950; --off: #4b5563; --warn: #e3a008; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 520px; margin: 48px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; }
+  .card .text { flex: 1; }
+  .name { font-weight: 600; }
+  .detail { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .detail.warn { color: var(--warn); }
+  .switch { position: relative; width: 50px; height: 28px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--off); border-radius: 28px;
+            cursor: pointer; transition: background .15s; }
+  .slider::before { content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+                    background: #fff; border-radius: 50%; transition: transform .15s; }
+  input:checked + .slider { background: var(--on); }
+  input:checked + .slider::before { transform: translateX(22px); }
+  input:focus-visible + .slider { outline: 2px solid var(--on); outline-offset: 2px; }
+  input:disabled + .slider { opacity: .5; cursor: wait; }
+  #lease, #error { color: var(--muted); font-size: 13px; margin-top: 16px; }
+  #error { color: var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Role Radar runners</h1>
+  <p class="sub">Turn each runner on or off. The laptop app picks up a change within a minute; Lambda at its next run.</p>
+  <div class="card">
+    <div class="text"><div class="name">Laptop</div><div class="detail" id="laptop-detail">…</div></div>
+    <label class="switch"><input type="checkbox" id="laptop" aria-label="Laptop runner"><span class="slider"></span></label>
+  </div>
+  <div class="card">
+    <div class="text"><div class="name">Lambda</div><div class="detail" id="lambda-detail">…</div></div>
+    <label class="switch"><input type="checkbox" id="lambda" aria-label="Lambda runner"><span class="slider"></span></label>
+  </div>
+  <div id="lease"></div>
+  <div id="error"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+function ago(iso) {
+  if (!iso) return "never";
+  const s = Math.round((Date.now() - Date.parse(iso)) / 1000);
+  if (s < 90) return s + "s ago";
+  if (s < 5400) return Math.round(s / 60) + " min ago";
+  return Math.round(s / 3600) + " h ago";
+}
+function lastRun(runs, prefix) {
+  return Object.entries(runs).filter(([k]) => k.startsWith(prefix))
+    .map(([, v]) => v.finished_at).sort().pop();
+}
+function render(s) {
+  for (const r of ["laptop", "lambda"]) { $(r).checked = s.switches[r]; $(r).disabled = false; }
+  const ld = $("laptop-detail");
+  if (!s.switches.laptop) { ld.textContent = "Off: the laptop app idles and leaves checks to Lambda."; ld.className = "detail"; }
+  else if (!s.laptop_app_pid) { ld.textContent = "On, but role-radar start isn't running on this Mac."; ld.className = "detail warn"; }
+  else { ld.textContent = "On · app running (pid " + s.laptop_app_pid + ") · last pass " + ago(lastRun(s.last_runs, "laptop")); ld.className = "detail"; }
+  $("lambda-detail").textContent = s.switches.lambda
+    ? "On · runs every 5 minutes when the laptop isn't · last pass " + ago(lastRun(s.last_runs, "lambda"))
+    : "Off: Lambda exits at once without checking anything.";
+  $("lease").textContent = s.lease_holder ? "Lease held by " + s.lease_holder : "Nobody holds the lease right now.";
+  if (!s.switches.laptop && !s.switches.lambda) $("lease").textContent += " Both runners are off, so no companies are being checked.";
+  $("error").textContent = "";
+}
+async function load() {
+  try { const r = await fetch("/api/state"); render(await r.json()); }
+  catch (e) { $("error").textContent = "Couldn't load state: " + e; }
+}
+async function flip(runner) {
+  const box = $(runner); box.disabled = true;
+  try {
+    const r = await fetch("/api/switch", { method: "POST", headers: { "Content-Type": "application/json", "X-Role-Radar": "1" },
+                                           body: JSON.stringify({ runner, on: box.checked }) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.status);
+    render(data);
+  } catch (e) { box.checked = !box.checked; box.disabled = false; $("error").textContent = "Couldn't switch " + runner + ": " + e.message; }
+}
+$("laptop").addEventListener("change", () => flip("laptop"));
+$("lambda").addEventListener("change", () => flip("lambda"));
+load(); setInterval(load, 15000);
+</script>
+</body>
+</html>
+"""

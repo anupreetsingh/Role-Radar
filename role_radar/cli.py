@@ -9,6 +9,8 @@
   role-radar run --once          one pass over the due companies
                                  [--all] [--company NAME] [--dry-run] [--baseline]
   role-radar list-matches        print every job matching right now (no state, no alerts)
+  role-radar switch laptop|lambda on|off   turn a runner on or off (no arguments: show both)
+  role-radar ui                  a local page with on/off switches for the laptop and Lambda
   role-radar config push         upload the local companies file to runtime.config_url
   role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE
   role-radar login-item on|off   run `role-radar start` whenever you log in (macOS)
@@ -44,7 +46,7 @@ from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
 from role_radar.runner import EXIT_LEASE_HELD, Runner
 from role_radar.schedule import due_companies, interval_for, next_due
-from role_radar.storage import JsonStateStore, StateStore, from_iso, utcnow
+from role_radar.storage import RUNNERS, JsonStateStore, StateStore, from_iso, runner_on, utcnow
 
 log = logging.getLogger("role-radar")
 
@@ -182,6 +184,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     now = utcnow()
 
     print(f"State:          {describe(runtime)}")
+    print(f"Switches:       {describe_switches(backend.store.load_switches())}")
     print(f"Lease:          {describe_lease(backend.lease, runtime)}")
     pid = InstanceLock().running_pid()
     print(f"This machine:   role-radar start {'is running (pid %d)' % pid if pid else 'is not running'}")
@@ -218,6 +221,44 @@ def cmd_status(args: argparse.Namespace) -> int:
         same = ctx.config_path.read_text(encoding="utf-8") == source.read_text()
         note = "same as your local copy" if same else f"differs from {ctx.config_path}: run `role-radar config push`"
         print(f"Config:         {runtime.config_url} ({note})")
+    return 0
+
+
+def cmd_switch(args: argparse.Namespace) -> int:
+    ctx = context(args)
+    store = open_backend(ctx.runtime, "switch", ctx.clients).store
+    if args.runner:
+        if args.state is None:
+            raise ValueError("say on or off, e.g. role-radar switch lambda off")
+        store.save_switch(args.runner, args.state == "on")
+    switches = store.load_switches()
+    print(f"Switches: {describe_switches(switches)}")
+    if args.runner == "laptop" and args.state:
+        print("A running laptop app picks this up within a minute." if InstanceLock().running_pid()
+              else "role-radar start isn't running on this Mac, so the switch applies when it next starts.")
+    elif args.runner == "lambda" and args.state:
+        print("Lambda applies it at its next run (every 5 minutes).")
+    if not any(runner_on(switches, r) for r in RUNNERS):
+        print("Both runners are off: no companies will be checked.")
+    return 0
+
+
+def cmd_ui(args: argparse.Namespace) -> int:
+    import webbrowser
+
+    from role_radar import ui
+
+    ctx = context(args)
+    backend = open_backend(ctx.runtime, "ui", ctx.clients)
+    server = ui.serve(backend, InstanceLock().running_pid, args.port)
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    print(f"Role Radar runner switches at {url} (Ctrl+C to quit)")
+    if not args.no_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
     return 0
 
 
@@ -347,6 +388,10 @@ def describe(runtime: RuntimeSettings) -> str:
     return f"JSON file {runtime.state_file}"
 
 
+def describe_switches(switches: dict[str, bool]) -> str:
+    return ", ".join(f"{runner} {'on' if runner_on(switches, runner) else 'OFF'}" for runner in RUNNERS)
+
+
 def describe_lease(lease: Lease, runtime: RuntimeSettings) -> str:
     if runtime.storage != "dynamodb":
         return "not needed (JSON state is local to this machine)"
@@ -446,6 +491,16 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("list-matches", parents=[common], help="print every job matching right now")
     p.add_argument("--company", action="append", default=[], metavar="NAME", help="only this company (repeatable)")
     p.set_defaults(func=cmd_list_matches)
+
+    p = sub.add_parser("switch", parents=[common], help="turn the laptop or Lambda runner on or off")
+    p.add_argument("runner", nargs="?", choices=RUNNERS)
+    p.add_argument("state", nargs="?", choices=["on", "off"])
+    p.set_defaults(func=cmd_switch)
+
+    p = sub.add_parser("ui", parents=[common], help="a local page with on/off switches for each runner")
+    p.add_argument("--port", type=int, default=8765, help="port on 127.0.0.1 (default 8765; 0 picks a free one)")
+    p.add_argument("--no-browser", action="store_true", help="don't open the page in a browser")
+    p.set_defaults(func=cmd_ui)
 
     p = sub.add_parser("config", parents=[common], help="manage the shared companies file")
     config_sub = p.add_subparsers(dest="action", required=True, metavar="ACTION")

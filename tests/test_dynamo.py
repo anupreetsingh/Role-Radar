@@ -297,3 +297,13 @@ def test_migration_stops_when_the_lease_is_taken(table):
     with pytest.raises(LeaseLost):
         store.save(state)
     assert set(DynamoStateStore(*table).load().companies) == {"Acme"}  # nothing written after the loss
+
+
+def test_runner_switches_round_trip_and_survive_migration(table):
+    store = DynamoStateStore(table[0], table[1])
+    assert store.load_switches() == {}  # nothing stored: both runners on
+    store.save_switch("lambda", False)
+    store.save_switch("laptop", False)
+    store.save_switch("laptop", True)
+    assert store.load_switches() == {"lambda": False, "laptop": True}
+    assert store.load().switches == {"lambda": False, "laptop": True}

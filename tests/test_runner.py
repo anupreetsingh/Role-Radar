@@ -9,7 +9,8 @@ from role_radar import monitor
 from role_radar.backends import Backend, ConfigSource
 from role_radar.config import RuntimeSettings
 from role_radar.http_client import HttpClient
-from role_radar.runner import EXIT_LEASE_HELD, Runner
+from role_radar import runner as runner_module
+from role_radar.runner import EXIT_LEASE_HELD, Runner, Skipped
 from tests.conftest import fixture_json
 from tests.test_monitor import RecordingNotifier
 
@@ -129,3 +130,53 @@ def test_lambda_setup_time_counts_against_work_deadline(table, tmp_path, monkeyp
     monkeypatch.setattr(runner, "pass_once", pass_once)
     asyncio.run(runner.lambda_pass(120))
     assert not runner.lease.held
+
+
+def test_lambda_does_nothing_while_switched_off(table, tmp_path, requests_made):
+    runner = make_runner(table, tmp_path, "lambda", RecordingNotifier())
+    runner.store.save_switch("lambda", False)
+    result = asyncio.run(runner.lambda_pass(120))
+    assert isinstance(result, Skipped) and "switched off" in result.reason
+    assert requests_made == []
+    assert DynamoLease(table[0], table[1], "laptop:mac").acquire(180)  # never took the lease
+
+
+def test_laptop_switched_off_releases_the_lease_idles_and_resumes(table, tmp_path, requests_made, monkeypatch):
+    monkeypatch.setattr(runner_module, "MIN_SLEEP", 0.02)
+    monkeypatch.setattr(runner_module, "MAX_SLEEP", 0.05)
+    runner = make_runner(table, tmp_path, "laptop:mac", RecordingNotifier())
+    lam = DynamoLease(table[0], table[1], "lambda")
+
+    async def go():
+        stop = asyncio.Event()
+        task = asyncio.create_task(runner.serve(stop))
+        await until(lambda: runner.lease.held)
+        runner.store.save_switch("laptop", False)
+        await until(lambda: not runner.lease.held)
+        assert lam.acquire(60)  # free for Lambda while the laptop is off
+        await asyncio.sleep(0.2)
+        assert lam.read().requested_by is None  # didn't ask for it back
+        lam.release()
+        runner.store.save_switch("laptop", True)
+        await until(lambda: runner.lease.held)  # switched back on: takes the lease again
+        stop.set()
+        return await task
+
+    assert asyncio.run(go()) == 0
+
+
+def test_laptop_switched_off_never_scrapes(table, tmp_path, requests_made, monkeypatch):
+    monkeypatch.setattr(runner_module, "MAX_SLEEP", 0.05)
+    runner = make_runner(table, tmp_path, "laptop:mac", RecordingNotifier())
+    runner.store.save_switch("laptop", False)
+
+    async def go():
+        stop = asyncio.Event()
+        task = asyncio.create_task(runner.serve(stop))
+        await asyncio.sleep(0.3)
+        stop.set()
+        return await task
+
+    assert asyncio.run(go()) == 0
+    assert requests_made == [] and not runner.lease.held
+    assert runner.store.load_switches() == {"laptop": False}

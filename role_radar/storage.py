@@ -40,6 +40,13 @@ def from_iso(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+RUNNERS = ("laptop", "lambda")  # the runners a switch can turn off
+
+
+def runner_on(switches: dict[str, bool], runner: str) -> bool:
+    return switches.get(runner, True)
+
+
 def compact(obj: object) -> dict:
     """asdict() without empty values, so stored records stay small."""
     return {k: v for k, v in asdict(obj).items() if v not in (None, False, 0)}
@@ -133,6 +140,8 @@ class MonitorState:
     runs: dict[str, dict] = field(default_factory=dict)
     alerts: list[dict] = field(default_factory=list)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
+    # Runner on/off switches ("laptop", "lambda"); a runner not listed is on.
+    switches: dict[str, bool] = field(default_factory=dict)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
         return self.companies.setdefault(company, {})
@@ -175,6 +184,8 @@ class MonitorState:
             data["alerts"] = self.alerts
         if self.digest.next_send_at:
             data["digest"] = compact(self.digest)
+        if self.switches:
+            data["switches"] = self.switches
         return data
 
     @classmethod
@@ -185,10 +196,18 @@ class MonitorState:
         }
         meta = {company: CompanyMeta.from_dict(m) for company, m in (data.get("schedule") or {}).items()}
         return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []),
-                   digest=DigestSchedule.from_dict(data.get("digest") or {}))
+                   digest=DigestSchedule.from_dict(data.get("digest") or {}),
+                   switches={k: bool(v) for k, v in (data.get("switches") or {}).items()})
 
 
 class StateStore(ABC):
+    def load_switches(self) -> dict[str, bool]:
+        """Runner on/off switches; a runner not listed is on."""
+        return {}
+
+    def save_switch(self, runner: str, on: bool) -> None:
+        raise NotImplementedError("This store does not support runner switches")
+
     def load_digest(self) -> DigestSchedule:
         raise NotImplementedError("This store does not support digest scheduling")
 
@@ -242,6 +261,15 @@ class MemoryStateStore(StateStore):
     def load_schedule(self) -> dict[str, CompanyMeta]:
         with self._lock:
             return {name: CompanyMeta.from_dict(asdict(m)) for name, m in self._current().meta.items()}
+
+    def load_switches(self) -> dict[str, bool]:
+        with self._lock:
+            return dict(self._current().switches)
+
+    def save_switch(self, runner: str, on: bool) -> None:
+        with self._lock:
+            self._current().switches[runner] = on
+            self._persist()
 
     def load_digest(self) -> DigestSchedule:
         with self._lock:

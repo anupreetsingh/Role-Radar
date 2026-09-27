@@ -28,7 +28,9 @@ from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
-from role_radar.storage import CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso
+from role_radar.storage import (
+    RUNNERS, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso,
+)
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ LEASE = "#lease"
 ALERTS = "#alerts"
 RUNS = "#runs"
 DIGEST = "#digest"
+SWITCHES = "#switches"
 ALERT_TTL = 30 * 86400  # seconds an alert-log row lives (the table's TTL attribute is "ttl")
 MAX_TRANSACTION = 100  # DynamoDB's limit on actions per TransactWriteItems
 TRANSACTION_ATTEMPTS = 11
@@ -277,6 +280,17 @@ class DynamoStateStore(StateStore):
     def load_schedule(self) -> dict[str, CompanyMeta]:
         return {item["sk"]: CompanyMeta.from_dict(item) for item in self._query(SCHEDULE)}
 
+    def load_switches(self) -> dict[str, bool]:
+        item = self.client.get_item(TableName=self.table, Key=_key(SWITCHES, SWITCHES), ConsistentRead=True).get("Item")
+        return {k: bool(v) for k, v in _plain(item).items() if k in RUNNERS} if item else {}
+
+    def save_switch(self, runner: str, on: bool) -> None:
+        """Not fenced on the lease: a switch is the user's, and any runner may read it."""
+        self.client.update_item(
+            TableName=self.table, Key=_key(SWITCHES, SWITCHES), UpdateExpression="SET #r = :on",
+            ExpressionAttributeNames={"#r": runner}, ExpressionAttributeValues={":on": {"BOOL": on}},
+        )
+
     def load_digest(self) -> DigestSchedule:
         item = self.client.get_item(TableName=self.table, Key=_key(DIGEST, DIGEST), ConsistentRead=True).get("Item")
         return DigestSchedule.from_dict(_plain(item)) if item else DigestSchedule()
@@ -382,6 +396,8 @@ class DynamoStateStore(StateStore):
                     state.meta[item["sk"]] = CompanyMeta.from_dict(item)
                 elif item["pk"] == DIGEST:
                     state.digest = DigestSchedule.from_dict(item)
+                elif item["pk"] == SWITCHES:
+                    state.switches = {k: bool(v) for k, v in item.items() if k in RUNNERS}
                 elif not item["pk"].startswith("#"):
                     state.jobs_for(item["pk"])[item["sk"]] = SeenJob.from_dict(item)
             if "LastEvaluatedKey" not in page:

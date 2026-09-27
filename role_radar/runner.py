@@ -32,6 +32,7 @@ from role_radar.config import AppConfig
 from role_radar.http_client import RobotsCache
 from role_radar.lease import Lease
 from role_radar.monitor import Notifiers, PassResult, Unsaved, run_pass
+from role_radar.storage import runner_on
 
 log = logging.getLogger("runner")
 
@@ -44,6 +45,7 @@ CONFIG_REFRESH = 300.0  # re-read the config at most this often (S3 only resends
 LAMBDA_WORK_SECONDS = 600.0  # Lambda stops starting companies after this long
 LAMBDA_LEASE_MARGIN = 60.0  # Lambda's lease outlives the invocation's time limit by this much
 HANDOFF_POLL = 10.0  # how often Lambda looks for a handoff request
+SWITCH_POLL = 30.0  # how often a pass in progress re-reads its runner's on/off switch
 EXIT_LEASE_HELD = 4
 UNREACHABLE = "(unreachable)"  # _take_lease() couldn't reach the store at all
 
@@ -120,15 +122,35 @@ class Runner:
     # -- laptop ------------------------------------------------------------
 
     async def serve(self, stop: asyncio.Event) -> int:
-        """`role-radar start`: check companies whenever this runner holds the lease, until `stop` is set."""
+        """`role-radar start`: check companies whenever this runner holds the lease, until `stop` is set.
+
+        While the laptop's switch is off (`role-radar switch laptop off`), it gives
+        up the lease, so Lambda covers if its own switch is on, and idles until
+        switched back on.
+        """
         renewer: asyncio.Task[None] | None = None
+        was_off = False
         try:
             while not stop.is_set():
+                if not await self.switched_on():
+                    if not was_off:
+                        log.info("The laptop runner is switched off; idling (role-radar switch laptop on)")
+                        was_off = True
+                    if renewer:
+                        renewer.cancel()
+                        renewer = None
+                    if self.lease.held:
+                        await self._lease_call(self._release)
+                    await _wait(stop, MAX_SLEEP)
+                    continue
+                if was_off:
+                    log.info("The laptop runner is switched on again")
+                    was_off = False
                 if not self.lease.held:
                     if renewer:
                         renewer.cancel()
                     if not await self._wait_for_lease(stop):
-                        break
+                        continue  # stopped, or switched off while waiting
                     renewer = asyncio.create_task(self._keep_renewing())
                 await _wait(stop, await self._serve_pass(stop))
         finally:
@@ -140,7 +162,7 @@ class Runner:
     async def _wait_for_lease(self, stop: asyncio.Event) -> bool:
         """Take the lease, asking whoever has it to hand over and retrying. False if stopped first."""
         waiting_for: str | None = None
-        while not stop.is_set():
+        while not stop.is_set() and await self.switched_on():
             holder = await self._take_lease()
             if not holder:
                 return True
@@ -155,8 +177,13 @@ class Runner:
 
     async def _serve_pass(self, stop: asyncio.Event) -> float:
         """One pass while holding the lease. Returns how long to wait before the next."""
+        switch = _SwitchWatch(self.switched_on)
+
+        async def should_stop() -> bool:
+            return stop.is_set() or not await switch.on()
+
         try:
-            result = await self.pass_once(should_stop=stop.is_set)
+            result = await self.pass_once(should_stop=should_stop)
         except Exception as exc:  # e.g. DynamoDB or S3 unreachable; try again shortly
             log.error("Pass failed: %s", exc)
             return WAIT_POLL
@@ -202,6 +229,8 @@ class Runner:
             await asyncio.to_thread(self.config)
         except FileNotFoundError as exc:  # deployed, but `role-radar config push` hasn't run yet
             return Skipped(str(exc))
+        if not await self.switched_on("lambda"):
+            return Skipped("Lambda is switched off (role-radar switch lambda on)")
         if not await self._lease_call(self.lease.acquire, remaining + LAMBDA_LEASE_MARGIN):
             info = await self._lease_call(self.lease.read)
             return Skipped(f"{info.holder if info and info.holder else 'another runner'} holds the lease")
@@ -216,6 +245,14 @@ class Runner:
             return await self.pass_once(should_stop=should_stop, deadline=started + remaining, record_idle=True)
         finally:
             await self._lease_call(self._release)
+
+    async def switched_on(self, runner: str = "laptop") -> bool:
+        """Whether `runner`'s on/off switch is on. On if the store can't be read, as before switches existed."""
+        try:
+            return runner_on(await asyncio.to_thread(self.store.load_switches), runner)
+        except Exception as exc:
+            log.warning("Couldn't read the runner switches (%s); assuming %s is on", exc, runner)
+            return True
 
     async def _take_lease(self, ask: bool = True) -> str | None:
         """Try to take the lease. Returns None on success, otherwise who has it (after asking them to hand over)."""
@@ -253,6 +290,23 @@ class Runner:
         if result.next_due is None:
             return MAX_SLEEP
         return min(max((result.next_due - self.now()).total_seconds(), MIN_SLEEP), MAX_SLEEP)
+
+
+class _SwitchWatch:
+    """A pass's view of its runner's switch, re-read at most every SWITCH_POLL seconds."""
+
+    def __init__(self, read: Callable[[], Awaitable[bool]]) -> None:
+        self.read = read
+        self.checked_at = time.monotonic()  # the serve loop just read it
+        self.value = True
+
+    async def on(self) -> bool:
+        if self.value and time.monotonic() - self.checked_at >= SWITCH_POLL:
+            self.checked_at = time.monotonic()
+            self.value = await self.read()
+            if not self.value:
+                log.info("Switched off mid-pass; finishing the companies in flight, then stopping")
+        return self.value
 
 
 class _HandoffWatch:
