@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field, fields
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,8 @@ class CompanyConfig:
 @dataclass
 class Settings:
     state_file: str = "seen_jobs.json"
+    # How often each company is checked. Companies are checked when due, not all at once.
+    check_interval_minutes: float = 30.0
     # Alert on matches already open the first time a company is checked.
     # Set false to silently record a baseline when adding many companies at once.
     notify_on_first_run: bool = True
@@ -40,6 +43,10 @@ class Settings:
     max_company_concurrency: int = 40
     company_timeout: float = 300.0
     http: HttpSettings = field(default_factory=HttpSettings)
+
+    @property
+    def check_interval(self) -> timedelta:
+        return timedelta(minutes=self.check_interval_minutes)
 
 
 @dataclass

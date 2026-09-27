@@ -1,7 +1,7 @@
 # Role Radar company configuration.
 #
 # Per company:
-#   name      (required) display name; also the key in seen_jobs.json, so renaming
+#   name      (required) display name; also the key in the state store, so renaming
 #             a company re-baselines it
 #   url       (required) public careers page
 #   ats       optional: bamboohr | greenhouse | lever | ashby | workday | generic
@@ -22,6 +22,7 @@
 
 settings:
   state_file: seen_jobs.json
+  check_interval_minutes: 30  # each company is checked when due, so load spreads across the interval
   notify_on_first_run: true   # set false before adding many companies at once
   repost_window_days: 30
   retention_days: 90

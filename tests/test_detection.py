@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from storage import JsonStateStore, MonitorState
+from storage import CompanyMeta, JsonStateStore, MonitorState, to_iso
 from tracker import dedupe, mark_notified, reconcile
 from tests.conftest import job
 
@@ -168,3 +168,37 @@ def test_corrupt_state_file_raises(tmp_path):
     path.write_text("{not json")
     with pytest.raises(RuntimeError):
         JsonStateStore(path).load()
+
+
+def test_json_store_saves_one_company_at_a_time(tmp_path):
+    path = tmp_path / "seen.json"
+    store = JsonStateStore(path)
+    for name, title in (("Acme", "Software Engineer"), ("Globex", "Data Engineer")):
+        record = store.load_company(name)
+        assert record.is_new
+        state = MonitorState({name: record.jobs})
+        reconcile(state, name, [job(title, company=name)], {job(title, company=name).uid: True}, now=T0)
+        record.meta = CompanyMeta(last_checked_at=to_iso(T0), next_check_at=to_iso(T0 + timedelta(minutes=30)))
+        store.save_company(record)
+
+    reopened = JsonStateStore(path)
+    assert set(reopened.load_schedule()) == {"Acme", "Globex"}
+    acme = reopened.load_company("Acme")
+    assert not acme.is_new and [j.title for j in acme.jobs.values()] == ["Software Engineer"]
+    assert acme.meta.next_check_at == "2026-09-01T00:30:00Z"
+    # Records handed out are copies: changing one doesn't touch the store until it's saved.
+    acme.jobs.clear()
+    assert reopened.load_company("Acme").jobs
+
+
+def test_version_1_state_file_still_loads(tmp_path):
+    path = tmp_path / "seen.json"
+    path.write_text(
+        '{"version": 1, "companies": {"Acme": {"acme:test:1": '
+        '{"title": "Software Engineer", "url": "u", "fingerprint": "f", "first_seen": "2026-09-01T00:00:00Z", '
+        '"matched": true, "notified_at": "2026-09-01T00:00:00Z"}}}}'
+    )
+    store = JsonStateStore(path)
+    record = store.load_company("Acme")
+    assert record.jobs["acme:test:1"].notified_at and store.load_schedule() == {}
+    assert not record.is_new  # has history, so notify_on_first_run doesn't apply

@@ -6,19 +6,18 @@ Watches company careers pages and alerts you **once** when a new job matching yo
 
 ```
 config/companies.yaml ─┐
-seen_jobs.json ────────┤
+seen_jobs.json ────────┤  (seen jobs + each company's next check time)
                        ▼
-  monitor.py ── for each company (concurrent, bounded) ─────────────────────┐
+  monitor.py ── picks the companies that are due (schedule.py) ─────────────┐
+     │ for each due company (concurrent, bounded):                           │
      │   scraper (auto-picked from URL) → public JSON API, or HTML fallback  │
      │   → detail page only if the filter needs a field the listing lacks    │
      │     (Workday, custom sites) and the job could still match             │
      │   → filter (filters.py)                                               │
      │   → diff vs. stored state (tracker.py): new / removed / repost / dup  │
+     │   → one notification for its new matches (notifications.py)           │
+     │   → delivered jobs marked notified; its state and next check saved    │
      └───────────────────────────────────────────────────────────────────────┘
-                       ▼
-  one batched notification per channel (notifications.py)
-                       ▼
-  delivered jobs marked notified → seen_jobs.json saved (only if changed)
                        ▼
   GitHub Actions commits seen_jobs.json back (only if changed)
 ```
@@ -37,6 +36,7 @@ host.
 | Module | Role |
 |---|---|
 | `monitor.py` | CLI entry point and orchestration |
+| `schedule.py` | Which companies are due, and when each is next checked |
 | `config.py` | Loads and validates `companies.yaml` (JSON also accepted) |
 | `models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
 | `scrapers/` | One class per ATS plus `generic.py`; registry in `scrapers/__init__.py` |
@@ -81,10 +81,28 @@ supported, so point the config at the ATS the page loads its jobs from.
 | Reposted with a new ID within `repost_window_days` | Recorded as `duplicate_of`, no alert |
 | Two open postings with the same title and location | Second one suppressed as a duplicate |
 | Same title in several locations | Separate jobs, grouped into **one** entry in the notification |
-| Notification failed | Job stays un-notified and is retried next run |
+| Notification failed | Job stays un-notified and is retried at the company's next check |
 | Filters broadened | Jobs that already exist and now match alert once |
 
 Removed jobs are pruned from state after `retention_days`.
+
+### Scheduling
+
+Companies aren't all checked at once. Each one is checked when it's **due**: when
+`check_interval_minutes` (30) have passed since its last check, or straight away if it
+has never been checked. Each company's state is saved as soon as that company finishes,
+so an interrupted run loses at most the companies still in flight. Those companies are
+still due and get picked up next time.
+
+- A check that ran more than half an interval late (a company's first check, or catching
+  up after an outage) gets a random extra 0–30 minutes before its next check. Otherwise
+  a burst of catch-up checks would come due together every half hour forever. With it,
+  the checks spread out across the half hour after one round.
+- A failing company is still rescheduled, so it isn't retried every run. From the third
+  failure in a row its interval doubles each time, up to every 4 hours. One success
+  resets it.
+- `--all` checks every company whether it's due or not, and so do `--company` and
+  `--baseline`.
 
 ## Configuration
 
@@ -123,8 +141,9 @@ management and executive titles.
 
 ### Swapping the storage backend
 
-Subclass `storage.StateStore` and implement `load() -> MonitorState` and
-`save(MonitorState)`, for example with SQLite or DynamoDB, then pass it to
+Subclass `storage.StateStore`. Runs use `load_schedule()` (every company's next check
+time), then `load_company()` and `save_company()` around each company's check. `load()`
+and `save()` move a whole state at once, for migration. Pass the store to
 `monitor.run()` in place of `JsonStateStore`.
 
 ## Run locally
@@ -135,12 +154,13 @@ pip install -r requirements-dev.txt
 
 python -m pytest                          # tests
 python monitor.py --list-matches          # show every job matching now (no state, no alerts)
-python monitor.py --dry-run -v            # full run, alerts printed to stdout, state not saved
+python monitor.py --dry-run -v            # check due companies, print alerts, save nothing
+python monitor.py --all --dry-run         # the same for every company, due or not
 python monitor.py --company "Continental Finance" --dry-run
 
 cp .env.example .env                      # fill in a Discord webhook and/or SMTP settings
 set -a; source .env; set +a
-python monitor.py                         # real run: sends alerts, updates seen_jobs.json
+python monitor.py                         # real run of due companies: sends alerts, updates seen_jobs.json
 python monitor.py --baseline              # mark everything current as seen, no alerts
 ```
 
