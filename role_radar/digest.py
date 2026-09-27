@@ -57,14 +57,20 @@ async def flush_digest(
     if now < result.next_due:
         return result
 
-    # Read only the configured companies; no table scan or additional IAM permission.
+    # Read only the configured companies with matches still to send (or receipts from a
+    # failed save to apply): reading every company's jobs takes minutes of a small
+    # table's read capacity. A company whose schedule row predates the pending count
+    # is read once its next check has counted them.
+    metas = await asyncio.to_thread(store.load_schedule)
+    carried = set(sent or {}) | set(receipts or {})
+    names = [name for name in companies if name in carried or (name in metas and metas[name].pending)]
     limit = asyncio.Semaphore(8)
 
     async def load(name: str) -> CompanyRecord:
         async with limit:
             return await asyncio.to_thread(store.load_company, name)
 
-    records = await asyncio.gather(*(load(name) for name in companies))
+    records = await asyncio.gather(*(load(name) for name in names))
     if deadline is not None and time.monotonic() + 120 >= deadline:
         return result  # leave this slot due for the next runner
     dirty: set[str] = set()

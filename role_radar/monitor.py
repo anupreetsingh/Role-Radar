@@ -397,6 +397,7 @@ async def _save(
 ) -> None:
     """Save the company, trying harder once alerts have gone out: unsaved, they'd be sent again."""
     attempts = 1 + (SAVE_RETRIES_AFTER_ALERTS if record.alerted or record.delivery_changed else 0)
+    record.meta.pending = record.pending_count()
     for attempt in range(attempts):
         lease.check()  # fail fast; the store also checks the stored lease in the same transaction
         try:

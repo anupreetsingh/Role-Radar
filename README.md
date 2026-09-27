@@ -315,7 +315,9 @@ the previous one wrote. Each save writes only the rows that changed.
 To write another backend, subclass `storage.StateStore`. Runs use `load_schedule()`
 (every company's next check time), then `load_company()` and `save_company()` around
 each company's check. `load_digest()` and `save_digest()` persist the shared digest
-schedule; its writes must use the same lease fence as company saves. `load()` and
+schedule; its writes must use the same lease fence as company saves. Each schedule row
+also keeps `pending`, the company's matched jobs not yet sent, so the digest calls
+`load_company()` only for companies that have some. `load()` and
 `save()` move a whole state at once, for migration.
 
 ## Commands

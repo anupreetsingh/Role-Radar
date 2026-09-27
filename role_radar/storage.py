@@ -87,6 +87,9 @@ class CompanyMeta:
     failures: int = 0  # consecutive failed checks
     last_error: str | None = None
     last_ok_at: str | None = None  # the last check that succeeded
+    # Matched jobs still waiting for the digest, so it reads only companies that have some.
+    # None on rows saved before this was kept; set again at the company's next save.
+    pending: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> CompanyMeta:
@@ -128,6 +131,10 @@ class CompanyRecord:
         """
         checked_ok = self.meta.last_ok_at or (self.meta.last_checked_at and not self.meta.failures)
         return not checked_ok and not self.jobs
+
+    def pending_count(self) -> int:
+        """Matched jobs the digest hasn't delivered yet (the same test flush_digest uses)."""
+        return sum(1 for job in self.jobs.values() if job.matched and not job.notified_at and not job.duplicate_of)
 
 
 @dataclass

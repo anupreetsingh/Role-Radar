@@ -114,6 +114,49 @@ def test_digest_is_sent_when_the_work_window_ends_mid_pass(monkeypatch, store_fa
     assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
 
 
+def spy_loads(store, loaded):
+    original = store.load_company
+
+    def load_company(name):
+        loaded.append(name)
+        return original(name)
+
+    store.load_company = load_company
+    return store
+
+
+def test_digest_reads_only_companies_with_pending_matches(monkeypatch, store_factory):
+    cfg = config("Continental Finance", "Other", "Quiet")
+    cfg.companies[2].filter = JobFilter(include_keywords=["no such role"])
+    notifier = RecordingNotifier()
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg)
+
+    loaded = []
+    run_monitor(monkeypatch, spy_loads(store_factory(), loaded), notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=30))
+    assert sorted(loaded) == ["Continental Finance", "Other"]  # "Quiet" has no matches
+    assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 4
+
+    loaded.clear()
+    run_monitor(monkeypatch, spy_loads(store_factory(), loaded), notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=60))
+    assert loaded == [] and len(notifier.batches) == 1  # everything was delivered
+
+
+def test_digest_counts_pending_matches_of_older_rows_at_their_next_check(monkeypatch):
+    from role_radar.storage import MemoryStateStore
+
+    cfg = config("Continental Finance", "Other")
+    store, notifier = MemoryStateStore(), RecordingNotifier()
+    run_monitor(monkeypatch, store, notifier, config=cfg)
+    store.state.meta["Other"].pending = None  # saved before pending counts were kept
+
+    run_monitor(monkeypatch, store, notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=30))
+    assert [{j.company for j in batch} for batch in notifier.batches] == [{"Continental Finance"}]
+
+    run_monitor(monkeypatch, store, notifier, config=cfg, only={"other"}, clock=lambda: T0 + timedelta(minutes=40))
+    run_monitor(monkeypatch, store, notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=60))
+    assert [{j.company for j in batch} for batch in notifier.batches] == [{"Continental Finance"}, {"Other"}]
+
+
 def test_digest_skips_baselines_and_dry_runs(monkeypatch, store_factory):
     cfg = config("Continental Finance")
     notifier = RecordingNotifier()
