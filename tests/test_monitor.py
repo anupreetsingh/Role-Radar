@@ -11,7 +11,7 @@ from role_radar.config import AppConfig, CompanyConfig, Settings
 from role_radar.filters import JobFilter
 from role_radar.http_client import HttpClient, HttpSettings
 from role_radar.lease import LeaseLost, LocalLease
-from role_radar.notifications import DiscordNotifier, Notifier, format_group, group_jobs
+from role_radar.notifications import DiscordNotifier, Notifier, format_digest, format_group, group_jobs
 from role_radar.storage import MemoryStateStore, MonitorState, from_iso
 from tests.conftest import Clock, fixture_json, job, make_client
 
@@ -56,7 +56,8 @@ def run_monitor(monkeypatch, store, notifier, list_body=None, requested=None, co
     transport = httpx.MockTransport(handler or default_handler)
     monkeypatch.setattr(monitor, "HttpClient", lambda s, **kw: HttpClient(s, transport=transport, **kw))
     kwargs.setdefault("clock", lambda: T0)
-    return asyncio.run(monitor.run(config or build_config(), store, [notifier], **kwargs))
+    notifiers = notifier if isinstance(notifier, list) or callable(notifier) else [notifier]
+    return asyncio.run(monitor.run(config or build_config(), store, notifiers, **kwargs))
 
 
 def test_run_alerts_once_and_survives_broken_company(monkeypatch):
@@ -231,7 +232,7 @@ def test_discord_messages_respect_length_limit():
     jobs = [job(f"Software Engineer {i}", str(i), url=f"https://acme.example/jobs/{i}") for i in range(60)]
     messages = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
     assert all(len(m) <= 2000 for m in messages)
-    assert sum(m.count("NEW JOB") for m in messages) == 60
+    assert len(messages) == 1 and all(j.url in format_digest(jobs) for j in jobs)
 
 
 class FlakyStore(MemoryStateStore):
@@ -290,3 +291,33 @@ def test_first_run_rule_survives_a_failed_first_check(monkeypatch):
     status["code"] = 200
     run_monitor(monkeypatch, store, notifier, config=config, handler=handler, check_all=True)
     assert notifier.batches == []  # still its first successful check: recorded silently
+
+
+def test_partial_delivery_survives_failed_state_save(monkeypatch):
+    monkeypatch.setattr(monitor, "SAVE_RETRIES_AFTER_ALERTS", 1)
+    monkeypatch.setattr(monitor, "SAVE_RETRY_BASE", 0)
+    monkeypatch.setattr(monitor, "UNSAVED_HOLD", 0)
+    store, unsaved = FlakyStore(), monitor.Unsaved()
+    discord, email = RecordingNotifier(), RecordingNotifier(fail=True)
+    discord.name, email.name = "discord", "email"
+    store.failing = True
+    assert run_monitor(monkeypatch, store, [discord, email], unsaved=unsaved) == 1
+    assert len(discord.batches) == 1 and unsaved.channels
+    store.failing, email.fail = False, False
+    assert run_monitor(monkeypatch, store, [discord, email], unsaved=unsaved) == 0
+    assert len(discord.batches) == len(email.batches) == 1
+    assert not unsaved.channels
+
+
+def test_secret_loading_failure_saves_pending_jobs_for_retry(monkeypatch):
+    class MissingSecrets:
+        def __call__(self):
+            raise RuntimeError("SSM unavailable")
+
+    store = MemoryStateStore()
+    assert run_monitor(monkeypatch, store, MissingSecrets()) == 1
+    record = store.load_company("Continental Finance")
+    assert record.meta.next_check_at and any(j.matched and not j.notified_at for j in record.jobs.values())
+    notifier = RecordingNotifier()
+    assert run_monitor(monkeypatch, store, notifier, check_all=True) == 0
+    assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2

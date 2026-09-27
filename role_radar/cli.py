@@ -4,6 +4,8 @@
                                  companies as they come due; Lambda covers while it's off
   role-radar stop                ask a running `start` (e.g. the login item) to quit
   role-radar status              lease holder, last passes, companies due, recent alerts
+  role-radar doctor              check config, secrets and AWS deployment without sending alerts
+  role-radar notifications test  send a test to configured notification channels
   role-radar run --once          one pass over the due companies
                                  [--all] [--company NAME] [--dry-run] [--baseline]
   role-radar list-matches        print every job matching right now (no state, no alerts)
@@ -187,7 +189,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     for runner, run in sorted(backend.store.last_runs().items(), key=lambda kv: kv[1].get("finished_at", ""), reverse=True):
         print(
             f"Last pass:      {runner}, {when(run.get('finished_at'))}: {run.get('checked', 0)} checked, "
-            f"{run.get('alerts', 0)} alert(s), {run.get('failed', 0)} failed, {run.get('seconds', 0)}s"
+            f"{run.get('alerts', 0)} alert(s), {run.get('failed', 0)} failed, "
+            f"{run.get('undelivered', 0)} with undelivered alerts, {run.get('seconds', 0)}s"
         )
 
     enabled = [c for c in config.companies if c.enabled]
@@ -237,6 +240,35 @@ def cmd_config_push(args: argparse.Namespace) -> int:
         "A running laptop app picks it up within 5 minutes, Lambda at its next run."
     )
     return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    from role_radar.diagnostics import diagnose
+
+    ctx = context(args)
+    runtime = replace(ctx.runtime, profile=args.profile or ctx.runtime.profile, region=args.region or ctx.runtime.region)
+    checks = diagnose(runtime, ctx.config_path, AwsClients(runtime), args.stack)
+    for check in checks:
+        print(f"{'OK' if check.ok else 'FAIL'}  {check.name}: {check.detail}")
+    return 0 if all(c.ok for c in checks) else 1
+
+
+def cmd_notifications_test(args: argparse.Namespace) -> int:
+    from role_radar.models import JobPosting
+    from role_radar.notifications import ConsoleNotifier, notify_all
+
+    ctx = context(args)
+    channels = [n for n in NotifierSource(ctx.runtime, ctx.clients)() if not isinstance(n, ConsoleNotifier)]
+    if args.channel:
+        channels = [n for n in channels if n.name == args.channel]
+    if not channels:
+        raise ValueError("No requested notification channel configured; run role-radar doctor")
+    sample = JobPosting(company="Role Radar", title="[TEST] Notification delivery check", source="test",
+                        job_id="notification-test", url="https://example.com/role-radar-notification-test",
+                        location="Test message; no job was discovered")
+    ok = asyncio.run(notify_all(channels, [sample]))
+    print("Test delivered to all selected channels." if ok else "Test failed for one or more channels; see the errors above.")
+    return 0 if ok else 1
 
 
 def open_store_spec(spec: str, ctx: Context, holder: str) -> tuple[StateStore, Lease | None]:
@@ -389,6 +421,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("status", parents=[common], help="lease holder, last passes, companies due, recent alerts")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("doctor", parents=[common], help="read-only checks of setup and automation; never sends alerts")
+    p.add_argument("--stack", help="SAM stack to inspect, usually role-radar")
+    p.add_argument("--profile", help="AWS profile with deployment read access")
+    p.add_argument("--region", help="AWS region of the stack")
+    p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("notifications", help="verify notification delivery")
+    alerts_sub = p.add_subparsers(dest="action", required=True)
+    test = alerts_sub.add_parser("test", parents=[common], help="send a labeled test alert without changing job state")
+    test.add_argument("--channel", choices=["discord", "email"], help="test only this channel (default: all)")
+    test.set_defaults(func=cmd_notifications_test)
 
     p = sub.add_parser("run", parents=[common], help="one pass over the due companies (needs --once)")
     p.add_argument("--once", action="store_true", required=True, help="run one pass and exit (`start` keeps running)")

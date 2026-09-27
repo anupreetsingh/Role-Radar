@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from role_radar.lease import LeaseLost
-from role_radar.storage import CompanyMeta, MonitorState, SeenJob
+from role_radar.storage import CompanyMeta, DigestSchedule, MonitorState, SeenJob
 from role_radar.tracker import reconcile
 from tests.conftest import Clock, job
 
@@ -143,6 +143,19 @@ def test_stale_handoff_request_is_ignored(table):
 
 
 # -- store --------------------------------------------------------------------
+
+
+def test_digest_schedule_write_is_fenced_after_takeover(table):
+    clock = Clock()
+    held = lease(table, "laptop:mac", clock)
+    held.acquire(180)
+    store = store_for(table, held, clock)
+    original = DigestSchedule(next_send_at="2026-09-01T00:30:00Z", interval_minutes=30)
+    store.save_digest(original)
+    put_lease_item(table, holder="lambda", epoch=2, expires_at=clock() + 900)
+    with pytest.raises(LeaseLost):
+        store.save_digest(DigestSchedule(next_send_at="2026-09-01T01:00:00Z", interval_minutes=30))
+    assert store.load_digest() == original
 
 
 def test_company_roundtrip_writes_only_changed_rows(table):

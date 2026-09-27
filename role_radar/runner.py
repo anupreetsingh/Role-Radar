@@ -110,7 +110,7 @@ class Runner:
             config, self.store, self.notifiers,
             lease=self.lease, robots=self.robots, unsaved=self.unsaved, clock=self.now, **kwargs,
         )  # fmt: skip
-        if (result.checked or result.lease_lost or record_idle) and not kwargs.get("dry_run"):
+        if (result.checked or result.lease_lost or result.digest_attempted or result.digest_failed or record_idle) and not kwargs.get("dry_run"):
             try:
                 await asyncio.to_thread(self.store.record_run, self.name, {**result.summary(), "holder": self.lease.holder})
             except Exception as exc:  # informational only
@@ -197,6 +197,7 @@ class Runner:
         """
         if holder:
             self.lease.holder = holder
+        started = time.monotonic()
         try:
             await asyncio.to_thread(self.config)
         except FileNotFoundError as exc:  # deployed, but `role-radar config push` hasn't run yet
@@ -204,7 +205,6 @@ class Runner:
         if not await self._lease_call(self.lease.acquire, remaining + LAMBDA_LEASE_MARGIN):
             info = await self._lease_call(self.lease.read)
             return Skipped(f"{info.holder if info and info.holder else 'another runner'} holds the lease")
-        started = time.monotonic()
         stop_starting_at = started + min(work_seconds, remaining)
         handoff = _HandoffWatch(self.lease, self._lease_call)
 

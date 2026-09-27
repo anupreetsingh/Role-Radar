@@ -89,6 +89,32 @@ def test_missing_config_is_a_usage_error(tmp_path):
     assert cli.main(["status", "--config", str(tmp_path / "nope.yaml")]) == cli.EXIT_USAGE
 
 
+def test_doctor_reports_missing_automation_and_channels_without_writing(config, capsys):
+    assert cli.main(["doctor", "--config", str(config)]) == 1
+    out = capsys.readouterr().out
+    assert "Local mode only" in out and "No delivery channels" in out
+    assert not (config.parent / "state.json").exists()
+
+
+def test_notification_test_uses_configured_channel_without_job_state(config, monkeypatch, capsys):
+    from role_radar.notifications import DiscordNotifier
+
+    sent = []
+
+    async def send(self, jobs):
+        sent.extend(jobs)
+
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.invalid/hook")
+    monkeypatch.setattr(DiscordNotifier, "send", send)
+    assert cli.main(["notifications", "test", "--config", str(config)]) == 0
+    assert len(sent) == 1 and "[TEST]" in sent[0].title
+    assert not (config.parent / "state.json").exists()
+
+
+def test_notification_test_refuses_console_only(config):
+    assert cli.main(["notifications", "test", "--config", str(config)]) == cli.EXIT_USAGE
+
+
 def test_config_push_validates_then_uploads(config, fake_aws):
     import boto3
 

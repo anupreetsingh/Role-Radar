@@ -16,6 +16,7 @@ lost to a log nobody reads.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import smtplib
@@ -28,8 +29,13 @@ from typing import Callable
 import httpx
 
 from role_radar.models import JobPosting, normalize_text
+from role_radar.storage import SeenJob, to_iso, utcnow
 
 log = logging.getLogger(__name__)
+
+
+class NotificationError(RuntimeError):
+    """A delivery failure whose message contains no credentials or recipient details."""
 
 
 # -- formatting ---------------------------------------------------------------
@@ -86,6 +92,18 @@ def headline(jobs: list[JobPosting]) -> str:
     return f"{len(jobs)} new matching job{'s' if len(jobs) != 1 else ''} — {shown}"
 
 
+def format_digest(jobs: list[JobPosting]) -> str:
+    lines = ["Role Radar — New jobs digest", headline(jobs)]
+    company = None
+    for group in group_jobs(jobs):
+        if group.company != company:
+            company = group.company
+            lines += ["", company]
+        lines.append(f"- {group.title} — {' | '.join(group.locations)}")
+        lines.extend(f"  {url}" for url in dict.fromkeys(job.url for job in group.jobs))
+    return "\n".join(lines)
+
+
 # -- channels -------------------------------------------------------------------
 
 
@@ -109,42 +127,34 @@ class DiscordNotifier(Notifier):
     name = "discord"
     LIMIT = 2000  # Discord message character limit
 
-    def __init__(self, webhook_url: str, max_messages: int = 20) -> None:
+    def __init__(self, webhook_url: str) -> None:
         self._url = webhook_url  # never logged
-        self.max_messages = max_messages
 
     def build_messages(self, jobs: list[JobPosting]) -> list[str]:
-        blocks = [f"**{headline(jobs)}**"] + [f"```\n{format_group(g)}\n```" for g in group_jobs(jobs)]
-        messages: list[str] = []
-        current = ""
-        for block in blocks:
-            block = block if len(block) <= self.LIMIT else block[: self.LIMIT - 4] + "…```"
-            if current and len(current) + len(block) + 1 > self.LIMIT:
-                messages.append(current)
-                current = block
-            else:
-                current = f"{current}\n{block}" if current else block
-        if current:
-            messages.append(current)
-        if len(messages) > self.max_messages:
-            dropped = len(messages) - self.max_messages + 1
-            messages = messages[: self.max_messages - 1] + [f"…and {dropped} more message(s) of jobs not shown."]
-        return messages
+        digest = format_digest(jobs)
+        if len(digest) <= self.LIMIT:
+            return [digest]
+        # One notification even for a large digest. All links go in the attachment.
+        return [f"Role Radar — {len(jobs)} new matching jobs\nThe complete list of jobs and application links is attached."]
 
     async def send(self, jobs: list[JobPosting]) -> None:
+        digest = format_digest(jobs)
+        content = self.build_messages(jobs)[0]
+        payload = {"content": content, "allowed_mentions": {"parse": []}, "flags": 4}
+        url = httpx.URL(self._url).copy_merge_params({"wait": "true"})
         async with httpx.AsyncClient(timeout=20) as client:
-            for content in self.build_messages(jobs):
-                # allowed_mentions: a job title containing "@everyone" must not ping anyone.
-                payload = {"content": content, "allowed_mentions": {"parse": []}}
-                for attempt in range(4):
-                    resp = await client.post(self._url, json=payload)
-                    if resp.status_code == 429 and attempt < 3:
-                        await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
-                        continue
-                    if resp.status_code >= 400:
-                        raise RuntimeError(f"Discord webhook returned HTTP {resp.status_code}")
-                    break
-                await asyncio.sleep(0.5)  # stay well under webhook rate limits
+            for attempt in range(4):
+                if len(digest) > self.LIMIT:
+                    resp = await client.post(url, data={"payload_json": json.dumps(payload)},
+                                             files={"files[0]": ("role-radar-new-jobs.txt", digest.encode("utf-8"), "text/plain")})
+                else:
+                    resp = await client.post(url, json=payload)
+                if resp.status_code == 429 and attempt < 3:
+                    await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
+                    continue
+                if not resp.is_success:
+                    raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
+                break
 
 
 class EmailNotifier(Notifier):
@@ -162,14 +172,22 @@ class EmailNotifier(Notifier):
     ) -> None:
         self.host, self.port, self.sender, self.recipients = host, port, sender, recipients
         self._username, self._password = username, password
-        self.security = security.lower()
+        self.security = security.strip().lower()
+        if self.security not in {"starttls", "ssl", "none"}:
+            raise ValueError("SMTP_SECURITY must be starttls, ssl, or none")
+        if not recipients:
+            raise ValueError("EMAIL_TO must contain at least one recipient")
+        if not 1 <= port <= 65535:
+            raise ValueError("SMTP_PORT must be between 1 and 65535")
+        if bool(username) != bool(password):
+            raise ValueError("Set both SMTP_USERNAME and SMTP_PASSWORD for authenticated email")
 
     def build_message(self, jobs: list[JobPosting]) -> EmailMessage:
         msg = EmailMessage()
-        msg["Subject"] = f"[Role Radar] {headline(jobs)}"
+        msg["Subject"] = f"[Role Radar digest] {headline(jobs)}"
         msg["From"] = self.sender
         msg["To"] = ", ".join(self.recipients)
-        msg.set_content(("\n\n" + "=" * 50 + "\n\n").join(format_group(g) for g in group_jobs(jobs)))
+        msg.set_content(format_digest(jobs))
         return msg
 
     def _send_sync(self, msg: EmailMessage) -> None:
@@ -183,7 +201,9 @@ class EmailNotifier(Notifier):
                 server.starttls(context=context)
             if self._username and self._password:
                 server.login(self._username, self._password)
-            server.send_message(msg)
+            refused = server.send_message(msg, from_addr=self.sender, to_addrs=self.recipients)
+            if refused:
+                raise NotificationError(f"SMTP refused {len(refused)} recipient(s)")
 
     async def send(self, jobs: list[JobPosting]) -> None:
         await asyncio.to_thread(self._send_sync, self.build_message(jobs))
@@ -192,35 +212,56 @@ class EmailNotifier(Notifier):
 # -- wiring ---------------------------------------------------------------------
 
 
+class UnconfiguredNotifier(Notifier):
+    """Keep one broken channel visible without preventing the other from sending."""
+
+    def __init__(self, name: str, problem: str) -> None:
+        self.name, self.problem = name, problem
+
+    async def send(self, jobs: list[JobPosting]) -> None:
+        raise ValueError(self.problem)
+
+
 def notifiers_from_env(env: dict[str, str] | None = None, console_fallback: bool = True) -> list[Notifier]:
     """The channels `env` configures; if none, the console (or nothing, without console_fallback)."""
-    env = dict(os.environ if env is None else env)
+    env = {k: v if k == "SMTP_PASSWORD" else v.strip() for k, v in (os.environ if env is None else env).items()}
     notifiers: list[Notifier] = []
     if env.get("DISCORD_WEBHOOK_URL"):
         notifiers.append(DiscordNotifier(env["DISCORD_WEBHOOK_URL"]))
-    if env.get("SMTP_HOST") and env.get("EMAIL_TO"):
-        security = env.get("SMTP_SECURITY", "starttls")
-        notifiers.append(
-            EmailNotifier(
+    email_keys = ("SMTP_HOST", "EMAIL_TO", "EMAIL_FROM", "SMTP_USERNAME", "SMTP_PASSWORD")
+    if any(env.get(key) for key in email_keys):
+        security = (env.get("SMTP_SECURITY") or "starttls").lower()
+        try:
+            missing = [key for key in ("SMTP_HOST", "EMAIL_TO") if not env.get(key)]
+            if missing:
+                raise ValueError("Missing email settings: " + ", ".join(missing))
+            try:
+                port = int(env.get("SMTP_PORT") or (465 if security == "ssl" else 587))
+            except ValueError:
+                raise ValueError("SMTP_PORT must be an integer") from None
+            notifiers.append(EmailNotifier(
                 host=env["SMTP_HOST"],
-                port=int(env.get("SMTP_PORT") or (465 if security == "ssl" else 587)),
+                port=port,
                 sender=env.get("EMAIL_FROM") or env.get("SMTP_USERNAME") or env["EMAIL_TO"].split(",")[0],
                 recipients=[r.strip() for r in env["EMAIL_TO"].split(",") if r.strip()],
                 username=env.get("SMTP_USERNAME"),
                 password=env.get("SMTP_PASSWORD"),
                 security=security,
-            )
-        )
+            ))
+        except ValueError as exc:
+            notifiers.append(UnconfiguredNotifier("email", str(exc)))
     if not notifiers and console_fallback:
         return [ConsoleNotifier()]
     return notifiers
 
 
-async def notify_all(notifiers: list[Notifier], jobs: list[JobPosting], check: Callable[[], None] | None = None) -> bool:
-    """Send via every channel. True if at least one channel delivered.
+async def notify_all(
+    notifiers: list[Notifier], jobs: list[JobPosting], check: Callable[[], None] | None = None,
+    *, records: dict[str, SeenJob] | None = None,
+) -> bool:
+    """True only when every channel delivered; persist successes per job for retries.
 
-    "At least one" (rather than "all") avoids re-sending to a working channel
-    every run just because another channel is misconfigured. `check` runs
+    Successful channels are skipped on subsequent checks. `check` runs
     before each channel and may raise to stop sending (e.g. the lease was lost).
     """
     if not jobs:
@@ -228,15 +269,27 @@ async def notify_all(notifiers: list[Notifier], jobs: list[JobPosting], check: C
     if not notifiers:
         log.error("No alert channel is configured; %d job(s) stay pending", len(jobs))
         return False
-    delivered = False
+    delivered = True
     for notifier in notifiers:
+        pending = [j for j in jobs if records is None or notifier.name not in records[j.uid].notified_channels]
+        if not pending:
+            continue
         if check:
             check()
         try:
-            await notifier.send(jobs)
-            delivered = True
-            log.info("Sent %d job(s) via %s", len(jobs), notifier.name)
+            await notifier.send(pending)
+            if records is not None:
+                stamp = to_iso(utcnow())
+                for job in pending:
+                    records[job.uid].notified_channels[notifier.name] = stamp
+            log.info("Sent %d job(s) via %s", len(pending), notifier.name)
         except Exception as exc:
-            # Log only the exception type/message; never the channel config.
-            log.error("Notification via %s failed: %s", notifier.name, exc)
+            delivered = False
+            # Transport errors can contain webhook URLs or SMTP credentials.
+            detail = f": {notifier.problem}" if isinstance(notifier, UnconfiguredNotifier) else ""
+            if isinstance(exc, NotificationError):
+                detail = f": {exc}"
+            elif isinstance(exc, smtplib.SMTPResponseException):
+                detail = f": SMTP status {exc.smtp_code}"
+            log.error("Notification via %s failed (%s)%s", notifier.name, type(exc).__name__, detail)
     return delivered

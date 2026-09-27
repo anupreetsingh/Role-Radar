@@ -1,7 +1,7 @@
 # Role Radar
 
-Watches company careers pages and alerts you **once** when a new job matching your criteria
-is posted. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
+Watches company careers pages and collects new jobs matching your criteria into a digest
+every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
 the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
 
 ## How it works
@@ -26,7 +26,7 @@ stopped:
 
 | Piece | Lives in | Holds |
 |---|---|---|
-| State | DynamoDB, one table | Seen jobs, each company's next check time, the lease, an alert log |
+| State | DynamoDB, one table | Seen jobs, check and digest schedules, delivery receipts, the lease, an alert log |
 | Companies config | S3 (`role-radar config push` uploads your local `companies.yaml`) | Companies, filters, settings |
 | Alert channel secrets | SSM Parameter Store (SecureString) | Discord webhook, SMTP settings |
 | Laptop runner | `role-radar start` (optionally started at login) | Works whenever it's running |
@@ -41,8 +41,11 @@ load config + every company's schedule → the companies that are due (schedule.
     → detail page only if the filter needs a field the listing lacks (Workday, custom sites)
     → filter (filters.py)
     → diff vs. stored state (tracker.py): new / removed / repost / duplicate
-    → re-read the lease → one notification for this company's new matches
+    → queue the new matches for the next digest
     → save its jobs and next check time, in one transaction fenced on the lease
+  if the digest is due (even when no company was due):
+    collect pending matches across enabled companies → re-read the lease
+    → one digest per channel → save each channel's delivery receipts
 ```
 
 All HTTP goes through `http_client.py`. Each request checks robots.txt, waits until its
@@ -61,7 +64,8 @@ why each job matched or not.
 |---|---|
 | `role_radar/cli.py` | The `role-radar` command |
 | `role_radar/runner.py` | Holds the lease and runs passes: the laptop loop, `run --once`, Lambda |
-| `role_radar/monitor.py` | One pass: due companies → scrape → filter → alert → save |
+| `role_radar/monitor.py` | One pass: due companies → scrape → filter → queue → save, then any due digest |
+| `role_radar/digest.py` | Shared digest cadence, queued matches across companies, and delivery retries |
 | `role_radar/schedule.py` | Which companies are due, and when each is next checked |
 | `role_radar/lease.py` | The lease that decides which runner may work, and fencing |
 | `role_radar/dynamo.py` | DynamoDB state store and lease (one table) |
@@ -124,16 +128,26 @@ alert again. The previous version behaved the same way.
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
 | Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
+| MathWorks | Official RSS job feed, including EDG | no |
+| HRM Direct / ClearCompany | Public search-results table, including malformed job links | no |
+| iCIMS | Public job cards across every visible results page | no |
+| Jibe | Branded career site's public `/api/jobs` endpoint, paginated (e.g. Garmin) | no |
+| Avature | Public `SearchJobs` result cards, paginated (e.g. Bloomberg) | no |
+| COMSOL | Job links grouped under location headings | no |
+| Recruiterbox / Trakstar | Public widget API (e.g. Wolfram) | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
 
-**Job descriptions are never downloaded or stored.** A job's title, location, ID and URL
-are enough to alert on. Lever and Ashby put descriptions in their API responses anyway,
-with no way to turn them off, so they're dropped while parsing.
+**Job descriptions are not stored or used for matching.** A job's title, location, ID
+and URL are enough to alert on. Some feeds and APIs include descriptions in their
+listing responses; these are discarded. Detail pages are fetched only when listing
+metadata needed by a filter is missing.
 
 The ATS is detected from the URL, or you can set it with `ats:`. Nothing tries to get
 past CAPTCHAs, logins or robots.txt, and every request sends an honest User-Agent.
-Pages that only render with JavaScript aren't supported, so point the config at the ATS
-the page loads its jobs from.
+There is no browser automation. Branded sites can still be monitored through their
+public feeds/APIs or supported HTML readers; a JavaScript landing page alone is not
+evidence that the source works. See [company coverage](docs/company-coverage.md) for
+the enabled employers, source limitations and expansion queue.
 
 ### Job identity and new-job rules
 
@@ -152,10 +166,15 @@ the page loads its jobs from.
 | Reposted with a new ID within `repost_window_days` | Recorded as `duplicate_of`, no alert |
 | Two open postings with the same title and location | Second one suppressed as a duplicate |
 | Same title in several locations | Separate jobs, grouped into **one** entry in the notification |
-| Notification failed | Job stays un-notified and is retried at the company's next check |
+| Notification failed | Failed channels retry at the next digest (or company check if digests are disabled); successful channels are remembered and skipped |
 | Filters broadened | Jobs that already exist and now match alert once |
 
 Removed jobs are pruned from state after `retention_days`.
+
+Delivery receipts are stored per channel in `notified_channels`; `notified_at` is set
+after every configured channel succeeds. Partial failures count as undelivered alerts
+and trigger the Lambda error alarm. Older state files still load, and previously
+completed alerts are not replayed when another channel is added.
 
 ### Scheduling
 
@@ -175,6 +194,23 @@ still due and get picked up next time.
 - `--all` checks every company whether it's due or not, and so do `--company` and
   `--baseline`.
 
+#### Notification digests
+
+`settings.digest_interval_minutes: 30` collects all new matching jobs across enabled
+companies into one email and one Discord message, grouped by company with application
+links. If the list exceeds Discord's message limit, the single message includes the
+complete list as a text attachment. Empty intervals send nothing.
+
+The schedule targets `:00` and `:30`. Lambda sends on its first run after the boundary,
+after any checks in that run finish; its five-minute trigger can add a short delay.
+The laptop uses the same schedule. Pending jobs, the next send time and delivery
+receipts persist across restarts and handoffs. Failed channels retry at the next
+interval without repeating delivery to successful channels. Previously sent jobs
+are not replayed when digests are enabled.
+
+Set the interval to `0` (also the default when omitted) to send immediately after
+each company's check. Baselines and dry runs never send a digest.
+
 ## Configuration
 
 Edit [config/companies.yaml](config/companies.yaml), then `role-radar config push` it once
@@ -186,7 +222,6 @@ company's own `filters` replace them **one key at a time**.
   url: https://contfinco.bamboohr.com/careers
   filters:
     include_keywords: [software engineer, developer, machine learning, AI, data engineer]
-    exclude_keywords: [manager, director, vice president, chief]
     match_on: [title]            # title | location | employment_type | department
     locations: [Remote, Wilmington]   # optional
     employment_types: [full-time]     # optional
@@ -198,9 +233,32 @@ regex. To change the logic itself, edit `JobFilter.evaluate` in `filters.py`. To
 new field matchable, add it to `FIELD_GETTERS`. Descriptions can't be matched, and a
 config that puts `description` in `match_on` or `exclude_on` is rejected at load time.
 
-For Continental Finance, `senior` is deliberately **not** excluded, because its current
-tech opening is titled "Mid/Senior Software Developer". The filter excludes only
-management and executive titles.
+The default role list covers application development (including full stack, frontend
+and backend), platforms/cloud, compilers/systems/embedded software, AI/research/data,
+security, testing, product/technical delivery, and customer-facing engineering.
+It targets potential opportunities for a spring-2026 MS CS graduate; matching a title
+does not establish eligibility. Review the posting's experience, specialized skills,
+degree, graduation window and work authorization requirements separately. Research
+scientist and product/program roles in particular need this review. Graduation years
+and "new grad" are not required in titles, so unlabelled early-career openings can match.
+
+The defaults exclude senior and leadership titles, while permitting Product Manager,
+Technical Program Manager and Technical Project Manager. "Member of Technical Staff"
+is also allowed. Continental Finance inherits the expanded role list and retains its
+"Mid/Senior Software Developer" exception for review, but now excludes purely senior
+roles and the same leadership titles as the defaults. The location rules target the
+US, Canada, Australia and India, including common region/city formats. Unqualified
+Remote/Worldwide listings are retained for eligibility review; other remote regions
+are not automatically included. Location-text matching is approximate and does not
+establish work authorization. Employment type is unrestricted. Program names such as
+Engineering Development Group (EDG) are included even without an engineer/developer
+title.
+
+To verify the enabled sources without sending alerts or changing job state, run
+`python -m scripts.validate_companies --output docs/company-validation.json`.
+The report records the configuration hash, check time, listing/match counts, partial
+snapshots and any pending detail checks. Use `--company NAME` to check one source;
+omit `--output` for an exploratory check that should not replace the full report.
 
 A company's name is its key in the state store, so renaming a company re-baselines it.
 Names can't start with `#`, because the table uses that prefix for its own rows.
@@ -237,6 +295,7 @@ dry runs and AWS-free local use.
 |---|---|---|
 | company name | job uid | A seen job (the fields of `SeenJob`) |
 | `#schedule` | company name | `last_checked_at`, `next_check_at`, failure count |
+| `#digest` | `#digest` | `next_send_at`, `last_attempt_at`, `interval_minutes` |
 | `#lease` | `#lease` | Who may check companies now: `holder`, `epoch`, `expires_at` |
 | `#alerts` | time + company + uid | Log of sent alerts, which expires after 30 days via TTL |
 | `#runs` | runner | Each runner's last pass |
@@ -246,7 +305,9 @@ the previous one wrote. Each save writes only the rows that changed.
 
 To write another backend, subclass `storage.StateStore`. Runs use `load_schedule()`
 (every company's next check time), then `load_company()` and `save_company()` around
-each company's check. `load()` and `save()` move a whole state at once, for migration.
+each company's check. `load_digest()` and `save_digest()` persist the shared digest
+schedule; its writes must use the same lease fence as company saves. `load()` and
+`save()` move a whole state at once, for migration.
 
 ## Commands
 
@@ -262,6 +323,8 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar start` | Runs until you quit (Ctrl+C). Takes the lease and checks companies as they come due. If Lambda holds the lease, it asks Lambda to hand over and takes over once it has. |
 | `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. |
 | `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, the latest alerts, and whether the pushed config matches your local file. |
+| `role-radar doctor` | Checks setup without sending alerts or changing job state. Add `--stack role-radar --profile admin --region us-east-1` to inspect the deployed Lambda and EventBridge schedule. |
+| `role-radar notifications test` | Sends a labeled test through the configured channels without changing job state. Add `--channel email` or `--channel discord` to test one. |
 | `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease), `--baseline` (record everything as seen, no alerts) or `--local-config` (read the local file instead of the pushed copy). |
 | `role-radar list-matches` | Prints every job matching right now. Reads no state, sends nothing. |
 | `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
@@ -464,6 +527,42 @@ switching to on-demand up to four times per 24 hours, and back to provisioned at
 
 ## Operating it
 
+### Check automation and delivery
+
+From a checkout, use `.venv/bin/python -m role_radar` in place of `role-radar` if the
+command has not been installed. Start with:
+
+```bash
+role-radar doctor
+# After authenticating to AWS, use your stack's actual profile and region:
+role-radar doctor --stack role-radar --profile admin --region us-east-1
+```
+
+The stack inspection needs a profile with read access to CloudFormation, Lambda and
+EventBridge Scheduler, in addition to the app's state, config and secrets. The laptop's
+restricted policy alone does not include these deployment inspection permissions.
+The command reports missing credentials, a disabled schedule, blocked Lambda
+concurrency, stale run history, an unpushed config, and missing or incomplete channels.
+It never sends an alert or prints secret values. Local JSON mode alone does not enable
+Lambda; follow [Deploy to AWS](#deploy-to-aws) to connect the shared backends.
+
+Once channel settings are populated in the configured source, verify delivery:
+
+```bash
+role-radar notifications test --channel discord
+role-radar notifications test --channel email
+role-radar status
+```
+
+These tests send a `[TEST]` notification to the configured recipients. They do not
+mark real jobs as seen. `AlertEmail` in the SAM deployment only receives AWS error and
+budget emails; job-alert email separately needs `SMTP_HOST`, `EMAIL_TO`, and the SMTP
+provider's authentication settings. With `runtime.secrets: ssm:/role-radar/`, those
+settings must be in SSM; values in a local `.env` file are not used by Lambda. For local
+`secrets: env` runs, load `.env` into your shell as shown in the local setup instructions.
+
+### Routine maintenance
+
 - **Logs.** The laptop logs to the terminal, or to `~/Library/Logs/role-radar.log` for
   the login item (rotated at 5 MB). Lambda logs to CloudWatch:
   `aws logs tail /aws/lambda/role-radar-monitor --follow --profile admin`.
@@ -474,7 +573,8 @@ switching to on-demand up to four times per 24 hours, and back to provisioned at
   `role-radar config push`. A running laptop app picks it up within 5 minutes, and Lambda
   at its next run. `status` warns when your local file and the pushed copy differ.
 - **Rotating a secret.** `aws ssm put-parameter --overwrite ...`. Both sides re-read the
-  secrets after a failed delivery, and whenever they start fresh.
+  secrets on the next alert after a failed delivery, when they start fresh, and after
+  five minutes of cached settings. This also picks up newly configured channels.
 - **Updating the code.** `sam build -t deploy/aws/template.yaml && sam deploy` for
   Lambda, and `pipx install --force '.[aws]'` then restart `start` for the laptop.
 - **Tearing down.** `sam delete --stack-name role-radar` removes the Lambda, schedule,

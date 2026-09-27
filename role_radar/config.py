@@ -8,6 +8,7 @@ secrets live: see RuntimeSettings).
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass, field, fields, replace
 from datetime import timedelta
@@ -37,6 +38,8 @@ class CompanyConfig:
 class Settings:
     # How often each company is checked. Companies are checked when due, not all at once.
     check_interval_minutes: float = 30.0
+    # 0: immediate company batches; otherwise combine pending jobs on this cadence.
+    digest_interval_minutes: float = 0.0
     # Alert on matches already open the first time a company is checked.
     # Set false to silently record a baseline when adding many companies at once.
     notify_on_first_run: bool = True
@@ -51,6 +54,10 @@ class Settings:
     max_company_concurrency: int = 40
     company_timeout: float = 300.0
     http: HttpSettings = field(default_factory=HttpSettings)
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.digest_interval_minutes) or self.digest_interval_minutes < 0:
+            raise ValueError("settings.digest_interval_minutes must be a finite nonnegative number")
 
     @property
     def check_interval(self) -> timedelta:

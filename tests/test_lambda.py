@@ -7,7 +7,7 @@ import pytest
 
 from role_radar import monitor
 from role_radar.http_client import HttpClient
-from role_radar.notifications import DiscordNotifier
+from role_radar.notifications import DiscordNotifier, EmailNotifier
 from tests.conftest import fixture_json
 
 pytest.importorskip("moto")
@@ -105,6 +105,32 @@ def test_lambda_exits_at_once_while_the_laptop_holds_the_lease(deployed, sites):
     assert sites["requests"] == 0
 
 
+def test_cold_lambda_sends_due_digest_even_without_due_company(deployed, sites, discord, monkeypatch):
+    import boto3
+
+    config = CONFIG.replace(b"settings:\n", b"settings:\n  digest_interval_minutes: 30\n  check_interval_minutes: 1440\n")
+    boto3.client("s3", region_name="us-east-1").put_object(
+        Bucket="role-radar-config", Key="companies.yaml", Body=config,
+    )
+    first = lambda_handler.handler({}, FakeContext())
+    assert first["checked"] == 1 and first["alerts"] == 0 and not discord
+    store = DynamoStateStore(*deployed)
+    schedule = store.load_digest()
+    assert schedule.interval_minutes == 30 and schedule.next_send_at
+    schedule.next_send_at = "2000-01-01T00:00:00Z"
+    store.save_digest(schedule)
+
+    monkeypatch.setattr(lambda_handler, "_runner", None)
+    second = lambda_handler.handler({}, FakeContext())
+    assert second["checked"] == 0 and second["alerts"] == 2
+    assert second["digest_attempted"] and second["digest_jobs"] == 2
+    assert sites["requests"] == 1 and len(discord) == 1 and len(discord[0]) == 2
+    assert store.last_runs()["lambda"]["digest_attempted"]
+    assert store.load_digest().next_send_at != schedule.next_send_at
+    lambda_handler.handler({}, FakeContext())
+    assert len(discord) == 1
+
+
 def test_lambda_idles_until_the_config_is_pushed(deployed, sites):
     import boto3
 
@@ -136,3 +162,37 @@ def test_lambda_raises_when_every_company_fails(deployed, sites):
         lambda_handler.handler({}, FakeContext())
     client, name = deployed
     assert DynamoLease(client, name, "x").read().released_at  # the lease is still released
+
+
+def test_partial_delivery_retries_only_failed_channel_after_cold_start(deployed, sites, discord, monkeypatch):
+    import boto3
+
+    ssm = boto3.client("ssm", region_name="us-east-1")
+    for key, value in {"SMTP_HOST": "smtp.invalid", "EMAIL_TO": "a@example.com"}.items():
+        ssm.put_parameter(Name=f"/role-radar/{key}", Value=value, Type="SecureString")
+
+    async def fail(self, jobs):
+        raise RuntimeError("SMTP unavailable")
+
+    monkeypatch.setattr(EmailNotifier, "send", fail)
+    with pytest.raises(RuntimeError, match="undelivered"):
+        lambda_handler.handler({}, FakeContext())
+    store = DynamoStateStore(*deployed)
+    record = store.load_company("Continental Finance")
+    pending = [j for j in record.jobs.values() if j.matched]
+    assert len(pending) == 2 and all(j.notified_channels.keys() == {"discord"} and not j.notified_at for j in pending)
+    assert store.last_runs()["lambda"]["undelivered"] == 1
+
+    sent = []
+
+    async def recovered(self, jobs):
+        sent.extend(jobs)
+
+    monkeypatch.setattr(EmailNotifier, "send", recovered)
+    monkeypatch.setattr(lambda_handler, "_runner", None)  # a different Lambda / laptop process
+    record.meta.next_check_at = "2000-01-01T00:00:00Z"
+    store.save_company(record)
+    summary = lambda_handler.handler({}, FakeContext())
+    assert summary["undelivered"] == 0 and len(sent) == 2 and len(discord) == 1
+    assert all(j.notified_at and j.notified_channels.keys() == {"discord", "email"}
+               for j in store.load_company("Continental Finance").jobs.values() if j.matched)

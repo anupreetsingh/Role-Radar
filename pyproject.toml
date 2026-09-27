@@ -18,7 +18,7 @@ role-radar = "role_radar.cli:main"
 
 [project.optional-dependencies]
 # DynamoDB state, config in S3, secrets in SSM. (Lambda's Python runtime already has boto3.)
-aws = ["boto3>=1.34"]
+aws = ["boto3[crt]>=1.34"] # CRT supports browser-based `aws login` profiles on the laptop.
 
 [tool.setuptools.dynamic]
 version = { attr = "role_radar.__version__" }

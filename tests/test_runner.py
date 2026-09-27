@@ -105,3 +105,27 @@ def test_run_once_releases_the_lease_afterwards(table, tmp_path, requests_made):
     assert asyncio.run(runner.run_once()) == 0
     assert len(notifier.batches) == 1
     assert DynamoLease(table[0], table[1], "lambda").acquire(900)  # free straight away
+
+
+def test_lambda_setup_time_counts_against_work_deadline(table, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from role_radar import runner as runner_module
+
+    runner = make_runner(table, tmp_path, "lambda", RecordingNotifier())
+    ticks = [100.0]
+    monkeypatch.setattr(runner_module, "time", SimpleNamespace(monotonic=lambda: ticks[0]))
+    load = runner.source.load
+
+    def slow_load():
+        ticks[0] += 180  # S3 retries consume the entire remaining invocation budget
+        return load()
+
+    async def pass_once(**kwargs):
+        assert kwargs["deadline"] == 220
+        assert await kwargs["should_stop"]()
+        return monitor.PassResult()
+
+    monkeypatch.setattr(runner.source, "load", slow_load)
+    monkeypatch.setattr(runner, "pass_once", pass_once)
+    asyncio.run(runner.lambda_pass(120))
+    assert not runner.lease.held

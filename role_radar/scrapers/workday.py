@@ -37,11 +37,14 @@ class WorkdayScraper(BaseScraper):
         parts = urlsplit(self.company.url)
         self.host = parts.netloc
         segments = [s for s in parts.path.split("/") if s and not _LOCALE.match(s)]
-        self.tenant = self.options.get("tenant") or self.host.split(".")[0]
-        self.site = self.options.get("site") or (segments[0] if segments else None)
+        recruiting = len(segments) >= 3 and segments[0] == "recruiting"
+        self.tenant = self.options.get("tenant") or (segments[1] if recruiting else self.host.split(".")[0])
+        self.site = self.options.get("site") or (segments[2] if recruiting else (segments[0] if segments else None))
         if not self.site:
             raise ScraperError("could not determine Workday site from URL; set options.site")
         self.api = f"https://{self.host}/wday/cxs/{self.tenant}/{self.site}"
+        prefix = f"/recruiting/{self.tenant}" if recruiting else ""
+        self.career_base = f"https://{self.host}{prefix}/{self.site}"
 
     async def fetch_jobs(self) -> ScrapeResult:
         max_jobs = int(self.options.get("max_jobs", 500))
@@ -75,7 +78,7 @@ class WorkdayScraper(BaseScraper):
         return self.make_job(
             job_id=self._job_id(path, item.get("bulletFields") or []),
             title=(item.get("title") or "").strip(),
-            url=f"https://{self.host}/{self.site}{path}",
+            url=f"{self.career_base}{path}",
             location=item.get("locationsText"),
             date_posted=parse_date(item.get("postedOn")),
             extra={"path": path},

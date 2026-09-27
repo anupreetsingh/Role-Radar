@@ -141,6 +141,21 @@ def test_ssm_without_channel_settings_gives_no_channels(fake_aws):
     assert source() == []  # never a silent console fallback: alerts stay pending
 
 
+def test_ssm_refresh_discovers_added_email_without_a_delivery_failure(fake_aws):
+    import boto3
+    from tests.conftest import Clock
+
+    clock = Clock()
+    ssm = boto3.client("ssm", region_name="us-east-1")
+    ssm.put_parameter(Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/hook", Type="SecureString")
+    source = NotifierSource(RuntimeSettings(secrets="ssm:/role-radar/", region="us-east-1"), clock=clock)
+    assert [n.name for n in source()] == ["discord"]
+    for key, value in {"SMTP_HOST": "smtp.invalid", "EMAIL_TO": "a@example.com"}.items():
+        ssm.put_parameter(Name=f"/role-radar/{key}", Value=value, Type="SecureString")
+    clock.advance(301)
+    assert [n.name for n in source()] == ["discord", "email"]
+
+
 def test_sending_stops_between_channels_once_the_lease_is_gone():
     import asyncio
 

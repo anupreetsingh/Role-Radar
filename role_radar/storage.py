@@ -24,7 +24,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2  # 2 added "schedule"; version 1 files still load
+SCHEMA_VERSION = 4  # 2: schedules; 3: channel receipts; 4: digest cadence. Older files still load.
 ALERT_LOG_SIZE = 50  # alerts the JSON store remembers for `status`
 
 
@@ -57,6 +57,9 @@ class SeenJob:
     removed_at: str | None = None
     detail_fetched: bool = False
     duplicate_of: str | None = None  # uid of an earlier posting this one repeats
+    # Successful channels survive partial failures and runner handoffs. notified_at
+    # remains empty until all configured channels have accepted the job.
+    notified_channels: dict[str, str] = field(default_factory=dict)
 
     @property
     def active(self) -> bool:
@@ -85,6 +88,17 @@ class CompanyMeta:
 
 
 @dataclass
+class DigestSchedule:
+    next_send_at: str | None = None
+    last_attempt_at: str | None = None
+    interval_minutes: float = 0.0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> DigestSchedule:
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
 class CompanyRecord:
     """One company's stored state, loaded for a check and saved after it."""
 
@@ -96,6 +110,7 @@ class CompanyRecord:
     # alerted during this check, for the store's alert log.
     loaded: dict[str, dict] | None = field(default=None, repr=False, compare=False)
     alerted: list[str] = field(default_factory=list, repr=False, compare=False)
+    delivery_changed: bool = field(default=False, repr=False, compare=False)
 
     @property
     def is_new(self) -> bool:
@@ -117,6 +132,7 @@ class MonitorState:
     # For `status` with JSON storage: each runner's last pass, and the latest alerts.
     runs: dict[str, dict] = field(default_factory=dict)
     alerts: list[dict] = field(default_factory=list)
+    digest: DigestSchedule = field(default_factory=DigestSchedule)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
         return self.companies.setdefault(company, {})
@@ -157,6 +173,8 @@ class MonitorState:
             data["runs"] = self.runs
         if self.alerts:
             data["alerts"] = self.alerts
+        if self.digest.next_send_at:
+            data["digest"] = compact(self.digest)
         return data
 
     @classmethod
@@ -166,10 +184,17 @@ class MonitorState:
             for company, jobs in (data.get("companies") or {}).items()
         }
         meta = {company: CompanyMeta.from_dict(m) for company, m in (data.get("schedule") or {}).items()}
-        return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []))
+        return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []),
+                   digest=DigestSchedule.from_dict(data.get("digest") or {}))
 
 
 class StateStore(ABC):
+    def load_digest(self) -> DigestSchedule:
+        raise NotImplementedError("This store does not support digest scheduling")
+
+    def save_digest(self, schedule: DigestSchedule) -> None:
+        raise NotImplementedError("This store does not support digest scheduling")
+
     @abstractmethod
     def load_schedule(self) -> dict[str, CompanyMeta]:
         """Every company's schedule, to decide which are due."""
@@ -217,6 +242,15 @@ class MemoryStateStore(StateStore):
     def load_schedule(self) -> dict[str, CompanyMeta]:
         with self._lock:
             return {name: CompanyMeta.from_dict(asdict(m)) for name, m in self._current().meta.items()}
+
+    def load_digest(self) -> DigestSchedule:
+        with self._lock:
+            return DigestSchedule.from_dict(asdict(self._current().digest))
+
+    def save_digest(self, schedule: DigestSchedule) -> None:
+        with self._lock:
+            self._current().digest = DigestSchedule.from_dict(asdict(schedule))
+            self._persist()
 
     def load_company(self, company: str) -> CompanyRecord:
         with self._lock:

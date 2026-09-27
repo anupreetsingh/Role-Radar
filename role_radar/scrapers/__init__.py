@@ -7,16 +7,27 @@ and add the class to SCRAPERS below.
 from __future__ import annotations
 
 from role_radar.scrapers.ashby import AshbyScraper
+from role_radar.scrapers.avature import AvatureScraper
 from role_radar.scrapers.bamboohr import BambooHRScraper
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
+from role_radar.scrapers.comsol import ComsolScraper
 from role_radar.scrapers.generic import GenericScraper
 from role_radar.scrapers.greenhouse import GreenhouseScraper
+from role_radar.scrapers.hrmdirect import HRMDirectScraper
+from role_radar.scrapers.icims import ICIMSScraper
+from role_radar.scrapers.jibe import JibeScraper
 from role_radar.scrapers.lever import LeverScraper
+from role_radar.scrapers.mathworks import MathWorksScraper
+from role_radar.scrapers.recruiterbox import RecruiterboxScraper
 from role_radar.scrapers.workday import WorkdayScraper
 
 SCRAPERS: dict[str, type[BaseScraper]] = {
     cls.name: cls
-    for cls in (BambooHRScraper, GreenhouseScraper, LeverScraper, AshbyScraper, WorkdayScraper, GenericScraper)
+    for cls in (
+        BambooHRScraper, GreenhouseScraper, LeverScraper, AshbyScraper, WorkdayScraper,
+        MathWorksScraper, HRMDirectScraper, ICIMSScraper, JibeScraper, AvatureScraper,
+        ComsolScraper, RecruiterboxScraper, GenericScraper,
+    )
 }
 
 

@@ -29,7 +29,7 @@ for _noisy in ("httpx", "httpcore", "botocore", "boto3", "urllib3"):
 log = logging.getLogger("lambda")
 
 # Kept across warm invocations: AWS clients, the config (re-read only when it
-# changes), the alert channels (secrets fetched once), parsed robots.txt files.
+# changes), the alert channels (secrets refreshed periodically), parsed robots.txt files.
 _runner: Runner | None = None
 
 

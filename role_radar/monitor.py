@@ -6,8 +6,9 @@ Flow of a pass:
       load its state → scrape listing → fetch details only for unseen jobs whose
       filter needs a field the listing lacks (and that could still match)
       → filter → diff against state
-      → confirm the lease is still ours → alert on its new matches
+      → queue its new matches (or alert immediately if digests are disabled)
       → save its state and next check time straight away (fenced on the lease)
+  → if the shared digest is due, confirm the lease and send the queued matches
 
 If the lease turns out to be lost, the pass stops without saving or sending
 anything more. The companies it didn't finish are still due, so whoever holds
@@ -27,6 +28,7 @@ from datetime import datetime
 from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, Union
 
 from role_radar.config import AppConfig, CompanyConfig, Settings
+from role_radar.digest import flush_digest
 from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
@@ -34,7 +36,7 @@ from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
 from role_radar.schedule import after_check, due_companies, next_due
 from role_radar.scrapers import BaseScraper, scraper_class_for
 from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
-from role_radar.tracker import CompanyDiff, dedupe, reconcile, record_delivery, settle_duplicates
+from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile, settle_duplicates
 
 log = logging.getLogger("monitor")
 
@@ -61,15 +63,18 @@ class Unsaved:
 
     def __init__(self) -> None:
         self.sent: dict[str, dict[str, str]] = {}  # company → uid → notified_at: alerted, not saved
+        self.channels: dict[str, dict[str, dict[str, str]]] = {}
         self._retry_at: dict[str, float] = {}
 
     def failed(self, company: str, record: CompanyRecord) -> None:
         alerted = {uid: record.jobs[uid].notified_at for uid in record.alerted if uid in record.jobs}
         self.sent.setdefault(company, {}).update({uid: at for uid, at in alerted.items() if at})
+        self.channels[company] = {uid: dict(job.notified_channels) for uid, job in record.jobs.items() if job.notified_channels}
         self._retry_at[company] = time.monotonic() + UNSAVED_HOLD
 
     def saved(self, company: str) -> None:
         self.sent.pop(company, None)
+        self.channels.pop(company, None)
         self._retry_at.pop(company, None)
 
     def holding(self, company: str) -> bool:
@@ -83,9 +88,10 @@ class CompanyOutcome:
     listed: int = 0
     matched: list[JobPosting] = field(default_factory=list)
     diff: CompanyDiff | None = None
-    delivered: bool = True  # False when there were alerts and no channel took them
+    delivered: bool = True  # False when any configured channel still needs the alerts
     meta: CompanyMeta | None = None  # the schedule saved after this check
     skipped: bool = False  # due, but not started (stopping, or out of time)
+    queued: bool = False
 
     @property
     def ok(self) -> bool:
@@ -93,7 +99,7 @@ class CompanyOutcome:
 
     @property
     def alerted(self) -> int:
-        return len(self.diff.to_notify) if self.diff and self.delivered else 0
+        return len(self.diff.to_notify) if self.diff and self.delivered and not self.queued else 0
 
 
 @dataclass
@@ -109,6 +115,10 @@ class PassResult:
     next_due: datetime | None = None
     finished_at: datetime | None = None
     nothing_configured: bool = False
+    digest_attempted: bool = False
+    digest_jobs: int = 0
+    digest_completed: int = 0
+    digest_failed: bool = False
 
     @property
     def checked(self) -> list[CompanyOutcome]:
@@ -120,7 +130,7 @@ class PassResult:
 
     @property
     def alerts(self) -> int:
-        return sum(o.alerted for o in self.outcomes)
+        return sum(o.alerted for o in self.outcomes) + self.digest_completed
 
     @property
     def undelivered(self) -> list[CompanyOutcome]:
@@ -133,7 +143,7 @@ class PassResult:
         if self.lease_lost:
             return EXIT_LEASE_LOST
         checked = self.checked
-        if (checked and len(self.failed) == len(checked)) or self.undelivered:
+        if (checked and len(self.failed) == len(checked)) or self.undelivered or self.digest_failed:
             return EXIT_FAILED
         return EXIT_OK
 
@@ -144,7 +154,9 @@ class PassResult:
             "checked": len(self.checked),
             "failed": len(self.failed),
             "alerts": self.alerts,
-            "undelivered": len(self.undelivered),
+            "undelivered": len(self.undelivered) + int(self.digest_failed),
+            "digest_attempted": self.digest_attempted,
+            "digest_jobs": self.digest_jobs,
             "skipped": len(self.outcomes) - len(self.checked),
             "seconds": round(self.seconds, 1),
             "requests": self.requests,
@@ -289,9 +301,17 @@ async def process_company(
     diff = outcome.diff
     if diff:
         if unsaved and not dry_run:
+            for uid, channels in unsaved.channels.get(company.name, {}).items():
+                if uid in record.jobs:
+                    record.jobs[uid].notified_channels.update(channels)
+                    record.delivery_changed = True
             _skip_already_sent(diff, record, unsaved.sent.get(company.name, {}))
         if diff.to_notify:
-            outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run)
+            if settings.digest_interval_minutes and not dry_run:
+                outcome.queued = True
+                log.info("[%s] %d match(es) pending the next digest", company.name, len(diff.to_notify))
+            else:
+                outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run)
         settle_duplicates(state, diff)
 
     pruned = state.prune(settings.retention_days, now)
@@ -323,19 +343,28 @@ async def _alert(
     lease: Lease,
     dry_run: bool,
 ) -> bool:
-    """Send one company's new matches; True if a channel took them."""
+    """Send one company's matches; keep partial successes for the next check."""
     # Fetch the channels (secrets) first, so nothing slow sits between the lease check and sending.
-    channels = list(await asyncio.to_thread(notifiers))
+    try:
+        channels = list(await asyncio.to_thread(notifiers))
+    except Exception as exc:
+        log.error("[%s] couldn't load notification settings (%s); alerts stay pending", diff.company, type(exc).__name__)
+        invalidate = getattr(notifiers, "invalidate", None)
+        if invalidate:
+            invalidate()
+        return False
     if not dry_run:
         # Never alert without the lease: after a pause, another runner may already have.
         lease.check()
         await asyncio.to_thread(lease.verify)
-    delivered = await notify_all(channels, diff.to_notify, check=None if dry_run else lease.check)
-    if delivered:
-        record_delivery(state, diff)
-        record.alerted += [j.uid for j in diff.to_notify]
-    else:
-        log.error("[%s] no notification channel succeeded; %d job(s) will be retried next check", diff.company, len(diff.to_notify))
+    before = {j.uid: dict(record.jobs[j.uid].notified_channels) for j in diff.to_notify}
+    delivered = await notify_all(channels, diff.to_notify, check=None if dry_run else lease.check, records=record.jobs)
+    record.delivery_changed |= any(record.jobs[uid].notified_channels != seen for uid, seen in before.items())
+    completed = [j for j in diff.to_notify if channels and all(n.name in record.jobs[j.uid].notified_channels for n in channels)]
+    mark_notified(state, completed)
+    record.alerted += [j.uid for j in completed]
+    if not delivered:
+        log.error("[%s] notification delivery incomplete; failed channels will be retried next check", diff.company)
         invalidate = getattr(notifiers, "invalidate", None)
         if invalidate:  # re-read the channel settings next time, in case they changed
             invalidate()
@@ -351,7 +380,7 @@ async def _save(
     unsaved: Unsaved | None,
 ) -> None:
     """Save the company, trying harder once alerts have gone out: unsaved, they'd be sent again."""
-    attempts = 1 + (SAVE_RETRIES_AFTER_ALERTS if record.alerted else 0)
+    attempts = 1 + (SAVE_RETRIES_AFTER_ALERTS if record.alerted or record.delivery_changed else 0)
     for attempt in range(attempts):
         lease.check()  # fail fast; the store also checks the stored lease in the same transaction
         try:
@@ -410,14 +439,18 @@ async def run_pass(
         lease = LocalLease("local")
         lease.acquire(0)
 
+    started = time.monotonic()
     schedule = await asyncio.to_thread(store.load_schedule)
     due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), settings.check_interval)
     if not due:
         result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+        if not baseline and not dry_run and not await _stopping(should_stop):
+            await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
+        result.seconds = time.monotonic() - started
+        result.finished_at = clock()
         log.debug("Nothing due; next check at %s", to_iso(result.next_due) if result.next_due else "-")
         return result
 
-    started = time.monotonic()
     channels = _channels(notifiers, dry_run)
     save_lock = asyncio.Lock()
 
@@ -447,14 +480,54 @@ async def run_pass(
             log.error("Stopped: %s. Unfinished companies are still due for whoever holds the lease.", exc)
             result.lease_lost = True
 
-    result.seconds = time.monotonic() - started
     result.requests, result.bytes = http.stats.requests, http.stats.bytes
-    result.finished_at = clock()
     schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
     result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+    if not baseline and not dry_run and not result.lease_lost and not await _stopping(should_stop):
+        await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
+    result.seconds = time.monotonic() - started
+    result.finished_at = clock()
     _log_pass(result, len(due), http, dry_run)
     write_step_summary(result.outcomes, result.alerts)
     return result
+
+
+async def _digest(
+    config: AppConfig,
+    store: StateStore,
+    notifiers: Notifiers,
+    lease: Lease,
+    result: PassResult,
+    now: datetime,
+    deadline: float | None,
+    unsaved: Unsaved | None,
+) -> None:
+    if not config.settings.digest_interval_minutes:
+        return
+    if deadline is not None and time.monotonic() + SAVE_MARGIN >= deadline:
+        return
+
+    async def save(record: CompanyRecord) -> None:
+        await _save(store, record, lease, None, deadline, unsaved)
+
+    try:
+        digest = await flush_digest(
+            store, [c.name for c in config.companies if c.enabled], _channels(notifiers, False), lease,
+            now, config.settings.digest_interval_minutes, save, deadline=deadline,
+            sent=unsaved.sent if unsaved else None, receipts=unsaved.channels if unsaved else None,
+        )
+        result.digest_attempted = digest.attempted
+        result.digest_jobs = digest.jobs
+        result.digest_completed = digest.completed
+        result.digest_failed = digest.failed
+        if digest.next_due:
+            result.next_due = min(result.next_due, digest.next_due) if result.next_due else digest.next_due
+    except LeaseLost as exc:
+        result.lease_lost = True
+        log.error("Digest stopped: %s", exc)
+    except Exception as exc:
+        result.digest_failed = True
+        log.error("Digest failed (%s); undelivered jobs remain pending", type(exc).__name__)
 
 
 async def _stopping(should_stop: Callable[[], bool | Awaitable[bool]] | None) -> bool:

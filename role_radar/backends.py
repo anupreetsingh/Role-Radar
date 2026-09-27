@@ -94,19 +94,24 @@ class NotifierSource:
     """The alert channels, built the first time they're needed.
 
     With secrets in SSM that means Parameter Store is only called when there's
-    actually something to send, and then once per process.
+    actually something to send, then at most every five minutes.
     """
 
-    def __init__(self, runtime: RuntimeSettings, clients: AwsClients | None = None, env: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self, runtime: RuntimeSettings, clients: AwsClients | None = None, env: Mapping[str, str] | None = None,
+        *, clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self.runtime = runtime
         self._clients = clients
         self._env = env
         self._notifiers: list[Notifier] | None = None
         self._lock = threading.Lock()
+        self._clock = clock
+        self._loaded_at = 0.0
 
     def __call__(self) -> list[Notifier]:
         with self._lock:
-            if self._notifiers is None:
+            if self._notifiers is None or self._clock() - self._loaded_at >= 300:
                 path = self.runtime.ssm_path
                 if path:
                     clients = self._clients or AwsClients(self.runtime)
@@ -115,6 +120,7 @@ class NotifierSource:
                     settings = self._env
                 # With SSM, no settings is a mistake: print nothing and keep alerts pending instead.
                 self._notifiers = notifiers_from_env(settings, console_fallback=not path)
+                self._loaded_at = self._clock()
                 if self._notifiers:
                     log.info("Alert channels: %s", ", ".join(n.name for n in self._notifiers))
                 else:

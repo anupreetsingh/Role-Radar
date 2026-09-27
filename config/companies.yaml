@@ -24,16 +24,17 @@
 # each key: ROLE_RADAR_STORAGE, ROLE_RADAR_STATE_FILE, ROLE_RADAR_TABLE,
 # ROLE_RADAR_CONFIG_URL, ROLE_RADAR_SECRETS, AWS_REGION, AWS_PROFILE.
 runtime:
-  storage: json               # json: local state_file | dynamodb: the shared table
+  storage: dynamodb
   state_file: seen_jobs.json
-  # table: role-radar                                           # storage: dynamodb
-  # config_url: s3://role-radar-config-123456789012/companies.yaml  # companies read from here
-  # secrets: ssm:/role-radar/                                   # env | ssm:/path/
-  # region: us-east-1
-  # profile: role-radar                                         # ~/.aws profile
+  table: role-radar-StateTable-UVW1FTNH6RAD
+  config_url: s3://role-radar-configbucket-sgxptx7mtuif/companies.yaml
+  secrets: ssm:/role-radar/
+  region: us-east-1
+  profile: role-radar-admin
 
 settings:
   check_interval_minutes: 30  # each company is checked when due, so load spreads across the interval
+  digest_interval_minutes: 30 # combine all new matching jobs into one notification per half hour
   notify_on_first_run: true   # set false before adding many companies at once
   repost_window_days: 30
   retention_days: 90
@@ -55,54 +56,216 @@ settings:
 
 defaults:
   filters:
+    # Broad discovery for a spring-2026 MS CS graduate. These are title matches,
+    # not eligibility checks: experience, degree, graduation window and work
+    # authorization requirements still need review in each job description.
     include_keywords:
+      # Application development (spaces also match hyphens or no separator).
       - software engineer
-      - backend engineer
+      - software engineering
+      - software development
+      - developer
+      - programmer
+      - SWE
+      - SDE
+      - full stack
+      - front end
+      - back end
+      - web engineer
+      - mobile engineer
+      - iOS engineer
+      - Android engineer
+      - application engineer
+      - applications engineer
+      - product engineer
+      - integration engineer
+      - integrations engineer
+      # Platforms, cloud infrastructure and developer tooling.
       - platform engineer
-      - machine learning engineer
+      - platforms engineer
+      - platform engineering
+      - cloud engineer
+      - cloud operations
+      - infrastructure engineer
+      - site reliability
+      - SRE
+      - DevOps
+      - DevSecOps
+      - production engineer
+      - build engineer
+      - release engineer
+      - tools engineer
+      # Compilers, operating systems, embedded and performance work.
+      - compiler
+      - toolchain engineer
+      - runtime engineer
+      - kernel engineer
+      - systems engineer
+      - system engineer
+      - systems development
+      - embedded engineer
+      - embedded software
+      - firmware
+      - distributed systems
+      - performance engineer
+      - GPU engineer
+      - graphics engineer
+      - rendering engineer
+      - robotics engineer
+      - simulation engineer
+      - algorithm engineer
+      - algorithms engineer
+      - high performance computing
+      - HPC engineer
+      - member of technical staff
+      - member technical staff
+      - associate technical staff
+      # AI, applied research, data and analytics.
+      - machine learning
+      - ML engineer
+      - MLOps
       - AI engineer
+      - AI engineering
+      - applied AI
+      - artificial intelligence
+      - generative AI
+      - LLM engineer
+      - NLP engineer
+      - natural language processing
+      - computer vision
+      - research engineer
+      - research scientist
+      - applied scientist
       - data engineer
+      - data engineering
+      - data scientist
+      - data science
+      - data analyst
+      - analytics engineer
+      - analytics analyst
+      - business intelligence
+      - BI engineer
+      - BI analyst
+      - database engineer
+      - database administrator
+      - ETL engineer
+      - quantitative analyst
+      - quantitative researcher
+      # Security, networking and IT systems.
+      - security engineer
+      - security analyst
+      - cybersecurity
+      - cyber security
+      - information security
+      - SOC analyst
+      - penetration tester
+      - detection engineer
+      - network engineer
+      - network development
+      - network administrator
+      - systems administrator
+      - system administrator
+      - systems analyst
+      - system analyst
+      - IT analyst
+      # Software quality and test automation.
+      - SDET
+      - QA engineer
+      - QA analyst
+      - quality assurance engineer
+      - quality assurance analyst
+      - software quality
+      - test engineer
+      - test automation
+      - automation engineer
+      - software tester
+      # Product and technical delivery: "manager" need not mean people manager.
+      - product manager
+      - product management
+      - product owner
+      - product analyst
+      - technical program manager
+      - technical program management
+      - technical project manager
+      - technical project management
+      - business analyst
+      - business systems analyst
+      # Customer-facing engineering and technical implementation.
+      - solutions engineer
+      - solution engineer
+      - solutions architect
+      - solution architect
+      - implementation engineer
+      - implementation consultant
+      - technical consultant
+      - technology consultant
+      - support engineer
+      - cloud support
+      - application support
+      - technical support analyst
+      - customer engineer
+      - customer success engineer
+      - forward deployed engineer
+      # Employer-specific graduate/rotation programs with nonstandard titles.
+      - engineering development group
+      - EDG
+      - technology development program
+      - technology analyst program
+      - technical development program
+      - software development program
+      - technology graduate
     exclude_keywords:
       - senior
       - sr
-      - staff
+      # "Member of Technical Staff" can be an early-career title.
+      - 're:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b'
       - principal
+      - distinguished
       - lead
-      - manager
+      # Permit product/technical program/project managers, exclude other managers.
+      - 're:^(?!.*\b(?:product|technical[\s/_-]+(?:program|project))[\s/_-]+manager\b).*\bmanagers?\b'
       - director
       - vice president
       - vp
       - head of
       - chief
+      - president
+      - officer
     match_on: [title]
     exclude_on: [title]
+    # Target countries, plus regional/city names used by boards that omit countries.
+    # Unqualified Remote/Worldwide listings need a country-eligibility check.
+    locations:
+      - United States
+      - USA
+      - US
+      - Canada
+      - Australia
+      - India
+      - 're:\b(?-i:US|USA|CAN|AU|AUS|IND)\b'
+      - 're:^(?-i:IN|CA)-'
+      - 're:\b(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|District of Columbia)\b'
+      - 're:(?:,\s*|\s-\s)(?-i:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT|NSW|VIC|QLD|ACT|SA|TAS)\b'
+      - 're:\b(?:Ontario|Quebec|Québec|British Columbia|Alberta|Manitoba|Saskatchewan|Nova Scotia|New Brunswick|Newfoundland|Toronto|Vancouver|Montréal|Montreal|Ottawa|Waterloo|Kitchener|Calgary|Edmonton|Winnipeg|Halifax)\b'
+      - 're:\b(?:Sydney|Melbourne|Brisbane|Perth|Adelaide|Canberra|Hobart|New South Wales|Victoria|Queensland|Tasmania)\b'
+      - 're:\b(?:Bangalore|Bengaluru|Hyderabad|Pune|Mumbai|Delhi|Noida|Gurgaon|Gurugram|Chennai|Kolkata|Ahmedabad|Jaipur|Kochi|Thiruvananthapuram|Chandigarh|Indore|Coimbatore)\b'
+      - 're:\b(?:San Francisco|Bay Area|San Jose|Palo Alto|Mountain View|Sunnyvale|Redwood City|Menlo Park|Seattle|Bellevue|Redmond|Boston|Cambridge|Natick|Austin|Dallas|Houston|Chicago|Los Angeles|San Diego|New York City|NYC|Brooklyn|Atlanta|Denver|Boulder|Portland|Raleigh|Durham|Cary|Charlotte|Baltimore|Bethesda|Rockville|Reston|Arlington|McLean|Herndon|Philadelphia|Pittsburgh|Cleveland|Columbus|Cincinnati|Detroit|Ann Arbor|Minneapolis|Madison|Verona|Olathe|San Antonio|Tampa|Orlando|Miami|Phoenix|Salt Lake City|Nashville)\b(?!,?\s*(?:UK|United Kingdom|England|New Zealand|Germany))'
+      - 're:^(?:remote|anywhere|worldwide|global)(?:\s*[/,-]\s*(?:remote|anywhere|worldwide|global))*\s*$'
 
 companies:
   - name: Continental Finance
     url: https://contfinco.bamboohr.com/careers
     ats: bamboohr
     filters:
-      include_keywords:
-        - software engineer
-        - software engineering
-        - software developer
-        - developer
-        - backend
-        - back end
-        - platform engineer
-        - platform engineering
-        - machine learning
-        - ML
-        - MLOps
-        - AI
-        - artificial intelligence
-        - data engineer
-        - data engineering
-      # Management/executive roles only. "senior" is deliberately NOT excluded here:
-      # it would drop hybrid titles like "Mid/Senior Software Developer". Add it
-      # back if you want entry/mid-level roles only.
+      # Inherit the broad role list. Keep "Mid/Senior" titles for review, while
+      # excluding purely senior roles and the same leadership titles as defaults.
       exclude_keywords:
-        - manager
+        - 're:^(?!.*\bmid[\s/_-]*(?:senior|sr)\b).*\b(?:senior|sr)\b'
+        - 're:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b'
+        - principal
+        - distinguished
+        - lead
+        - 're:^(?!.*\b(?:product|technical[\s/_-]+(?:program|project))[\s/_-]+manager\b).*\bmanagers?\b'
         - director
         - vice president
         - vp
@@ -113,35 +276,278 @@ companies:
       match_on: [title]
       exclude_on: [title]
 
-  # --- More examples (disabled). Enable and adjust as needed. ---------------
+  # --- Scientific computing, simulation and healthcare ---
 
-  - name: Discord
-    url: https://job-boards.greenhouse.io/discord
-    enabled: false
+  - name: MathWorks
+    url: https://www.mathworks.com/company/jobs/opportunities/search
+    ats: mathworks
 
-  - name: Palantir
-    url: https://jobs.lever.co/palantir
-    enabled: false
-    filters:
-      locations: [New York, Remote]
+  - name: COMSOL
+    url: https://www.comsol.com/company/careers
+    ats: comsol
 
-  - name: Ashby
-    url: https://jobs.ashbyhq.com/ashby
-    enabled: false
+  - name: Wolfram
+    url: https://www.wolfram.com/company/careers/opportunities/
+    ats: recruiterbox
+    options:
+      widget_id: 42716
+
+  - name: Kitware
+    url: https://jobs.lever.co/kitware
+    ats: lever
+
+  - name: Schrödinger
+    url: https://job-boards.greenhouse.io/schrdinger
+    ats: greenhouse
+
+  - name: Esri
+    url: https://job-boards.greenhouse.io/esri
+    ats: greenhouse
+
+  - name: SAS
+    url: https://globalcareers-sas.icims.com/jobs/search
+    ats: icims
+
+  - name: Flatiron Health
+    url: https://job-boards.greenhouse.io/flatironhealth
+    ats: greenhouse
+
+  - name: PathAI
+    url: https://job-boards.greenhouse.io/pathai
+    ats: greenhouse
+
+  - name: Natera
+    url: https://job-boards.greenhouse.io/natera
+    ats: greenhouse
+
+  - name: Recursion
+    url: https://job-boards.greenhouse.io/recursionpharmaceuticals
+    ats: greenhouse
+
+  - name: Benchling
+    url: https://jobs.ashbyhq.com/benchling
+    ats: ashby
+
+  - name: PointClickCare
+    url: https://jobs.lever.co/pointclickcare
+    ats: lever
+
+  # --- Aviation, robotics, industrial technology and energy ---
+
+  - name: Flexjet
+    url: https://flexjet.hrmdirect.com/employment/job-openings.php?search=true&cust_sort1=196974
+    ats: hrmdirect
+
+  - name: Garmin
+    url: https://careers.garmin.com/jobs
+    ats: jibe
+
+  - name: Zipline
+    url: https://job-boards.greenhouse.io/flyzipline
+    ats: greenhouse
+
+  - name: Motional
+    url: https://job-boards.greenhouse.io/motional
+    ats: greenhouse
+
+  - name: Nuro
+    url: https://job-boards.greenhouse.io/nuro
+    ats: greenhouse
+
+  - name: Torc Robotics
+    url: https://job-boards.greenhouse.io/torcrobotics
+    ats: greenhouse
+
+  - name: Waabi
+    url: https://jobs.lever.co/waabi
+    ats: lever
+
+  - name: Skydio
+    url: https://jobs.ashbyhq.com/skydio
+    ats: ashby
+
+  - name: Samsara
+    url: https://job-boards.greenhouse.io/samsara
+    ats: greenhouse
+
+  - name: Redwood Materials
+    url: https://job-boards.greenhouse.io/redwoodmaterials
+    ats: greenhouse
+
+  - name: Gecko Robotics
+    url: https://jobs.ashbyhq.com/gecko-robotics
+    ats: ashby
+
+  - name: Form Energy
+    url: https://jobs.ashbyhq.com/formenergy
+    ats: ashby
+
+  - name: Geotab
+    url: https://job-boards.greenhouse.io/geotab
+    ats: greenhouse
+
+  - name: LHP Engineering Solutions
+    url: https://lhpes.hrmdirect.com/employment/job-openings.php?search=true
+    ats: hrmdirect
+
+  # --- Financial technology and business software ---
+
+  - name: Bloomberg
+    url: https://bloomberg.avature.net/careers/SearchJobs/
+    ats: avature
+
+  - name: Enova
+    url: https://job-boards.greenhouse.io/enova
+    ats: greenhouse
+
+  - name: Blend
+    url: https://job-boards.greenhouse.io/blend
+    ats: greenhouse
+
+  - name: Upstart
+    url: https://job-boards.greenhouse.io/upstart
+    ats: greenhouse
+
+  - name: Alarm.com
+    url: https://job-boards.greenhouse.io/alarmcom
+    ats: greenhouse
+
+  - name: Appian
+    url: https://job-boards.greenhouse.io/appian
+    ats: greenhouse
+
+  - name: Guidewire
+    url: https://wd5.myworkdaysite.com/recruiting/guidewire/external
+    ats: workday
+
+  - name: Razorpay
+    url: https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited
+    ats: greenhouse
+
+  - name: Harness
+    url: https://job-boards.greenhouse.io/harnessinc
+    ats: greenhouse
+
+  - name: Wealthsimple
+    url: https://jobs.ashbyhq.com/wealthsimple
+    ats: ashby
+
+  - name: Zensurance
+    url: https://jobs.lever.co/zensurance
+    ats: lever
+
+  - name: Jane
+    url: https://jobs.ashbyhq.com/jane
+    ats: ashby
+
+  - name: Xero
+    url: https://jobs.ashbyhq.com/xero
+    ats: ashby
+
+  - name: Culture Amp
+    url: https://job-boards.greenhouse.io/cultureamp
+    ats: greenhouse
+
+  - name: Faire
+    url: https://job-boards.greenhouse.io/faire
+    ats: greenhouse
+
+  - name: DaySmart
+    url: https://daysmart.hrmdirect.com/employment/job-openings.php?search=true
+    ats: hrmdirect
+
+  - name: ChurnZero
+    url: https://churnzero.hrmdirect.com/employment/job-openings.php?search=true
+    ats: hrmdirect
+
+  - name: Identity Digital
+    url: https://donuts.hrmdirect.com/employment/job-openings.php?search=true
+    ats: hrmdirect
+
+  - name: Kinaxis
+    url: https://careers-kinaxis.icims.com/jobs/search
+    ats: icims
+
+  - name: D2L
+    url: https://job-boards.greenhouse.io/d2l
+    ats: greenhouse
+
+  # --- Data infrastructure, cloud, security and developer tools ---
+
+  - name: Cockroach Labs
+    url: https://job-boards.greenhouse.io/cockroachlabs
+    ats: greenhouse
+
+  - name: SingleStore
+    url: https://job-boards.greenhouse.io/singlestore
+    ats: greenhouse
+
+  - name: Yugabyte
+    url: https://job-boards.greenhouse.io/yugabyte
+    ats: greenhouse
+
+  - name: Grafana Labs
+    url: https://job-boards.greenhouse.io/grafanalabs
+    ats: greenhouse
+
+  - name: Imply
+    url: https://job-boards.greenhouse.io/imply
+    ats: greenhouse
+
+  - name: Fivetran
+    url: https://job-boards.greenhouse.io/fivetran
+    ats: greenhouse
+
+  - name: Auvik
+    url: https://job-boards.greenhouse.io/auviknetworks
+    ats: greenhouse
+
+  - name: Rubrik
+    url: https://job-boards.greenhouse.io/rubrik
+    ats: greenhouse
+
+  - name: Druva
+    url: https://job-boards.greenhouse.io/druva
+    ats: greenhouse
+
+  - name: Elastic
+    url: https://job-boards.greenhouse.io/elastic
+    ats: greenhouse
+
+  - name: ClickHouse
+    url: https://jobs.ashbyhq.com/clickhouse
+    ats: ashby
+
+  - name: BrowserStack
+    url: https://browserstack.wd3.myworkdayjobs.com/External
+    ats: workday
+
+  - name: Cohere
+    url: https://jobs.ashbyhq.com/cohere
+    ats: ashby
 
   - name: NVIDIA
     url: https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite
-    enabled: false
+    ats: workday
     options:
-      search_text: software engineer new grad  # narrows thousands of jobs server-side
-      max_jobs: 200
-    filters:
-      include_keywords: [software engineer, new grad, new college grad]
-      locations: [US, United States]
+      max_jobs: 5000
 
-  - name: Example Custom Site
-    url: https://example.com/careers
-    ats: generic
-    enabled: false
-    options:
-      link_pattern: "/careers/jobs/\\d+"   # regex for job-detail links on the page
+  - name: Ashby
+    url: https://jobs.ashbyhq.com/ashby
+    ats: ashby
+
+  - name: Ramp
+    url: https://jobs.ashbyhq.com/ramp
+    ats: ashby
+
+  - name: Sentry
+    url: https://jobs.ashbyhq.com/sentry
+    ats: ashby
+
+  - name: Discord
+    url: https://job-boards.greenhouse.io/discord
+    ats: greenhouse
+
+  - name: Palantir
+    url: https://jobs.lever.co/palantir
+    ats: lever

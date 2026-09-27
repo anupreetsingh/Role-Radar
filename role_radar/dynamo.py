@@ -28,7 +28,7 @@ from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
-from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, compact, to_iso
+from role_radar.storage import CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ SCHEDULE = "#schedule"
 LEASE = "#lease"
 ALERTS = "#alerts"
 RUNS = "#runs"
+DIGEST = "#digest"
 ALERT_TTL = 30 * 86400  # seconds an alert-log row lives (the table's TTL attribute is "ttl")
 MAX_TRANSACTION = 100  # DynamoDB's limit on actions per TransactWriteItems
 TRANSACTION_ATTEMPTS = 11
@@ -276,6 +277,15 @@ class DynamoStateStore(StateStore):
     def load_schedule(self) -> dict[str, CompanyMeta]:
         return {item["sk"]: CompanyMeta.from_dict(item) for item in self._query(SCHEDULE)}
 
+    def load_digest(self) -> DigestSchedule:
+        item = self.client.get_item(TableName=self.table, Key=_key(DIGEST, DIGEST), ConsistentRead=True).get("Item")
+        return DigestSchedule.from_dict(_plain(item)) if item else DigestSchedule()
+
+    def save_digest(self, schedule: DigestSchedule) -> None:
+        writes = [{"Put": {"TableName": self.table, "Item": _item(DIGEST, DIGEST, compact(schedule))}}]
+        epoch = self.lease.epoch if self.lease else None
+        self._transact([self.lease.condition_check(epoch), *writes] if self.lease else writes, epoch)
+
     def load_company(self, company: str) -> CompanyRecord:
         jobs = {item["sk"]: SeenJob.from_dict(item) for item in self._query(company)}
         meta = self.client.get_item(TableName=self.table, Key=_key(SCHEDULE, company), ConsistentRead=True).get("Item")
@@ -370,6 +380,8 @@ class DynamoStateStore(StateStore):
             for item in map(_plain, page.get("Items", [])):
                 if item["pk"] == SCHEDULE:
                     state.meta[item["sk"]] = CompanyMeta.from_dict(item)
+                elif item["pk"] == DIGEST:
+                    state.digest = DigestSchedule.from_dict(item)
                 elif not item["pk"].startswith("#"):
                     state.jobs_for(item["pk"])[item["sk"]] = SeenJob.from_dict(item)
             if "LastEvaluatedKey" not in page:
@@ -385,3 +397,5 @@ class DynamoStateStore(StateStore):
         for name in sorted(set(state.companies) | set(state.meta)):
             record = CompanyRecord(name, state.companies.get(name, {}), state.meta.get(name, CompanyMeta()), loaded={})
             self.save_company(record)
+        if state.digest.next_send_at:
+            self.save_digest(state.digest)
