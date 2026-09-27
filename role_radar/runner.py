@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 from role_radar.backends import Backend, ConfigSource
@@ -29,7 +30,6 @@ from role_radar.config import AppConfig
 from role_radar.http_client import RobotsCache
 from role_radar.lease import Lease
 from role_radar.monitor import Notifiers, PassResult, run_pass
-from role_radar.storage import utcnow
 
 log = logging.getLogger("runner")
 
@@ -79,10 +79,16 @@ class Runner:
             self._config_read_at = now
         return self._config
 
+    def now(self) -> datetime:
+        """The runner's clock as a UTC datetime: lease expiry and the schedule use the same time."""
+        return datetime.fromtimestamp(self.clock(), tz=timezone.utc).replace(microsecond=0)
+
     async def pass_once(self, **kwargs: Any) -> PassResult:
         """One pass with the current config. The caller holds the lease (unless it's a dry run)."""
         config = await asyncio.to_thread(self.config)
-        result = await run_pass(config, self.store, self.notifiers, lease=self.lease, robots=self.robots, **kwargs)
+        result = await run_pass(
+            config, self.store, self.notifiers, lease=self.lease, robots=self.robots, clock=self.now, **kwargs
+        )
         if (result.checked or result.lease_lost) and not kwargs.get("dry_run"):
             try:
                 await asyncio.to_thread(self.store.record_run, self.name, {**result.summary(), "holder": self.lease.holder})
@@ -213,11 +219,10 @@ class Runner:
         except Exception as exc:  # it expires on its own within LAPTOP_TTL
             log.warning("Couldn't release the lease (%s); it expires on its own", exc)
 
-    @staticmethod
-    def _pause_after(result: PassResult) -> float:
+    def _pause_after(self, result: PassResult) -> float:
         if result.next_due is None:
             return MAX_SLEEP
-        return min(max((result.next_due - utcnow()).total_seconds(), MIN_SLEEP), MAX_SLEEP)
+        return min(max((result.next_due - self.now()).total_seconds(), MIN_SLEEP), MAX_SLEEP)
 
 
 class _HandoffWatch:

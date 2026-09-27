@@ -103,6 +103,9 @@ the fencing token.
 | The laptop wakes up after Lambda took over | Its unfinished work fails the fence, so nothing is saved or sent. It waits and takes the lease back when Lambda releases it. |
 | A Lambda run crashes or times out | Its lease expires a minute after its time limit, and the next runner takes over. |
 
+[tests/test_handoff.py](tests/test_handoff.py) plays each of these out against fake AWS
+(moto), including a laptop whose clock runs slow, and runners racing for the lease.
+
 **Known exception.** If a runner sends an alert and then crashes, or is killed, before
 that company's save commits, the next check sends the alert again. The previous version
 behaved the same way.
