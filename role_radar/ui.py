@@ -24,14 +24,30 @@ WRITE_HEADER = "X-Role-Radar"
 
 
 def snapshot(backend: Backend, laptop_pid: Callable[[], int | None]) -> dict[str, Any]:
-    switches = backend.store.load_switches()
+    switches = {runner: runner_on(backend.store.load_switches(), runner) for runner in RUNNERS}
     lease = backend.lease.read()
+    holder = lease.holder if lease and lease.holder and lease.held(time.time()) else None
+    pid = laptop_pid()
     return {
-        "switches": {runner: runner_on(switches, runner) for runner in RUNNERS},
-        "lease_holder": lease.holder if lease and lease.holder and lease.held(time.time()) else None,
-        "laptop_app_pid": laptop_pid(),
+        "switches": switches,
+        "checking": checking(switches, holder, pid),
+        "lease_holder": holder,
+        "laptop_app_pid": pid,
         "last_runs": backend.store.last_runs(),
     }
+
+
+def checking(switches: dict[str, bool], lease_holder: str | None, laptop_pid: int | None) -> str | None:
+    """Which runner is checking sites: "laptop", "lambda", or None.
+
+    Both on: the laptop while its app runs (it takes the lease from Lambda),
+    otherwise Lambda. One on: that one, if it can run. Both off: nobody.
+    """
+    if lease_holder:
+        return lease_holder.split(":", 1)[0]
+    if switches["laptop"] and laptop_pid:
+        return "laptop"
+    return "lambda" if switches["lambda"] else None
 
 
 def make_handler(backend: Backend, laptop_pid: Callable[[], int | None]) -> type[BaseHTTPRequestHandler]:
@@ -157,8 +173,8 @@ function render(s) {
   $("lambda-detail").textContent = s.switches.lambda
     ? "On · runs every 5 minutes when the laptop isn't · last pass " + ago(lastRun(s.last_runs, "lambda"))
     : "Off: Lambda exits at once without checking anything.";
-  $("lease").textContent = s.lease_holder ? "Lease held by " + s.lease_holder : "Nobody holds the lease right now.";
-  if (!s.switches.laptop && !s.switches.lambda) $("lease").textContent += " Both runners are off, so no companies are being checked.";
+  $("lease").textContent = s.checking === "laptop" ? "The Mac is checking sites."
+    : s.checking === "lambda" ? "Lambda is checking sites." : "Nothing is checking sites.";
   $("error").textContent = "";
 }
 async function load() {

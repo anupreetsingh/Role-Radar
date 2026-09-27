@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import signal
@@ -225,12 +226,25 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_switch(args: argparse.Namespace) -> int:
+    from role_radar import ui
+
     ctx = context(args)
-    store = open_backend(ctx.runtime, "switch", ctx.clients).store
+    backend = open_backend(ctx.runtime, "switch", ctx.clients)
+    store = backend.store
     if args.runner:
         if args.state is None:
             raise ValueError("say on or off, e.g. role-radar switch lambda off")
         store.save_switch(args.runner, args.state == "on")
+        if args.start and args.runner == "laptop" and args.state == "on" and not InstanceLock().running_pid():
+            if sys.platform != "darwin":
+                raise ValueError("--start uses the macOS login item")
+            if not launchd.start():
+                _install_login_item(ctx)
+    if args.json:
+        state = ui.snapshot(backend, InstanceLock().running_pid)
+        state["login_item"] = sys.platform == "darwin" and launchd.plist_path().exists()
+        print(json.dumps(state))
+        return 0
     switches = store.load_switches()
     print(f"Switches: {describe_switches(switches)}")
     if args.runner == "laptop" and args.state:
@@ -360,7 +374,17 @@ def cmd_login_item(args: argparse.Namespace) -> int:
     if args.state == "off":
         print("Login item removed." if launchd.uninstall() else "The login item wasn't on.")
         return 0
-    ctx = context(args)
+    path = _install_login_item(context(args))
+    log_file = launchd.log_dir() / "role-radar.log"
+    print(
+        f"Login item on ({path}). role-radar start is running now and will start whenever you log in.\n"
+        f"Log: {log_file}. `role-radar stop` quits it until your next login; `role-radar login-item off` removes it."
+    )
+    return 0
+
+
+def _install_login_item(ctx: Context) -> Path:
+    """Install and load the LaunchAgent, which starts `role-radar start` now and at every login."""
     if not ctx.config_path:
         raise ValueError("the login item needs your config file: pass --config PATH")
     if not ctx.runtime.ssm_path:
@@ -371,12 +395,7 @@ def cmd_login_item(args: argparse.Namespace) -> int:
     config_path = ctx.config_path.resolve()
     log_file = launchd.log_dir() / "role-radar.log"
     program = [sys.executable, "-m", "role_radar", "start", "--config", str(config_path), "--log-file", str(log_file)]
-    path = launchd.install(program, launchd.passed_env(), working_dir=config_path.parent)
-    print(
-        f"Login item on ({path}). role-radar start is running now and will start whenever you log in.\n"
-        f"Log: {log_file}. `role-radar stop` quits it until your next login; `role-radar login-item off` removes it."
-    )
-    return 0
+    return launchd.install(program, launchd.passed_env(), working_dir=config_path.parent)
 
 
 # -- output helpers -------------------------------------------------------------
@@ -495,6 +514,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("switch", parents=[common], help="turn the laptop or Lambda runner on or off")
     p.add_argument("runner", nargs="?", choices=RUNNERS)
     p.add_argument("state", nargs="?", choices=["on", "off"])
+    p.add_argument("--start", action="store_true", help="switching the laptop on: also start role-radar start (via the login item)")
+    p.add_argument("--json", action="store_true", help="print the switches, who's checking and last passes as JSON")
     p.set_defaults(func=cmd_switch)
 
     p = sub.add_parser("ui", parents=[common], help="a local page with on/off switches for each runner")

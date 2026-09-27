@@ -59,6 +59,16 @@ def install(program: list[str], env: dict[str, str], working_dir: Path) -> Path:
     return path
 
 
+def start() -> bool:
+    """Start the login item's `role-radar start` now (a no-op if it's running). False if the login item isn't on."""
+    path = plist_path()
+    if not path.exists():
+        return False
+    if _launchctl("kickstart", f"{_domain()}/{LABEL}", check=False).returncode != 0:
+        _launchctl("bootstrap", _domain(), str(path), check=False)  # not loaded: loading starts it (RunAtLoad)
+    return True
+
+
 def uninstall() -> bool:
     """Unload the LaunchAgent (stopping the app if launchd started it) and delete it. False if it wasn't on."""
     path = plist_path()
