@@ -13,3 +13,6 @@ venv/
 build/
 dist/
 .aws-sam/
+seen_jobs.json
+samconfig.toml
+!.env.example

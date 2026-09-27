@@ -1,0 +1,31 @@
+name: CI
+
+# Tests only. Monitoring runs on the laptop (`role-radar start`) and on AWS Lambda
+# (deploy/aws/template.yaml); state lives in DynamoDB, not in this repo.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"] # the oldest supported, and Lambda's runtime
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q

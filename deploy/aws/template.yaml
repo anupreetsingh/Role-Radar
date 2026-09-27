@@ -1,0 +1,283 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Role Radar: checks careers pages every 5 minutes whenever the laptop app isn't
+  running. One DynamoDB table (seen jobs, schedule, lease), one S3 bucket
+  (companies.yaml), one Lambda. Secrets stay in SSM Parameter Store.
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Where AWS sends the budget and error-alarm emails (not job alerts). Confirm the SNS email it sends.
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 5
+    Description: Email when this month's actual AWS spend passes 80% of this, or is forecast to pass 100%.
+  SsmPathName:
+    Type: String
+    Default: role-radar
+    AllowedPattern: "[A-Za-z0-9_.-]+"
+    Description: Discord/SMTP settings are the SecureString parameters under /<this>/ (e.g. /role-radar/DISCORD_WEBHOOK_URL).
+  BillingMode:
+    Type: String
+    Default: PROVISIONED
+    AllowedValues: [PROVISIONED, PAY_PER_REQUEST]
+    Description: >-
+      PROVISIONED (ReadCapacity/WriteCapacity) fits in the always-free tier. PAY_PER_REQUEST never
+      throttles but costs about $5/month at 1,000 companies: use it for a big first load, then switch
+      back (DynamoDB allows 4 switches to on-demand per 24 hours; back to provisioned any time).
+  ReadCapacity:
+    Type: Number
+    Default: 25
+    Description: Provisioned RCUs. The always-free tier covers 25 RCUs and 25 WCUs per region, across all tables.
+  WriteCapacity:
+    Type: Number
+    Default: 25
+  ReservedConcurrency:
+    Type: Number
+    Default: 1
+    Description: >-
+      1 keeps Lambda runs from overlapping. New accounts sometimes have a concurrency quota of 10, which
+      doesn't allow reserving any; then either request a quota increase or set 0 (the lease still stops
+      overlapping runs from doing the same work).
+  ScheduleExpression:
+    Type: String
+    Default: rate(5 minutes)
+
+Conditions:
+  ReserveConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
+  Provisioned: !Equals [!Ref BillingMode, PROVISIONED]
+
+Resources:
+  StateTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain # state outlives the stack: deleting it would re-alert every job
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: !Ref BillingMode
+      ProvisionedThroughput: !If
+        - Provisioned
+        - ReadCapacityUnits: !Ref ReadCapacity
+          WriteCapacityUnits: !Ref WriteCapacity
+        - !Ref AWS::NoValue
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      TimeToLiveSpecification: # the #alerts log expires after 30 days
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification: # a few MB of state: cents per month
+        PointInTimeRecoveryEnabled: true
+      DeletionProtectionEnabled: true
+
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled # every `role-radar config push` is kept for 90 days
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldConfigVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
+
+  MonitorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-monitor
+      RetentionInDays: 14
+
+  MonitorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-monitor
+      Description: Checks due companies unless the laptop app holds the lease
+      CodeUri: ../../ # the project root: role_radar/, lambda_handler.py, requirements.txt
+      Handler: lambda_handler.handler
+      Runtime: python3.13 # `sam build` needs a local python3.13 (or use --use-container)
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 840 # 14 minutes: it stops starting companies after 10 (ROLE_RADAR_WORK_SECONDS)
+      ReservedConcurrentExecutions: !If [ReserveConcurrency, !Ref ReservedConcurrency, !Ref AWS::NoValue]
+      LoggingConfig:
+        LogGroup: !Ref MonitorLogGroup
+        LogFormat: Text
+      Environment:
+        Variables:
+          ROLE_RADAR_STORAGE: dynamodb
+          ROLE_RADAR_TABLE: !Ref StateTable
+          ROLE_RADAR_CONFIG_URL: !Sub s3://${ConfigBucket}/companies.yaml
+          ROLE_RADAR_SECRETS: !Sub ssm:/${SsmPathName}/
+          ROLE_RADAR_WORK_SECONDS: "600"
+      EventInvokeConfig: # the schedule invokes asynchronously; never retry or queue a run for long
+        MaximumRetryAttempts: 0
+        MaximumEventAgeInSeconds: 240
+      Events:
+        EveryFiveMinutes:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref ScheduleExpression
+            FlexibleTimeWindow:
+              Mode: "OFF"
+            RetryPolicy:
+              MaximumRetryAttempts: 0 # a missed run is simply picked up by the next one
+      Policies:
+        - Statement:
+            - Sid: StateTable
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:ConditionCheckItem
+              Resource: !GetAtt StateTable.Arn
+            - Sid: ReadConfig
+              Effect: Allow
+              Action: s3:GetObject
+              Resource: !Sub ${ConfigBucket.Arn}/companies.yaml
+            - Sid: ReadSecrets
+              Effect: Allow
+              Action: ssm:GetParametersByPath
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}/*
+            - Sid: DecryptSecretsViaSsm
+              Effect: Allow
+              Action: kms:Decrypt
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+                StringLike:
+                  kms:EncryptionContext:PARAMETER_ARN: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}/*
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlertEmail
+
+  ErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: >-
+        Role Radar's Lambda failed: alerts couldn't be delivered, every company failed, or it crashed
+        (bad config, AWS permissions). Check its log group.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MonitorFunction
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub ${AWS::StackName}-monthly-cost
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetUsd
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+
+  # Attach this to the laptop's IAM user (whose keys live in ~/.aws). It allows
+  # only this table, the config object and the secrets path.
+  LaptopPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Role Radar laptop app - this stack's table, config object and SSM secrets only
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: StateTable
+            Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan # role-radar migrate
+              - dynamodb:BatchWriteItem # role-radar migrate
+              - dynamodb:ConditionCheckItem
+            Resource: !GetAtt StateTable.Arn
+          - Sid: Config
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject # role-radar config push
+            Resource: !Sub ${ConfigBucket.Arn}/companies.yaml
+          - Sid: ReadSecrets
+            Effect: Allow
+            Action: ssm:GetParametersByPath
+            Resource:
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}/*
+          - Sid: DecryptSecretsViaSsm
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+              StringLike:
+                kms:EncryptionContext:PARAMETER_ARN: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmPathName}/*
+
+Outputs:
+  TableName:
+    Value: !Ref StateTable
+  ConfigUrl:
+    Description: runtime.config_url for your local companies.yaml
+    Value: !Sub s3://${ConfigBucket}/companies.yaml
+  SecretsPath:
+    Description: Put DISCORD_WEBHOOK_URL / SMTP_* here as SecureString parameters
+    Value: !Sub /${SsmPathName}/
+  FunctionName:
+    Value: !Ref MonitorFunction
+  LogGroup:
+    Value: !Ref MonitorLogGroup
+  LaptopPolicyArn:
+    Description: Attach to the laptop's IAM user
+    Value: !Ref LaptopPolicy
+  RuntimeSection:
+    Description: Paste into the runtime section of your local config/companies.yaml
+    Value: !Sub "storage: dynamodb | table: ${StateTable} | config_url: s3://${ConfigBucket}/companies.yaml | secrets: ssm:/${SsmPathName}/ | region: ${AWS::Region}"

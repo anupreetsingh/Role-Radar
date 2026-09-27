@@ -27,6 +27,7 @@ from typing import Any, Callable
 from role_radar.backends import Backend, ConfigSource
 from role_radar.config import AppConfig
 from role_radar.http_client import RobotsCache
+from role_radar.lease import Lease
 from role_radar.monitor import Notifiers, PassResult, run_pass
 from role_radar.storage import utcnow
 
@@ -37,6 +38,9 @@ RENEW_EVERY = 60.0  # ...renewed this often
 WAIT_POLL = 15.0  # how often a runner without the lease tries again
 MIN_SLEEP, MAX_SLEEP = 15.0, 60.0  # between passes while holding the lease
 CONFIG_REFRESH = 300.0  # re-read the config at most this often (S3 only resends it if changed)
+LAMBDA_WORK_SECONDS = 600.0  # Lambda stops starting companies after this long
+LAMBDA_LEASE_MARGIN = 60.0  # Lambda's lease outlives the invocation's time limit by this much
+HANDOFF_POLL = 10.0  # how often Lambda looks for a handoff request
 EXIT_LEASE_HELD = 4
 UNREACHABLE = "(unreachable)"  # _take_lease() couldn't reach the store at all
 
@@ -50,10 +54,12 @@ class Runner:
         *,
         clock: Callable[[], float] = time.time,
         robots: RobotsCache | None = None,
+        name: str | None = None,
     ) -> None:
         self.source = source
         self.store = backend.store
         self.lease = backend.lease
+        self.name = name or backend.lease.holder  # its passes are recorded under this, for `status`
         self.notifiers = notifiers
         self.clock = clock
         self.robots = robots or RobotsCache()
@@ -79,7 +85,7 @@ class Runner:
         result = await run_pass(config, self.store, self.notifiers, lease=self.lease, robots=self.robots, **kwargs)
         if (result.checked or result.lease_lost) and not kwargs.get("dry_run"):
             try:
-                await asyncio.to_thread(self.store.record_run, self.lease.holder, result.summary())
+                await asyncio.to_thread(self.store.record_run, self.name, {**result.summary(), "holder": self.lease.holder})
             except Exception as exc:  # informational only
                 log.warning("Couldn't record the pass: %s", exc)
         return result
@@ -89,40 +95,48 @@ class Runner:
     async def serve(self, stop: asyncio.Event) -> int:
         """`role-radar start`: check companies whenever this runner holds the lease, until `stop` is set."""
         renewer: asyncio.Task[None] | None = None
-        waiting_for: str | None = None
         try:
             while not stop.is_set():
                 if not self.lease.held:
                     if renewer:
                         renewer.cancel()
-                        renewer = None
-                    holder = await self._take_lease()
-                    if holder:
-                        if holder != waiting_for:
-                            if holder == UNREACHABLE:
-                                log.warning("Can't reach the lease (offline?); retrying every %.0fs", WAIT_POLL)
-                            else:
-                                log.info("%s has the lease; asked it to hand over, will take over when it does", holder)
-                            waiting_for = holder
-                        await _wait(stop, WAIT_POLL)
-                        continue
-                    waiting_for = None
+                    if not await self._wait_for_lease(stop):
+                        break
                     renewer = asyncio.create_task(self._keep_renewing())
-                try:
-                    result = await self.pass_once(should_stop=stop.is_set)
-                except Exception as exc:  # e.g. DynamoDB or S3 unreachable; try again shortly
-                    log.error("Pass failed: %s", exc)
-                    await _wait(stop, WAIT_POLL)
-                    continue
-                if result.lease_lost:
-                    log.warning("Lost the lease; will take it back once it's free")
-                    continue
-                await _wait(stop, self._pause_after(result))
+                await _wait(stop, await self._serve_pass(stop))
         finally:
             if renewer:
                 renewer.cancel()
             await asyncio.to_thread(self._release)
         return 0
+
+    async def _wait_for_lease(self, stop: asyncio.Event) -> bool:
+        """Take the lease, asking whoever has it to hand over and retrying. False if stopped first."""
+        waiting_for: str | None = None
+        while not stop.is_set():
+            holder = await self._take_lease()
+            if not holder:
+                return True
+            if holder != waiting_for:
+                if holder == UNREACHABLE:
+                    log.warning("Can't reach the lease (offline?); retrying every %.0fs", WAIT_POLL)
+                else:
+                    log.info("%s has the lease; asked it to hand over, will take over when it does", holder)
+                waiting_for = holder
+            await _wait(stop, WAIT_POLL)
+        return False
+
+    async def _serve_pass(self, stop: asyncio.Event) -> float:
+        """One pass while holding the lease. Returns how long to wait before the next."""
+        try:
+            result = await self.pass_once(should_stop=stop.is_set)
+        except Exception as exc:  # e.g. DynamoDB or S3 unreachable; try again shortly
+            log.error("Pass failed: %s", exc)
+            return WAIT_POLL
+        if result.lease_lost:
+            log.warning("Lost the lease; will take it back once it's free")
+            return 0
+        return self._pause_after(result)
 
     async def run_once(self, stop: asyncio.Event | None = None, **kwargs: Any) -> int:
         """`role-radar run --once`: take the lease, run one pass, release it."""
@@ -138,6 +152,36 @@ class Runner:
             return result.exit_code
         finally:
             renewer.cancel()
+            await asyncio.to_thread(self._release)
+
+    # -- Lambda -------------------------------------------------------------
+
+    async def lambda_pass(
+        self, remaining: float, work_seconds: float = LAMBDA_WORK_SECONDS, holder: str | None = None
+    ) -> PassResult | None:
+        """Lambda: take the lease for the rest of this invocation and check what's due.
+
+        Returns None at once if another runner (normally the laptop) holds the
+        lease. Otherwise stops starting companies after `work_seconds`, or as
+        soon as the laptop asks to take over, lets the ones in flight finish
+        (each is cut short to fit in `remaining`), and releases the lease.
+        `holder` names this invocation, so an overlapping one waits rather
+        than taking the lease over.
+        """
+        if holder:
+            self.lease.holder = holder
+        if not await asyncio.to_thread(self.lease.acquire, remaining + LAMBDA_LEASE_MARGIN):
+            return None
+        started = time.monotonic()
+        stop_starting_at = started + min(work_seconds, remaining)
+        handoff = _HandoffWatch(self.lease)
+
+        def should_stop() -> bool:
+            return time.monotonic() >= stop_starting_at or handoff.requested()
+
+        try:
+            return await self.pass_once(should_stop=should_stop, deadline=started + remaining)
+        finally:
             await asyncio.to_thread(self._release)
 
     async def _take_lease(self, ask: bool = True) -> str | None:
@@ -174,6 +218,27 @@ class Runner:
         if result.next_due is None:
             return MAX_SLEEP
         return min(max((result.next_due - utcnow()).total_seconds(), MIN_SLEEP), MAX_SLEEP)
+
+
+class _HandoffWatch:
+    """Lambda's view of whether the laptop has asked to take over, re-read at most every HANDOFF_POLL seconds."""
+
+    def __init__(self, lease: Lease) -> None:
+        self.lease = lease
+        self._checked_at = -HANDOFF_POLL
+        self._asked_by: str | None = None
+
+    def requested(self) -> bool:
+        now = time.monotonic()
+        if self._asked_by is None and now - self._checked_at >= HANDOFF_POLL:
+            self._checked_at = now
+            try:
+                self._asked_by = self.lease.handoff_requested()
+            except Exception as exc:  # can't tell; carry on until the next check
+                log.warning("Couldn't check for a handoff request: %s", exc)
+            if self._asked_by:
+                log.info("%s asked to take over; finishing the companies in progress", self._asked_by)
+        return self._asked_by is not None
 
 
 async def _wait(stop: asyncio.Event, seconds: float) -> None:

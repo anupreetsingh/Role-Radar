@@ -38,6 +38,7 @@ ALERTS = "#alerts"
 RUNS = "#runs"
 ALERT_TTL = 30 * 86400  # seconds an alert-log row lives (the table's TTL attribute is "ttl")
 MAX_TRANSACTION = 100  # DynamoDB's limit on actions per TransactWriteItems
+TRANSACTION_ATTEMPTS = 11
 REQUEST_STALE_AFTER = 120  # seconds a handoff request keeps others from taking the lease
 _RETRYABLE_TXN = {"ThrottlingError", "ProvisionedThroughputExceeded", "TransactionConflict"}
 
@@ -76,8 +77,8 @@ def _error_code(exc: ClientError) -> str:
     return exc.response.get("Error", {}).get("Code", "")
 
 
-def _backoff(attempt: int) -> None:
-    time.sleep(min(0.05 * 2**attempt, 2.0))
+def _backoff(attempt: int, cap: float = 2.0) -> None:
+    time.sleep(min(0.05 * 2**attempt, cap))
 
 
 def create_table(client: Any, table: str, read_capacity: int = 25, write_capacity: int = 25) -> None:
@@ -323,7 +324,9 @@ class DynamoStateStore(StateStore):
         return {"Put": {"TableName": self.table, "Item": _item(ALERTS, sk, {k: v for k, v in attrs.items() if v})}}
 
     def _transact(self, items: list[dict[str, Any]]) -> None:
-        for attempt in range(8):
+        # boto3 doesn't retry cancelled transactions, so throttling (common on a
+        # small provisioned table during a big first load) is retried here, ~20 s in all.
+        for attempt in range(TRANSACTION_ATTEMPTS):
             try:
                 self.client.transact_write_items(TransactItems=items)
                 return
@@ -334,9 +337,9 @@ class DynamoStateStore(StateStore):
                 if self.lease and reasons and reasons[0] == "ConditionalCheckFailed":
                     self.lease.epoch = None
                     raise LeaseLost(f"{self.lease.holder} lost the lease; nothing was saved") from exc
-                if not _RETRYABLE_TXN.intersection(reasons) or attempt == 7:
+                if not _RETRYABLE_TXN.intersection(reasons) or attempt == TRANSACTION_ATTEMPTS - 1:
                     raise
-                _backoff(attempt)
+                _backoff(attempt, cap=5.0)
 
     def record_run(self, runner: str, summary: dict[str, Any]) -> None:
         """Remember a runner's last pass for `status` (not fenced: it's informational)."""

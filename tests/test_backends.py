@@ -120,3 +120,17 @@ def test_secrets_from_the_environment():
     assert isinstance(console, ConsoleNotifier)
     (discord,) = NotifierSource(RuntimeSettings(), env={"DISCORD_WEBHOOK_URL": "https://discord.invalid/x"})()
     assert isinstance(discord, DiscordNotifier)
+
+
+def test_secrets_are_reread_after_a_failed_delivery(fake_aws, monkeypatch):
+    import boto3
+
+    ssm = boto3.client("ssm", region_name="us-east-1")
+    ssm.put_parameter(Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/old", Type="SecureString")
+    source = NotifierSource(RuntimeSettings(secrets="ssm:/role-radar/", region="us-east-1").with_env({}))
+    (old,) = source()
+    ssm.put_parameter(Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/new", Type="SecureString", Overwrite=True)
+    assert source()[0] is old  # cached
+    source.invalidate()
+    (new,) = source()
+    assert new._url == "https://discord.invalid/new"

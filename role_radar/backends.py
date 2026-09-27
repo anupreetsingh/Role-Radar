@@ -116,6 +116,11 @@ class NotifierSource:
                 log.info("Alert channels: %s", ", ".join(n.name for n in self._notifiers))
             return self._notifiers
 
+    def invalidate(self) -> None:
+        """Forget the channels, so the next alert re-reads the settings (e.g. after a rotated webhook)."""
+        with self._lock:
+            self._notifiers = None
+
 
 @dataclass
 class Backend:

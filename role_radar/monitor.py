@@ -264,6 +264,9 @@ async def process_company(
             record.alerted = [j.uid for j in to_notify]
         else:
             log.error("[%s] no notification channel succeeded; %d job(s) will be retried next check", company.name, len(to_notify))
+            invalidate = getattr(notifiers, "invalidate", None)
+            if invalidate:  # re-read the channel settings next time, in case they changed
+                invalidate()
 
     pruned = state.prune(settings.retention_days, now)
     if pruned:
