@@ -152,7 +152,7 @@ Limits worth knowing:
   the first ~3 checks work through its ~1,000 open jobs; after that a new posting is
   read at the next check. `max_alert_age_days: 14` keeps those older jobs from alerting.
 - TikTok's API filters by city only, so each check reads all ~4,300 jobs (~18 MB)
-  and keeps US ones; it's checked every four hours.
+  and keeps US ones.
 
 Not added, and why: SmartRecruiters (ServiceNow, Western Digital, AbbVie, Visa...)
 disallows its posting API to all crawlers but LinkedIn's; its public pages group

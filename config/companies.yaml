@@ -36,8 +36,9 @@ runtime:
   profile: role-radar-admin
 
 settings:
-  check_interval_minutes: 30  # each company is checked when due, so load spreads across the interval
-  digest_interval_minutes: 30 # combine all new matching jobs into one notification per half hour
+  # Target: a new job reaches you within 30 minutes (check every 20 + digest every 10).
+  check_interval_minutes: 20  # each company is checked when due, so load spreads across the interval
+  digest_interval_minutes: 10 # combine all new matching jobs into one notification every 10 minutes
   notify_on_first_run: false  # new companies record a baseline first; set true to alert on their open jobs
   repost_window_days: 30
   retention_days: 90
@@ -48,7 +49,6 @@ settings:
   # a time: roughly 4,500 requests per round, spread over four hours.
   check_interval_by_ats:
     workday: 240
-    tiktok: 240   # every check reads all ~4,300 TikTok jobs (~18 MB)
   company_concurrency_by_ats:
     workday: 2
   http:
@@ -1897,7 +1897,7 @@ companies:
     ats: eightfold
     options:
       domain: microsoft.com
-      max_jobs: 300             # newest 300 of ~1,200 US jobs
+      max_jobs: 100             # newest 100 of ~1,200 US jobs: plenty between checks
 
   - name: Netflix
     url: https://explore.jobs.netflix.net/careers

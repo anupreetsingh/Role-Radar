@@ -188,7 +188,7 @@ completed alerts are not replayed when another channel is added.
 ### Scheduling
 
 Companies aren't all checked at once. Each one is checked when it's **due**: when
-`check_interval_minutes` (30; Workday companies 240, via `check_interval_by_ats`) have
+`check_interval_minutes` (20; Workday companies 240, via `check_interval_by_ats`) have
 passed since its last check, or straight away if it has never been checked. Each company's state is saved as soon as that company finishes,
 so an interrupted pass loses at most the companies still in flight. Those companies are
 still due and get picked up next time.
@@ -205,7 +205,7 @@ still due and get picked up next time.
 
 #### Notification digests
 
-`settings.digest_interval_minutes: 30` collects all new matching jobs across enabled
+`settings.digest_interval_minutes: 10` collects all new matching jobs across enabled
 companies into one email and one Discord message, grouped by company with application
 links. If the list exceeds Discord's message limit, the single message includes the
 complete list as a text attachment. Empty intervals send nothing.
