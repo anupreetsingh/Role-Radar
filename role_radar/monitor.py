@@ -460,7 +460,7 @@ async def run_pass(
     due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), interval_for(settings))
     if not due:
         result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
-        if not baseline and not dry_run and not await _stopping(should_stop):
+        if not baseline and not dry_run:
             await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
         result.seconds = time.monotonic() - started
         result.finished_at = clock()
@@ -501,7 +501,9 @@ async def run_pass(
     result.requests, result.bytes = http.stats.requests, http.stats.bytes
     schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
     result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
-    if not baseline and not dry_run and not result.lease_lost and not await _stopping(should_stop):
+    # Sent even once should_stop() is true: it stops new companies, not the digest. Otherwise a
+    # Lambda with a backlog, which always works to the end of its window, would never send one.
+    if not baseline and not dry_run and not result.lease_lost:
         await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
     result.seconds = time.monotonic() - started
     result.finished_at = clock()

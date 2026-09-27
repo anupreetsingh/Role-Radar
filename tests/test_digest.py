@@ -97,6 +97,23 @@ def test_digest_survives_a_careers_site_failure(monkeypatch, store_factory):
     assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
 
 
+def test_digest_is_sent_when_the_work_window_ends_mid_pass(monkeypatch, store_factory):
+    # Lambda stops starting companies after its work window. With a backlog every
+    # pass runs into it, and the digest must still go out.
+    cfg = config("Continental Finance")
+    notifier = RecordingNotifier()
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg)
+    calls = []
+
+    def window_ends_after_first_company():
+        calls.append(1)
+        return len(calls) > 1
+
+    assert run_monitor(monkeypatch, store_factory(), notifier, config=cfg, check_all=True,
+                       should_stop=window_ends_after_first_company, clock=lambda: T0 + timedelta(minutes=30)) == 0
+    assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
+
+
 def test_digest_skips_baselines_and_dry_runs(monkeypatch, store_factory):
     cfg = config("Continental Finance")
     notifier = RecordingNotifier()
