@@ -9,7 +9,7 @@ import pytest
 
 from config import CompanyConfig
 from filters import JobFilter
-from http_client import HttpClient, HttpSettings
+from http_client import DEFAULT_HOST_DELAYS, HttpClient, HttpSettings
 from models import JobPosting
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -24,8 +24,10 @@ def fixture_json(name: str):
 
 
 def make_client(handler: Callable[[httpx.Request], httpx.Response], **overrides) -> HttpClient:
-    settings = HttpSettings(per_domain_delay=0, respect_robots=False, max_retries=2, backoff_base=0, **overrides)
-    return HttpClient(settings, transport=httpx.MockTransport(handler))
+    options = {"per_domain_delay": 0, "respect_robots": False, "max_retries": 2, "backoff_base": 0, **overrides}
+    # Zero delays for the built-in API hosts too, unless a test sets its own.
+    options["host_delays"] = {host: 0 for host in DEFAULT_HOST_DELAYS} | options.get("host_delays", {})
+    return HttpClient(HttpSettings(**options), transport=httpx.MockTransport(handler))
 
 
 def company(name: str = "Acme", url: str = "https://acme.example/careers", **filters) -> CompanyConfig:

@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -136,6 +137,7 @@ async def run(
         return 2
 
     sem = asyncio.Semaphore(settings.max_company_concurrency)
+    started = time.monotonic()
 
     async with HttpClient(settings.http) as http:
 
@@ -152,6 +154,10 @@ async def run(
                     return CompanyOutcome(company.name, error=msg)
 
         outcomes = await asyncio.gather(*(guarded(c) for c in companies))
+
+    log.info("Checked %d companies in %.1fs: %s", len(companies), time.monotonic() - started, http.stats.summary())
+    for host, stats in http.stats.busiest():
+        log.debug("  %s: %d requests, %d bytes, %d failed", host, stats.requests, stats.bytes, stats.errors)
 
     if list_matches:
         for o in outcomes:

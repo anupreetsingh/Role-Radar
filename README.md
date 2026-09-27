@@ -23,10 +23,16 @@ seen_jobs.json ────────┤
   GitHub Actions commits seen_jobs.json back (only if changed)
 ```
 
-All HTTP goes through `http_client.py`. Each request checks robots.txt, waits for a
-global concurrency slot and for the per-domain throttle, and retries with exponential
-backoff on timeouts, 429 and 5xx (it honours `Retry-After`). If one company fails, that
-failure is logged and the other companies still run.
+All HTTP goes through `http_client.py`. Each request checks robots.txt, waits until its
+host's delay has passed since the previous request to that host, then takes one of the
+global concurrency slots, and retries with exponential backoff on timeouts, 429 and 5xx
+(it honours `Retry-After`). The host wait comes first, so requests queued behind a busy
+shared host such as `boards-api.greenhouse.io` don't hold slots that other hosts could
+use. If one company fails, that failure is logged and the other companies still run.
+
+At the end of every run the log shows how long it took, the number of requests and bytes
+downloaded (compressed, as received), and the busiest hosts. Run with `-v` to see every
+host.
 
 | Module | Role |
 |---|---|
@@ -204,10 +210,13 @@ Things to know about GitHub scheduling:
 - If you edit `seen_jobs.json` locally, pull first.
 - In a public repo, the state file (job titles and URLs only, no secrets) is public too.
 
-## Scaling to 50–100 companies
+## Scaling to 1,000 companies
 
-- The defaults allow 8 concurrent requests overall and 1 request per second per host.
-  Most boards take one request.
+- The defaults allow 16 requests in flight overall, 40 companies in flight, and one
+  request per second per host. The shared ATS APIs are exceptions:
+  `boards-api.greenhouse.io` gets 0.25 s, and `api.lever.co` / `api.ashbyhq.com` get
+  0.3 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
+  subdomains. Most boards take one request, so 1,000 companies take a few minutes.
 - Detail requests are made only when a filter needs a field the listing lacks, only for
   unseen jobs that could still match, and at most `max_detail_requests` per company per
   run. Any left over are picked up next run.

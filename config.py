@@ -35,7 +35,9 @@ class Settings:
     retention_days: int = 90
     # Cap on per-job detail requests per company per run (remaining ones are fetched next run).
     max_detail_requests: int = 25
-    max_company_concurrency: int = 10
+    # Companies checked at once. Requests are still limited by http.max_concurrency
+    # and each host's delay; this just keeps enough work queued for other hosts.
+    max_company_concurrency: int = 40
     company_timeout: float = 300.0
     http: HttpSettings = field(default_factory=HttpSettings)
 

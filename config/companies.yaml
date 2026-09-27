@@ -26,11 +26,16 @@ settings:
   repost_window_days: 30
   retention_days: 90
   max_detail_requests: 25
-  max_company_concurrency: 10
+  max_company_concurrency: 40   # companies in flight; requests are limited separately below
   company_timeout: 300
   http:
-    max_concurrency: 8
-    per_domain_delay: 1.0
+    max_concurrency: 16         # requests in flight across all hosts
+    per_domain_delay: 1.0       # seconds between requests to one host...
+    host_delays:                # ...except these shared ATS APIs (these are also the built-in defaults)
+      boards-api.greenhouse.io: 0.25
+      api.lever.co: 0.3
+      api.eu.lever.co: 0.3
+      api.ashbyhq.com: 0.3
     connect_timeout: 10
     read_timeout: 30
     max_retries: 3
