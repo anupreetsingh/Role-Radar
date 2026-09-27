@@ -1,8 +1,8 @@
 import random
 from datetime import datetime, timedelta, timezone
 
-from schedule import after_check, due_at, due_companies, next_due
-from storage import CompanyMeta, from_iso, to_iso
+from role_radar.schedule import after_check, due_at, due_companies, next_due
+from role_radar.storage import CompanyMeta, from_iso, to_iso
 from tests.conftest import company
 
 T0 = datetime(2026, 9, 1, 12, tzinfo=timezone.utc)

@@ -4,7 +4,7 @@ import time
 import httpx
 import pytest
 
-from http_client import FetchError, HttpClient, HttpSettings, RobotsDisallowed, format_bytes
+from role_radar.http_client import FetchError, HttpClient, HttpSettings, RobotsDisallowed, format_bytes
 from tests.conftest import make_client
 
 

@@ -6,13 +6,14 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-import monitor
-from config import AppConfig, CompanyConfig, Settings
-from filters import JobFilter
-from http_client import HttpClient, HttpSettings
-from notifications import DiscordNotifier, Notifier, format_group, group_jobs
-from storage import MemoryStateStore, MonitorState, from_iso
-from tests.conftest import fixture_json, job, make_client
+from role_radar import monitor
+from role_radar.config import AppConfig, CompanyConfig, Settings
+from role_radar.filters import JobFilter
+from role_radar.http_client import HttpClient, HttpSettings
+from role_radar.lease import LeaseLost, LocalLease
+from role_radar.notifications import DiscordNotifier, Notifier, format_group, group_jobs
+from role_radar.storage import MemoryStateStore, MonitorState, from_iso
+from tests.conftest import Clock, fixture_json, job, make_client
 
 T0 = datetime(2026, 9, 1, 12, tzinfo=timezone.utc)
 
@@ -127,6 +128,44 @@ def test_each_company_is_saved_as_soon_as_it_finishes(monkeypatch):
     config = AppConfig(settings=build_config().settings, companies=companies)
     assert run_monitor(monkeypatch, RecordingStore(), RecordingNotifier(), config=config, handler=handler) == 0
     assert saved == ["Fast", "Slow"]
+
+
+class TakenOverLease(LocalLease):
+    """Looks held from here, but the stored lease now belongs to someone else."""
+
+    def verify(self):
+        self.check()
+        raise LeaseLost("lambda took over")
+
+
+class ExpiringLease(LocalLease):
+    def acquire(self, ttl):
+        self.epoch, self.expires_at = 1, self.clock() + ttl
+        return True
+
+
+def test_runner_never_alerts_after_a_takeover(monkeypatch):
+    store, notifier = MemoryStateStore(), RecordingNotifier()
+    lease = TakenOverLease("laptop:mac")
+    lease.acquire(0)
+    assert run_monitor(monkeypatch, store, notifier, lease=lease) == monitor.EXIT_LEASE_LOST
+    assert notifier.batches == []
+    assert "Continental Finance" not in store.load_schedule()  # not saved either: still due
+
+
+def test_runner_stops_before_saving_once_its_lease_expired(monkeypatch):
+    clock = Clock()
+    lease = ExpiringLease("laptop:mac", clock)
+    lease.acquire(180)
+    store, notifier = MemoryStateStore(), RecordingNotifier()
+
+    def handler(request):
+        clock.advance(3600)  # the lid closes mid-scrape; the process wakes an hour later
+        return httpx.Response(200, json=fixture_json("bamboohr_list.json"))
+
+    config = AppConfig(settings=build_config().settings, companies=build_config().companies[:1])
+    assert run_monitor(monkeypatch, store, notifier, config=config, handler=handler, lease=lease) == monitor.EXIT_LEASE_LOST
+    assert notifier.batches == [] and store.saves == 0
 
 
 def test_baseline_checks_every_company_without_alerting(monkeypatch):

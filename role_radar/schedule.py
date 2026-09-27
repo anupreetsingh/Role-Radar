@@ -21,8 +21,8 @@ import random
 from datetime import datetime, timedelta
 from typing import Iterable
 
-from config import CompanyConfig
-from storage import CompanyMeta, from_iso, to_iso
+from role_radar.config import CompanyConfig
+from role_radar.storage import CompanyMeta, from_iso, to_iso
 
 MAX_BACKOFF = 8  # longest interval for a failing company, as a multiple of the normal one
 _rng = random.Random()

@@ -39,7 +39,7 @@ def from_iso(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def _compact(obj: object) -> dict:
+def compact(obj: object) -> dict:
     """asdict() without empty values, so stored records stay small."""
     return {k: v for k, v in asdict(obj).items() if v not in (None, False, 0)}
 
@@ -89,6 +89,11 @@ class CompanyRecord:
     name: str
     jobs: dict[str, SeenJob] = field(default_factory=dict)
     meta: CompanyMeta = field(default_factory=CompanyMeta)
+    # Not persisted as such. `loaded` is what a store read (uid → stored fields),
+    # so it can write only the rows that changed; `alerted` lists the uids
+    # alerted during this check, for the store's alert log.
+    loaded: dict[str, dict] | None = field(default=None, repr=False, compare=False)
+    alerted: list[str] = field(default_factory=list, repr=False, compare=False)
 
     @property
     def is_new(self) -> bool:
@@ -134,9 +139,9 @@ class MonitorState:
         return {
             "version": SCHEMA_VERSION,
             "companies": {
-                company: {uid: _compact(job) for uid, job in jobs.items()} for company, jobs in self.companies.items() if jobs
+                company: {uid: compact(job) for uid, job in jobs.items()} for company, jobs in self.companies.items() if jobs
             },
-            "schedule": {company: _compact(meta) for company, meta in self.meta.items() if _compact(meta)},
+            "schedule": {company: compact(meta) for company, meta in self.meta.items() if compact(meta)},
         }
 
     @classmethod

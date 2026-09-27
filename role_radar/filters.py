@@ -21,7 +21,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Collection
 
-from models import JobPosting
+from role_radar.models import JobPosting
 
 # The fields a rule can be applied to. Add an entry here to make a new field matchable.
 FIELD_GETTERS: dict[str, Callable[[JobPosting], str | None]] = {

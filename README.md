@@ -33,16 +33,22 @@ At the end of every run the log shows how long it took, the number of requests a
 downloaded (compressed, as received), and the busiest hosts. Run with `-v` to see every
 host.
 
+All modules live in the `role_radar/` package.
+
 | Module | Role |
 |---|---|
 | `monitor.py` | CLI entry point and orchestration |
 | `schedule.py` | Which companies are due, and when each is next checked |
-| `config.py` | Loads and validates `companies.yaml` (JSON also accepted) |
+| `config.py` | Loads and validates `companies.yaml` (JSON also accepted), including `runtime:` |
 | `models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
 | `scrapers/` | One class per ATS plus `generic.py`; registry in `scrapers/__init__.py` |
 | `filters.py` | Keyword, location and employment-type rules |
 | `tracker.py` | New-job, removal, repost and duplicate detection |
-| `storage.py` | `StateStore` interface + JSON implementation |
+| `storage.py` | `StateStore` interface + JSON and in-memory implementations |
+| `lease.py` | The lease that decides which runner may work, and fencing |
+| `dynamo.py` | DynamoDB `StateStore` and lease (one table) |
+| `aws.py` | boto3 helpers: the config file in S3, secrets in SSM |
+| `backends.py` | Picks the store, lease, config source and secrets from `runtime:` |
 | `notifications.py` | `Notifier` interface + Discord, email and console |
 
 ### Supported sources
@@ -139,12 +145,49 @@ management and executive titles.
    needs that field.
 2. Add the class to `SCRAPERS` in `scrapers/__init__.py`.
 
-### Swapping the storage backend
+### Backends: state, config and secrets
 
-Subclass `storage.StateStore`. Runs use `load_schedule()` (every company's next check
-time), then `load_company()` and `save_company()` around each company's check. `load()`
-and `save()` move a whole state at once, for migration. Pass the store to
-`monitor.run()` in place of `JsonStateStore`.
+The `runtime:` section of `companies.yaml` picks where things live, and environment
+variables override each key. That way one codebase serves the laptop, Lambda and tests.
+
+| Key | Env var | Values |
+|---|---|---|
+| `storage` | `ROLE_RADAR_STORAGE` | `json` (default): `state_file` on disk. `dynamodb`: the shared table |
+| `state_file` | `ROLE_RADAR_STATE_FILE` | JSON state path (default `seen_jobs.json`) |
+| `table` | `ROLE_RADAR_TABLE` | DynamoDB table name |
+| `config_url` | `ROLE_RADAR_CONFIG_URL` | `s3://bucket/key`. Companies and settings are read from there; the local file then only supplies `runtime:` |
+| `secrets` | `ROLE_RADAR_SECRETS` | `env` (default): environment variables. `ssm:/role-radar/`: SSM Parameter Store, fetched the first time an alert is sent |
+| `region`, `profile` | `AWS_REGION`, `AWS_PROFILE` | Which AWS region and `~/.aws` profile to use |
+
+The AWS backends need boto3: `pip install '.[aws]'`.
+
+**DynamoDB layout** (one table, `pk` + `sk`):
+
+| pk | sk | Item |
+|---|---|---|
+| company name | job uid | A seen job (the fields of `SeenJob`) |
+| `#schedule` | company name | `last_checked_at`, `next_check_at`, failure count |
+| `#lease` | `#lease` | Who may check companies now: `holder`, `epoch`, `expires_at` |
+| `#alerts` | time + company + uid | Log of sent alerts, which expires after 30 days via TTL |
+| `#runs` | runner | Each runner's last pass |
+
+Reads are strongly consistent. Right after a handoff, the new runner must see everything
+the previous one wrote.
+
+**The lease and fencing.** Only the lease holder checks companies. It takes the lease
+with a conditional write that succeeds only if the lease has expired or is already its
+own, and every successful take bumps `epoch`. Each company is saved in one transaction
+together with a check that the lease still has *this runner's* epoch. So a runner that
+was paused past its expiry can't overwrite the work of whoever took over, even before it
+notices; a laptop that slept mid-run is the usual case. Before sending alerts, a runner
+also re-reads the lease. A runner that finds it has lost the lease stops without saving
+or sending anything more, and its unfinished companies are still due for the new holder.
+Expiry uses wall-clock time, because on macOS the monotonic clock stops while the laptop
+sleeps.
+
+To write another backend, subclass `storage.StateStore`. Runs use `load_schedule()`
+(every company's next check time), then `load_company()` and `save_company()` around
+each company's check. `load()` and `save()` move a whole state at once, for migration.
 
 ## Run locally
 
@@ -152,16 +195,16 @@ and `save()` move a whole state at once, for migration. Pass the store to
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 
-python -m pytest                          # tests
-python monitor.py --list-matches          # show every job matching now (no state, no alerts)
-python monitor.py --dry-run -v            # check due companies, print alerts, save nothing
-python monitor.py --all --dry-run         # the same for every company, due or not
-python monitor.py --company "Continental Finance" --dry-run
+python -m pytest                                # tests
+python -m role_radar.monitor --list-matches     # show every job matching now (no state, no alerts)
+python -m role_radar.monitor --dry-run -v       # check due companies, print alerts, save nothing
+python -m role_radar.monitor --all --dry-run    # the same for every company, due or not
+python -m role_radar.monitor --company "Continental Finance" --dry-run
 
 cp .env.example .env                      # fill in a Discord webhook and/or SMTP settings
 set -a; source .env; set +a
-python monitor.py                         # real run of due companies: sends alerts, updates seen_jobs.json
-python monitor.py --baseline              # mark everything current as seen, no alerts
+python -m role_radar.monitor                    # real run of due companies: sends alerts, saves state
+python -m role_radar.monitor --baseline         # mark everything current as seen, no alerts
 ```
 
 If no notification env vars are set, alerts go to stdout. The exit code is `1` when

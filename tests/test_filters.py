@@ -1,6 +1,6 @@
 import pytest
 
-from filters import JobFilter, compile_keyword
+from role_radar.filters import JobFilter, compile_keyword
 from tests.conftest import job
 
 INCLUDE = ["software engineer", "backend engineer", "platform engineer", "machine learning engineer", "AI engineer", "data engineer"]
@@ -60,7 +60,7 @@ def test_description_filters_are_rejected():
 
 
 def test_config_with_description_filter_fails_clearly(tmp_path):
-    from config import load_config
+    from role_radar.config import load_config
 
     path = tmp_path / "companies.yaml"
     path.write_text(
@@ -119,7 +119,7 @@ def test_unknown_field_rejected():
 def test_continental_finance_config():
     from pathlib import Path
 
-    from config import load_config
+    from role_radar.config import load_config
 
     cfg = load_config(Path(__file__).parent.parent / "config" / "companies.yaml")
     cf = next(c for c in cfg.companies if c.name == "Continental Finance")

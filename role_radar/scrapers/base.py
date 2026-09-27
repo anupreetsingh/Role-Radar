@@ -9,9 +9,9 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
-from config import CompanyConfig
-from http_client import HttpClient
-from models import JobPosting
+from role_radar.config import CompanyConfig
+from role_radar.http_client import HttpClient
+from role_radar.models import JobPosting
 
 
 @dataclass

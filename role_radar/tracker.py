@@ -18,8 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from models import JobPosting
-from storage import MonitorState, SeenJob, from_iso, to_iso, utcnow
+from role_radar.models import JobPosting
+from role_radar.storage import MonitorState, SeenJob, from_iso, to_iso, utcnow
 
 
 @dataclass

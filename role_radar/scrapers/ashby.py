@@ -11,8 +11,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from models import JobPosting
-from scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
+from role_radar.models import JobPosting
+from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
 
 
 def _humanize(value: str | None) -> str | None:

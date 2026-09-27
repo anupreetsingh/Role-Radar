@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Callable
 
 import httpx
 import pytest
 
-from config import CompanyConfig
-from filters import JobFilter
-from http_client import DEFAULT_HOST_DELAYS, HttpClient, HttpSettings
-from models import JobPosting
+from role_radar.config import CompanyConfig
+from role_radar.filters import JobFilter
+from role_radar.http_client import DEFAULT_HOST_DELAYS, HttpClient, HttpSettings
+from role_radar.models import JobPosting
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -42,3 +43,48 @@ def job(title: str = "Software Engineer", job_id: str | None = "1", location: st
 @pytest.fixture
 def make_job():
     return job
+
+
+@pytest.fixture(autouse=True)
+def _no_runtime_env(monkeypatch):
+    """Keep ROLE_RADAR_* settings from the developer's shell out of the tests."""
+    for name in [n for n in os.environ if n.startswith("ROLE_RADAR_")]:
+        monkeypatch.delenv(name)
+
+
+class Clock:
+    """A settable stand-in for time.time()."""
+
+    def __init__(self, start: float = 1_790_000_000.0) -> None:
+        self.now = start
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def fake_aws(monkeypatch):
+    """Fake AWS (moto) with dummy credentials, so no test can reach a real account."""
+    moto = pytest.importorskip("moto")
+    for name in ("AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    with moto.mock_aws():
+        yield
+
+
+@pytest.fixture
+def table(fake_aws):
+    """A fresh Role Radar table in fake DynamoDB; returns (client, table name)."""
+    import boto3
+
+    from role_radar.dynamo import create_table
+
+    client = boto3.client("dynamodb", region_name="us-east-1")
+    create_table(client, "role-radar-test")
+    return client, "role-radar-test"

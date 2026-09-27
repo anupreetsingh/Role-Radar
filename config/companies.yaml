@@ -20,8 +20,19 @@
 # Matching is case-insensitive, on word boundaries ("AI" won't match "maintain").
 # Prefix a keyword with "re:" to use a regular expression.
 
-settings:
+# Where state, this config and alert secrets live. Environment variables override
+# each key: ROLE_RADAR_STORAGE, ROLE_RADAR_STATE_FILE, ROLE_RADAR_TABLE,
+# ROLE_RADAR_CONFIG_URL, ROLE_RADAR_SECRETS, AWS_REGION, AWS_PROFILE.
+runtime:
+  storage: json               # json: local state_file | dynamodb: the shared table
   state_file: seen_jobs.json
+  # table: role-radar                                           # storage: dynamodb
+  # config_url: s3://role-radar-config-123456789012/companies.yaml  # companies read from here
+  # secrets: ssm:/role-radar/                                   # env | ssm:/path/
+  # region: us-east-1
+  # profile: role-radar                                         # ~/.aws profile
+
+settings:
   check_interval_minutes: 30  # each company is checked when due, so load spreads across the interval
   notify_on_first_run: true   # set false before adding many companies at once
   repost_window_days: 30

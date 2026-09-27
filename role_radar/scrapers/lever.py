@@ -12,8 +12,8 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import urlsplit
 
-from models import JobPosting
-from scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
+from role_radar.models import JobPosting
+from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
 
 PAGE_SIZE = 100
 

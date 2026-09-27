@@ -24,7 +24,7 @@ from email.message import EmailMessage
 
 import httpx
 
-from models import JobPosting, normalize_text
+from role_radar.models import JobPosting, normalize_text
 
 log = logging.getLogger(__name__)
 

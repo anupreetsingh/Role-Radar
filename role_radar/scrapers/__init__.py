@@ -6,13 +6,13 @@ and add the class to SCRAPERS below.
 
 from __future__ import annotations
 
-from scrapers.ashby import AshbyScraper
-from scrapers.bamboohr import BambooHRScraper
-from scrapers.base import BaseScraper, ScrapeResult, ScraperError
-from scrapers.generic import GenericScraper
-from scrapers.greenhouse import GreenhouseScraper
-from scrapers.lever import LeverScraper
-from scrapers.workday import WorkdayScraper
+from role_radar.scrapers.ashby import AshbyScraper
+from role_radar.scrapers.bamboohr import BambooHRScraper
+from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
+from role_radar.scrapers.generic import GenericScraper
+from role_radar.scrapers.greenhouse import GreenhouseScraper
+from role_radar.scrapers.lever import LeverScraper
+from role_radar.scrapers.workday import WorkdayScraper
 
 SCRAPERS: dict[str, type[BaseScraper]] = {
     cls.name: cls

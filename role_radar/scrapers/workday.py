@@ -20,8 +20,8 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from models import JobPosting
-from scrapers.base import BaseScraper, ScrapeResult, ScraperError, parse_date
+from role_radar.models import JobPosting
+from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, parse_date
 
 PAGE_SIZE = 20
 _LOCALE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")

@@ -5,10 +5,10 @@ from datetime import date
 import httpx
 import pytest
 
-from models import JobPosting
-from scrapers import SCRAPERS, scraper_class_for
-from scrapers.base import ScraperError, parse_date
-from storage import SeenJob
+from role_radar.models import JobPosting
+from role_radar.scrapers import SCRAPERS, scraper_class_for
+from role_radar.scrapers.base import ScraperError, parse_date
+from role_radar.storage import SeenJob
 from tests.conftest import company, fixture_json, fixture_text, job, make_client
 
 

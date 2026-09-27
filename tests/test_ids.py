@@ -1,4 +1,4 @@
-from models import JobPosting, normalize_url
+from role_radar.models import JobPosting, normalize_url
 from tests.conftest import job
 
 

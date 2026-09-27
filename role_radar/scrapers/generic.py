@@ -23,9 +23,9 @@ from html.parser import HTMLParser
 from typing import Any, Iterator
 from urllib.parse import urljoin, urlsplit
 
-from config import CompanyConfig
-from models import JobPosting, html_to_text, normalize_url
-from scrapers.base import BaseScraper, ScrapeResult, ScraperError, join_nonempty, parse_date
+from role_radar.config import CompanyConfig
+from role_radar.models import JobPosting, html_to_text, normalize_url
+from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, join_nonempty, parse_date
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +168,7 @@ class GenericScraper(BaseScraper):
     # -- strategies --------------------------------------------------------
 
     def _embedded_scraper(self, page: str) -> BaseScraper | None:
-        from scrapers import SCRAPERS  # local import: registry imports this module
+        from role_radar.scrapers import SCRAPERS  # local import: registry imports this module
 
         for ats, pattern, template in EMBED_PATTERNS:
             m = pattern.search(page)
