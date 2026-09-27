@@ -142,7 +142,7 @@ alert again. The previous version behaved the same way.
 | amazon.jobs | `search.json`, newest first, by category | no |
 | Apple | Search pages' hydration JSON, newest first | no |
 | Google | First results page of each query (robots.txt disallows paging), newest first | no |
-| Meta | `/jobsearch/sitemap.xml` for the job IDs | each job's page once, for its title and location (at most 40 a check) |
+| Meta | `/jobsearch/sitemap.xml` for the job IDs | each new job's page once, for its title and location (up to 2 minutes of pages a check) |
 | TikTok | Public search API; the listing is filtered to US jobs locally | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
 

@@ -68,6 +68,7 @@ settings:
       apply.careers.microsoft.com: 3.0
       explore.jobs.netflix.net: 2.0
       eightfold.ai: 2.0         # all *.eightfold.ai tenants share this rate
+      www.metacareers.com: 0.25 # Meta's catch-up reads ~1,000 job pages; new ones after that
     connect_timeout: 10
     read_timeout: 30
     max_retries: 3
@@ -1889,9 +1890,7 @@ companies:
   - name: Meta
     url: https://www.metacareers.com/jobsearch/
     ats: meta
-    max_alert_age_days: 14      # the first checks work through ~1,000 older jobs
-    options:
-      new_per_check: 40
+    max_alert_age_days: 14      # the first ~3 checks work through ~1,000 older jobs
 
   - name: Microsoft
     url: https://apply.careers.microsoft.com/careers

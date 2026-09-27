@@ -148,8 +148,9 @@ Limits worth knowing:
 - Amazon, Apple, Microsoft and the Oracle sites are read newest first up to a cap
   (see each company's options), so they're never removal snapshots.
 - Meta's search page is built in the browser; the scraper uses its job sitemap and
-  reads each new job's page once (40 a check), so the first ~25 checks work through
-  its ~1,000 open jobs. `max_alert_age_days: 14` keeps those older jobs from alerting.
+  reads each new job's page once (up to 2 minutes of pages a check, 4 a second), so
+  the first ~3 checks work through its ~1,000 open jobs; after that a new posting is
+  read at the next check. `max_alert_age_days: 14` keeps those older jobs from alerting.
 - TikTok's API filters by city only, so each check reads all ~4,300 jobs (~18 MB)
   and keeps US ones; it's checked every four hours.
 

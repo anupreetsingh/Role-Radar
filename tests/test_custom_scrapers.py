@@ -363,7 +363,7 @@ def test_meta_reads_new_jobs_from_their_pages_and_reuses_known_ones():
             return await scraper.fetch_jobs()
 
     first = asyncio.run(go({}, new_per_check=2))
-    assert fetched == ["11", "22"] and not first.complete  # 2 of 4 read this check
+    assert sorted(fetched) == ["11", "22"] and not first.complete  # 2 of 4 read this check
     assert [j.title for j in first.jobs] == ["Software Engineer 11", "Software Engineer 22"]
     assert first.jobs[0].location == "Menlo Park, CA, US" and str(first.jobs[0].date_posted) == "2026-09-20"
 
@@ -371,7 +371,9 @@ def test_meta_reads_new_jobs_from_their_pages_and_reuses_known_ones():
              for j in first.jobs}
     fetched.clear()
     second = asyncio.run(go(known, new_per_check=2))
-    assert fetched == ["33", "44"] and second.complete  # known jobs cost nothing
+    assert sorted(fetched) == ["33", "44"] and second.complete  # known jobs cost nothing
+    fetched.clear()
+    assert not asyncio.run(go({}, read_seconds=0)).jobs and fetched == []  # out of time: nothing read
     assert {j.title for j in second.jobs} == {f"Software Engineer {i}" for i in (11, 22, 33, 44)}
 
 
