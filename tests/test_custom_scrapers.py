@@ -1,4 +1,6 @@
 import asyncio
+import json
+import re
 from pathlib import Path
 
 import httpx
@@ -210,3 +212,188 @@ def test_config_program_titles_and_target_countries(title, location, expected):
     config = load_config(Path(__file__).parent.parent / "config/companies.yaml")
     filt = next(c.filter for c in config.companies if c.name == "Discord")
     assert filt.evaluate(job(title, location=location)).matched is expected
+
+
+# -- big-company career sites and the Oracle HCM / Eightfold platforms --
+
+def test_amazon_reads_newest_pages_and_is_incomplete_at_the_hits_cap():
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params.multi_items()))
+        offset = int(request.url.params["offset"])
+        jobs = [{"id_icims": str(offset + i), "title": f"Software Development Engineer {offset + i}",
+                 "job_path": f"/en/jobs/{offset + i}/sde", "normalized_location": "Seattle, Washington, USA",
+                 "posted_date": "September 25, 2026", "job_schedule_type": "full-time", "job_category": "Software Development"}
+                for i in range(100)]
+        return httpx.Response(200, json={"hits": 10000, "jobs": jobs})
+
+    result = run_scraper("amazon", "https://www.amazon.jobs/en/search", handler, max_jobs=200, categories=["software-development"])
+    assert [s["offset"] for s in seen] == ["0", "100"] and seen[0]["sort"] == "recent" and seen[0]["country"] == "USA"
+    assert seen[0]["category[]"] == "software-development"
+    assert len(result.jobs) == 200 and not result.complete
+    job = result.jobs[0]
+    assert job.url == "https://www.amazon.jobs/en/jobs/0/sde" and str(job.date_posted) == "2026-09-25"
+    assert job.location == "Seattle, Washington, USA" and job.employment_type == "full-time"
+
+
+def test_apple_parses_hydration_data_and_stops_at_the_total():
+    import json as _json
+
+    def page(results, total):
+        data = {"loaderData": {"search": {"searchResults": results, "totalRecords": total}}}
+        literal = _json.dumps(_json.dumps(data))[1:-1]  # a JSON document inside a JS string literal
+        return f'<script>window.__staticRouterHydrationData = JSON.parse("{literal}");</script>'
+
+    item = {"positionId": "200685702", "postingTitle": "Software Engineer, Maps", "transformedPostingTitle": "software-engineer-maps",
+            "locations": [{"city": "Cupertino", "stateProvince": "California", "countryName": "United States of America"}],
+            "team": {"teamName": "Software and Services"}, "postDateInGMT": "2026-09-27T10:19:33.768943492Z"}
+    urls = []
+
+    def handler(request):
+        urls.append(str(request.url))
+        return httpx.Response(200, text=page([item], 1))
+
+    result = run_scraper("apple", "https://jobs.apple.com/en-us/search?location=united-states-USA&sort=relevance", handler)
+    assert len(urls) == 1 and "location=united-states-USA" in urls[0] and "sort=newest" in urls[0] and "relevance" not in urls[0]
+    (job,) = result.jobs
+    assert result.complete and job.job_id == "200685702"
+    assert job.url == "https://jobs.apple.com/en-us/details/200685702/software-engineer-maps"
+    assert job.location == "Cupertino, California, United States of America" and str(job.date_posted) == "2026-09-27"
+
+
+def test_google_reads_only_first_pages_of_each_query():
+    import json as _json
+
+    def page(rows):
+        return (f"<script>AF_initDataCallback({{key: 'ds:1', hash: '2', data:{_json.dumps([rows, None, len(rows), 20])}, "
+                "sideChannel: {}});</script>")
+
+    def row(job_id, title, created):
+        r = [None] * 21
+        r[0], r[1], r[9], r[12] = job_id, title, [["Mountain View, CA, USA"], ["New York, NY, USA"]], [created, 0]
+        return r
+
+    urls = []
+
+    def handler(request):
+        urls.append(request.url)
+        level = request.url.params["target_level"]
+        return httpx.Response(200, text=page([row("1" if level == "EARLY" else "2", f"Software Engineer {level}", 1790377680)]))
+
+    result = run_scraper("google", "https://www.google.com/about/careers/applications/jobs/results/?location=United%20States", handler)
+    assert [u.params["target_level"] for u in urls] == ["EARLY", "MID"]
+    assert all(u.params["sort_by"] == "date" and "page" not in u.params and u.params["location"] == "United States" for u in urls)
+    assert not result.complete  # first pages only
+    job = {j.job_id: j for j in result.jobs}["1"]
+    assert job.url == "https://www.google.com/about/careers/applications/jobs/results/1"
+    assert job.location == "Mountain View, CA, USA; New York, NY, USA" and str(job.date_posted) == "2026-09-25"
+
+
+def test_eightfold_apply_and_pcsx_apis():
+    def apply_handler(request):
+        assert request.url.path == "/api/apply/v2/jobs" and request.url.params["domain"] == "netflix.com"
+        start = int(request.url.params["start"])
+        positions = [{"id": start + i, "name": f"Software Engineer {start + i}", "location": "Remote, United States",
+                      "t_create": 1790294400, "canonicalPositionUrl": f"https://explore.jobs.netflix.net/careers/job/{start + i}"}
+                     for i in range(min(10, 15 - start))]
+        return httpx.Response(200, json={"positions": positions, "count": 15})
+
+    result = run_scraper("eightfold", "https://explore.jobs.netflix.net/careers", apply_handler, api="apply", domain="netflix.com")
+    assert len(result.jobs) == 15 and result.complete
+    assert result.jobs[0].url == "https://explore.jobs.netflix.net/careers/job/0" and str(result.jobs[0].date_posted) == "2026-09-25"
+
+    def pcsx_handler(request):
+        assert request.url.path == "/api/pcsx/search" and request.url.params["domain"] == "microsoft.com"
+        return httpx.Response(200, json={"data": {"count": 1185, "positions": [
+            {"id": 1970393557002655, "displayJobId": "200057070", "name": "Software Engineer",
+             "locations": ["United States, Washington, Redmond"], "postedTs": 1790191288,
+             "positionUrl": "/careers/job/1970393557002655", "department": "Engineering"}]}})
+
+    result = run_scraper("eightfold", "https://apply.careers.microsoft.com/careers", pcsx_handler, max_jobs=10)
+    (job,) = result.jobs
+    assert not result.complete and job.job_id == "200057070"
+    assert job.url == "https://apply.careers.microsoft.com/careers/job/1970393557002655"
+    assert job.location == "United States, Washington, Redmond"
+
+
+def test_oracle_hcm_builds_the_finder_unencoded_and_pages():
+    urls = []
+
+    def handler(request):
+        urls.append(str(request.url))
+        offset = int(re.search(r"offset=(\d+)", str(request.url)).group(1))
+        reqs = [{"Id": str(offset + i), "Title": "Software Engineer", "PostedDate": "2026-09-27",
+                 "PrimaryLocation": "Plano, TX, United States", "secondaryLocations": [{"Name": "Dallas, TX, United States"}]}
+                for i in range(min(100, 130 - offset))]
+        return httpx.Response(200, json={"items": [{"TotalJobsCount": 130, "requisitionList": reqs}]})
+
+    result = run_scraper("oracle_hcm", "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs", handler)
+    assert "finder=findReqs;siteNumber=CX_1001,limit=100,offset=0,sortBy=POSTING_DATES_DESC" in urls[0]
+    assert len(urls) == 2 and len(result.jobs) == 130 and result.complete
+    job = result.jobs[0]
+    assert job.url == "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/0"
+    assert job.location == "Plano, TX, United States; Dallas, TX, United States"
+
+
+def test_meta_reads_new_jobs_from_their_pages_and_reuses_known_ones():
+    from role_radar.storage import SeenJob
+
+    sitemap = "<urlset>" + "".join(
+        f"<url><loc>https://www.metacareers.com/profile/job_details/{i}/</loc></url>" for i in (11, 22, 33, 44)
+    ) + "</urlset>"
+    page = ('<script type="application/ld+json">{"@type": "JobPosting", "title": "Software Engineer %s", '
+            '"datePosted": "2026-09-20", "employmentType": "FULL_TIME", "jobLocation": [{"@type": "Place", '
+            '"address": {"addressLocality": "Menlo Park", "addressRegion": "CA", "addressCountry": "US"}}]}</script>')
+    fetched = []
+
+    def handler(request):
+        if request.url.path.endswith("sitemap.xml"):
+            return httpx.Response(200, text=sitemap)
+        job_id = request.url.path.rstrip("/").rsplit("/", 1)[1]
+        fetched.append(job_id)
+        return httpx.Response(200, text=page % job_id)
+
+    async def go(known, **options):
+        async with make_client(handler) as http:
+            cfg = company("Meta", url="https://www.metacareers.com/jobsearch/")
+            cfg.options = options
+            scraper = SCRAPERS["meta"](cfg, http)
+            scraper.known = known
+            return await scraper.fetch_jobs()
+
+    first = asyncio.run(go({}, new_per_check=2))
+    assert fetched == ["11", "22"] and not first.complete  # 2 of 4 read this check
+    assert [j.title for j in first.jobs] == ["Software Engineer 11", "Software Engineer 22"]
+    assert first.jobs[0].location == "Menlo Park, CA, US" and str(first.jobs[0].date_posted) == "2026-09-20"
+
+    known = {j.uid: SeenJob(title=j.title, url=j.url, fingerprint=j.fingerprint, first_seen="x", location=j.location)
+             for j in first.jobs}
+    fetched.clear()
+    second = asyncio.run(go(known, new_per_check=2))
+    assert fetched == ["33", "44"] and second.complete  # known jobs cost nothing
+    assert {j.title for j in second.jobs} == {f"Software Engineer {i}" for i in (11, 22, 33, 44)}
+
+
+def test_tiktok_reads_every_page_and_keeps_us_jobs():
+    bodies = []
+    us = {"en_name": "San Jose", "parent": {"en_name": "California", "parent": {"en_name": "United States of America"}}}
+
+    def post(job_id, city):
+        return {"id": str(job_id), "title": "Software Engineer", "city_info": city,
+                "recruit_type": {"en_name": "Regular"}, "job_category": {"en_name": "R&D"}}
+
+    def handler(request):
+        body = json.loads(request.content)
+        bodies.append(body)
+        assert request.headers["website-path"] == "tiktok"
+        posts = ([post(i, us) for i in range(100)] if body["offset"] == 0
+                 else [post(i, us) for i in range(100, 120)] + [post("sg", {"en_name": "Singapore"})])
+        return httpx.Response(200, json={"code": 0, "data": {"job_post_list": posts, "count": 121}})
+
+    result = run_scraper("tiktok", "https://lifeattiktok.com/search", handler)
+    assert [b["offset"] for b in bodies] == [0, 100] and bodies[0]["location_code_list"] == []
+    assert len(result.jobs) == 120 and result.complete  # the Singapore job is dropped
+    job = result.jobs[0]
+    assert job.url == "https://lifeattiktok.com/search/0" and job.location == "San Jose, California, United States of America"
+    assert job.employment_type == "Regular" and job.department == "R&D"

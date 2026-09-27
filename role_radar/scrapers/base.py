@@ -6,12 +6,13 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Mapping
 from urllib.parse import urlsplit
 
 from role_radar.config import CompanyConfig
 from role_radar.http_client import HttpClient
 from role_radar.models import JobPosting
+from role_radar.storage import SeenJob
 
 
 @dataclass
@@ -35,6 +36,9 @@ class BaseScraper(ABC):
         self.company = company
         self.http = http
         self.options = company.options
+        # uid → the stored record of each job seen before (read-only), for scrapers
+        # that can reuse what's known instead of fetching it again.
+        self.known: Mapping[str, SeenJob] = {}
 
     @classmethod
     def handles_url(cls, url: str) -> bool:
@@ -89,6 +93,9 @@ def parse_date(value: Any, today: date | None = None) -> date | None:
         return date.fromisoformat(text[:10])
     except ValueError:
         pass
+    named = _named_month_date(text)
+    if named:
+        return named
     lowered = text.lower()
     if "today" in lowered or "just posted" in lowered:
         return today
@@ -99,6 +106,16 @@ def parse_date(value: Any, today: date | None = None) -> date | None:
         n, unit = int(m.group(1)), m.group(2)
         days = n * {"day": 1, "week": 7, "month": 30}[unit]
         return today - timedelta(days=days)
+    return None
+
+
+def _named_month_date(text: str) -> date | None:
+    """ "September 25, 2026" (amazon.jobs) or "Sep 27, 2026"."""
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            pass
     return None
 
 

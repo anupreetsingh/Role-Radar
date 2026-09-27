@@ -4,11 +4,14 @@
 #   name      (required) display name; also the key in the state store, so renaming
 #             a company re-baselines it
 #   url       (required) public careers page
-#   ats       optional: bamboohr | greenhouse | lever | ashby | workday | generic
+#   ats       optional: bamboohr | greenhouse | lever | ashby | workday | icims | jibe |
+#             avature | hrmdirect | recruiterbox | eightfold | oracle_hcm | amazon |
+#             apple | google | meta | tiktok | mathworks | comsol | generic
 #             (auto-detected from the URL when omitted)
 #   filters   optional; each key REPLACES the same key from defaults.filters
 #   options   optional scraper-specific settings (see each scraper's docstring)
 #   enabled   optional, default true
+#   max_alert_age_days  optional: record, don't alert, new matches posted longer ago
 #
 # Filter keys:
 #   include_keywords   any one must appear in the `match_on` fields
@@ -45,6 +48,7 @@ settings:
   # a time: roughly 4,500 requests per round, spread over four hours.
   check_interval_by_ats:
     workday: 240
+    tiktok: 240   # every check reads all ~4,300 TikTok jobs (~18 MB)
   company_concurrency_by_ats:
     workday: 2
   http:
@@ -60,6 +64,10 @@ settings:
       # 2 requests/s to Workday at most. A 429 from any of them pauses all of them.
       myworkdayjobs.com: 0.5
       myworkdaysite.com: 1.0
+      # Eightfold search APIs rate-limit quickly (Microsoft answered 429 on a second request).
+      apply.careers.microsoft.com: 3.0
+      explore.jobs.netflix.net: 2.0
+      eightfold.ai: 2.0         # all *.eightfold.ai tenants share this rate
     connect_timeout: 10
     read_timeout: 30
     max_retries: 3
@@ -1858,3 +1866,191 @@ companies:
   - name: Voyager Technologies
     url: https://job-boards.greenhouse.io/voyagertechnologiesinc
     ats: greenhouse
+
+  # --- Big tech on their own career sites ---
+
+  - name: Amazon
+    url: https://www.amazon.jobs/en/search
+    ats: amazon
+    options:
+      max_jobs: 500             # newest 500 US jobs in these categories
+      categories: [software-development, machine-learning-science, data-science, solutions-architect, business-intelligence, systems-quality-security-engineering, project-program-product-management-technical, hardware-development, research-science, database-administration]
+
+  - name: Apple
+    url: https://jobs.apple.com/en-us/search?location=united-states-USA
+    ats: apple
+    options:
+      max_pages: 10             # newest 200 US jobs
+
+  - name: Google
+    url: https://www.google.com/about/careers/applications/jobs/results/?location=United%20States
+    ats: google                 # robots.txt allows first pages only: 20 newest early-career + 20 mid-level
+
+  - name: Meta
+    url: https://www.metacareers.com/jobsearch/
+    ats: meta
+    max_alert_age_days: 14      # the first checks work through ~1,000 older jobs
+    options:
+      new_per_check: 40
+
+  - name: Microsoft
+    url: https://apply.careers.microsoft.com/careers
+    ats: eightfold
+    options:
+      domain: microsoft.com
+      max_jobs: 300             # newest 300 of ~1,200 US jobs
+
+  - name: Netflix
+    url: https://explore.jobs.netflix.net/careers
+    ats: eightfold
+    options:
+      api: apply
+      domain: netflix.com
+      max_jobs: 1000
+
+  - name: TikTok
+    url: https://lifeattiktok.com/search
+    ats: tiktok
+
+  # --- Eightfold career sites ---
+
+  - name: Qualcomm
+    url: https://qualcomm.eightfold.ai/careers
+    ats: eightfold
+    options:
+      domain: qualcomm.com
+      max_jobs: 300
+
+  - name: PayPal
+    url: https://paypal.eightfold.ai/careers
+    ats: eightfold
+    options:
+      domain: paypal.com
+      max_jobs: 100
+
+  - name: John Deere
+    url: https://johndeere.eightfold.ai/careers
+    ats: eightfold
+    options:
+      domain: johndeere.com
+      max_jobs: 100
+
+  - name: Eaton
+    url: https://eaton.eightfold.ai/careers
+    ats: eightfold
+    options:
+      domain: eaton.com
+      max_jobs: 100
+
+  - name: Boston Scientific
+    url: https://bostonscientific.eightfold.ai/careers
+    ats: eightfold
+    options:
+      domain: bostonscientific.com
+      max_jobs: 100
+
+  # --- Oracle Cloud HCM career sites (newest 500 each) ---
+
+  - name: JPMorgan Chase
+    url: https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+
+  - name: Oracle
+    url: https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_45001/jobs
+    ats: oracle_hcm
+
+  - name: Texas Instruments
+    url: https://ebgj.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Honeywell
+    url: https://ibqbjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Honeywell/jobs
+    ats: oracle_hcm
+
+  - name: American Express
+    url: https://egug.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Goldman Sachs
+    url: https://hdpc.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/LateralHiring/jobs
+    ats: oracle_hcm
+
+  - name: Ford
+    url: https://efds.fa.em5.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: GM Financial
+    url: https://fa-exvu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: BNY
+    url: https://eofe.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+
+  - name: Citizens
+    url: https://hcgn.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: DTCC
+    url: https://ebxr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Verisk
+    url: https://fa-ewmy-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: EXL
+    url: https://fa-ewjt-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+
+  - name: Fortinet
+    url: https://edel.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+
+  - name: onsemi
+    url: https://hctz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+
+  - name: Coherent
+    url: https://hcwp.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Nokia
+    url: https://fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Emerson
+    url: https://hdjq.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Cummins
+    url: https://fa-espx-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Vertiv
+    url: https://egup.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+
+  - name: Fortive
+    url: https://ejta.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+
+  - name: Denso
+    url: https://hcwt.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+
+  - name: Hologic
+    url: https://ebwb.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+
+  - name: UL Solutions
+    url: https://fa-eups-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/ULSolutionsCareers/jobs
+    ats: oracle_hcm
+
+  - name: ADT
+    url: https://fa-erqb-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+
+  - name: Albertsons
+    url: https://eofd.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm

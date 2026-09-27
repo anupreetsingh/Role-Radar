@@ -221,6 +221,7 @@ async def check_company(
 ) -> CompanyOutcome:
     """Scrape one company and reconcile the listing into `state` (in memory only)."""
     scraper = scraper_class_for(company.url, company.ats)(company, http)
+    scraper.known = state.companies.get(company.name, {})
     result = await scraper.fetch_jobs()
     jobs = dedupe([j.freeze_identity() for j in result.jobs if j.title])
     log.debug("[%s] %d job(s) listed via %s", company.name, len(jobs), scraper.name)
@@ -263,6 +264,7 @@ async def check_company(
         detail_fetched=fetched,
         notify=notify and (settings.notify_on_first_run or not first_run),
         repost_window_days=settings.repost_window_days,
+        max_alert_age_days=company.max_alert_age_days,
     )
     changed = diff.new or diff.removed or diff.returned or diff.suppressed or diff.to_notify
     log.log(

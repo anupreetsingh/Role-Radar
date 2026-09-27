@@ -32,6 +32,9 @@ class CompanyConfig:
     ats: str | None = None  # None → auto-detect from the URL
     options: dict[str, Any] = field(default_factory=dict)  # scraper-specific settings
     enabled: bool = True
+    # Don't alert on a new match posted more than this many days before it was first
+    # seen: an old job surfacing late (e.g. while a sitemap is being worked through).
+    max_alert_age_days: int | None = None
 
 
 @dataclass

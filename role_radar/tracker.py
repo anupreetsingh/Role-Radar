@@ -52,12 +52,14 @@ def reconcile(
     detail_fetched: set[str] | None = None,
     notify: bool = True,
     repost_window_days: int = 30,
+    max_alert_age_days: int | None = None,
     now: datetime | None = None,
 ) -> CompanyDiff:
     """Update `state` in place for one company and return what changed.
 
     `matches` maps uid → filter result. With `notify=False` (baseline run),
-    matching jobs are recorded as already notified so they never alert.
+    matching jobs are recorded as already notified so they never alert; so are
+    jobs posted more than `max_alert_age_days` before now.
     """
     now = now or utcnow()
     stamp = to_iso(now)
@@ -112,11 +114,15 @@ def reconcile(
             diff.suppressed.append((job, f"{kind} {owner}"))
             continue
         owners[job.fingerprint] = job.uid
-        if notify:
-            diff.to_notify.append(job)
-        else:
+        age = (now.date() - job.date_posted).days if job.date_posted else None
+        if not notify:
             rec.notified_at = stamp
             diff.suppressed.append((job, "baseline run"))
+        elif max_alert_age_days is not None and age is not None and age > max_alert_age_days:
+            rec.notified_at = stamp
+            diff.suppressed.append((job, f"posted {age} days ago"))
+        else:
+            diff.to_notify.append(job)
     return diff
 
 

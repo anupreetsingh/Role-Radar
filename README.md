@@ -53,8 +53,10 @@ host's delay has passed since the previous request to that host, then takes one 
 global concurrency slots, and retries with exponential backoff on timeouts, 429 and 5xx
 (it honours `Retry-After`). The host wait comes first, so requests queued behind a busy
 shared host such as `boards-api.greenhouse.io` don't hold slots that other hosts could
-use. Parsed robots.txt files are kept for 12 hours. If one company fails, that failure is
-recorded and the other companies still run.
+use. Parsed robots.txt files are kept for 12 hours and matched per RFC 9309 (the most
+specific rule wins; `*` and `$` wildcards), not urllib's first-match parser, which
+blocked Eightfold's explicitly allowed APIs and ignored Google's paging rules. If one
+company fails, that failure is recorded and the other companies still run.
 
 Each pass logs how long it took, the number of requests and bytes downloaded
 (compressed, as received), and the busiest hosts. Run with `-v` to see every host, and
@@ -135,6 +137,13 @@ alert again. The previous version behaved the same way.
 | Avature | Public `SearchJobs` result cards, paginated (e.g. Bloomberg) | no |
 | COMSOL | Job links grouped under location headings | no |
 | Recruiterbox / Trakstar | Public widget API (e.g. Wolfram) | no |
+| Eightfold | The site's `/api/pcsx/search` (Microsoft, Qualcomm, PayPal...) or `/api/apply/v2/jobs` (Netflix), newest first | no |
+| Oracle Cloud HCM | `{host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions`, newest first (JPMorgan Chase, Oracle, TI...) | no |
+| amazon.jobs | `search.json`, newest first, by category | no |
+| Apple | Search pages' hydration JSON, newest first | no |
+| Google | First results page of each query (robots.txt disallows paging), newest first | no |
+| Meta | `/jobsearch/sitemap.xml` for the job IDs | each job's page once, for its title and location (at most 40 a check) |
+| TikTok | Public search API; the listing is filtered to US jobs locally | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
 
 **Job descriptions are not stored or used for matching.** A job's title, location, ID

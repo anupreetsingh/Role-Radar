@@ -227,3 +227,24 @@ def test_rate_limit_pauses_every_host_sharing_the_spacing():
     asyncio.run(go())
     assert starts["t2.wd.example"] - starts["t1.wd.example"] >= 0.9
     assert starts["other.example"] - began < 3
+
+
+def test_robots_matching_follows_rfc9309():
+    from role_radar.robots import Robots
+
+    robots = Robots()
+    robots.parse([
+        "User-agent: BadBot", "Disallow: /",
+        "User-agent: *", "Disallow: /", "Allow: /careers", "Allow: /api/apply",  # Eightfold's shape
+        "Disallow: /careers/results?*&page=", "Disallow: /careers/results?page=",  # Google's paging rules
+        "Allow: /files/*.json$",
+    ])
+    ua = "RoleRadar/1.0 (personal job-alert monitor)"
+    allowed = lambda path: robots.can_fetch(ua, "https://x.example" + path)  # noqa: E731
+    assert allowed("/api/apply/v2/jobs?domain=x.com")  # the longer Allow beats "Disallow: /"
+    assert not allowed("/admin")
+    assert allowed("/careers/results?location=US")
+    assert not allowed("/careers/results?location=US&page=2") and not allowed("/careers/results?page=2")
+    assert allowed("/files/a.json") and not allowed("/files/a.json?x=1")  # $ anchors the end
+    assert allowed("/robots.txt")
+    assert not robots.can_fetch("BadBot/2.0", "https://x.example/careers")  # its own group, not "*"

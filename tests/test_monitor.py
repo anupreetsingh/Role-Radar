@@ -346,3 +346,21 @@ def test_bounded_gates_limit_their_jobs_without_holding_other_jobs_slots():
     assert asyncio.run(go()) == ["wd0", "wd1", "wd2", "wd3", "gh"]
     assert peak[0] == 1  # one gated job at a time
     assert order[0] == "gh"  # the ungated job didn't queue behind gated ones
+
+
+def test_max_alert_age_days_records_old_new_matches_without_alerting():
+    from datetime import date, datetime, timezone
+
+    from role_radar.storage import MonitorState
+    from role_radar.tracker import reconcile
+
+    now = datetime(2026, 9, 27, tzinfo=timezone.utc)
+    fresh = job("Software Engineer", job_id="1", date_posted=date(2026, 9, 20))
+    old = job("Data Engineer", job_id="2", date_posted=date(2025, 6, 10))
+    undated = job("QA Engineer", job_id="3")
+    state = MonitorState()
+    diff = reconcile(state, "Acme", [fresh, old, undated], {j.uid: True for j in (fresh, old, undated)},
+                     max_alert_age_days=14, now=now)
+    assert [j.job_id for j in diff.to_notify] == ["1", "3"]  # no date: can't tell, so it alerts
+    assert [(j.job_id, reason) for j, reason in diff.suppressed] == [("2", "posted 474 days ago")]
+    assert state.companies["Acme"][old.uid].notified_at  # recorded, never alerts later

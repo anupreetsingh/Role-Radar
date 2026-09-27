@@ -8,7 +8,7 @@ whether it belongs in the list.
 
 ## Enabled employers
 
-The 300 enabled employers are defined in [the configuration](../config/companies.yaml).
+The 338 enabled employers are defined in [the configuration](../config/companies.yaml).
 The latest source check is in [the validation report](company-validation.json).
 Counts in that report are a dated observation, not a promise that a position remains
 open or that its requirements fit the candidate. The report predates the US tech
@@ -127,6 +127,37 @@ Parts). All Workday tenants share one request rate through the `myworkdayjobs.co
 and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
 are checked every four hours, two at a time, so the list stays well under Workday's
 per-IP rate limit.
+
+## Big tech and more career platforms (September 2026)
+
+38 employers added on 2026-09-27, on career sites Role Radar couldn't read before:
+
+- Their own career sites: Amazon, Apple, Google, Meta, Microsoft, Netflix and TikTok.
+- Eightfold: Qualcomm, PayPal, John Deere, Eaton and Boston Scientific.
+- Oracle Cloud HCM: JPMorgan Chase, Oracle, Texas Instruments, Honeywell, American
+  Express, Goldman Sachs (lateral hiring site), Ford, GM Financial, BNY, Citizens,
+  DTCC, Verisk, EXL, Fortinet, onsemi, Coherent, Nokia, Emerson, Cummins, Vertiv,
+  Fortive, Denso, Hologic, UL Solutions, ADT and Albertsons.
+
+Each source was checked against its robots.txt (RFC 9309 matching) and read live.
+Limits worth knowing:
+
+- Google's robots.txt allows a search's first page only, so each check sees the 20
+  newest early-career and 20 newest mid-level US jobs. That covers what Google posts
+  between checks, but never the full list.
+- Amazon, Apple, Microsoft and the Oracle sites are read newest first up to a cap
+  (see each company's options), so they're never removal snapshots.
+- Meta's search page is built in the browser; the scraper uses its job sitemap and
+  reads each new job's page once (40 a check), so the first ~25 checks work through
+  its ~1,000 open jobs. `max_alert_age_days: 14` keeps those older jobs from alerting.
+- TikTok's API filters by city only, so each check reads all ~4,300 jobs (~18 MB)
+  and keeps US ones; it's checked every four hours.
+
+Not added, and why: SmartRecruiters (ServiceNow, Western Digital, AbbVie, Visa...)
+disallows its posting API to all crawlers but LinkedIn's; its public pages group
+jobs by city and would need their own reader. ByteDance's own site (jobs.bytedance.com)
+hasn't been looked at yet. Netflix's Workday board (and Walmart's, Comcast's and AMD's)
+answers HTTP 422. American Express's Eightfold API answers 404; its Oracle site is used.
 
 ## How the less conventional sources are covered
 

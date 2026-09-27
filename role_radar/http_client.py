@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 from urllib.parse import urlsplit
-from urllib.robotparser import RobotFileParser
+from role_radar.robots import Robots
 
 import httpx
 
@@ -150,16 +150,16 @@ class RobotsCache:
         self.ttl = ttl
         self.unreachable_ttl = unreachable_ttl  # an unreachable robots.txt blocks the host only this long
         self.clock = clock
-        self._entries: dict[str, tuple[RobotFileParser | None, float]] = {}
+        self._entries: dict[str, tuple[Robots | None, float]] = {}
 
-    def get(self, origin: str) -> tuple[bool, RobotFileParser | None]:
+    def get(self, origin: str) -> tuple[bool, Robots | None]:
         """(found, parser). A None parser means no restrictions."""
         entry = self._entries.get(origin)
         if entry and entry[1] > self.clock():
             return True, entry[0]
         return False, None
 
-    def put(self, origin: str, parser: RobotFileParser | None, unreachable: bool = False) -> None:
+    def put(self, origin: str, parser: Robots | None, unreachable: bool = False) -> None:
         self._entries[origin] = (parser, self.clock() + (self.unreachable_ttl if unreachable else self.ttl))
 
 
@@ -299,7 +299,7 @@ class HttpClient:
                 self.robots.put(origin, parser, unreachable)
         return parser is None or parser.can_fetch(self.settings.user_agent, url)
 
-    async def _load_robots(self, origin: str) -> tuple[RobotFileParser | None, bool]:
+    async def _load_robots(self, origin: str) -> tuple[Robots | None, bool]:
         """Fetch robots.txt, following RFC 9309 status handling. Returns (parser, unreachable).
 
         4xx ("unavailable")           → no restrictions (None)
@@ -311,7 +311,7 @@ class HttpClient:
             resp = None
         if resp is not None and 400 <= resp.status_code < 500 and resp.status_code != 429:
             return None, False
-        parser = RobotFileParser()
+        parser = Robots()
         if resp is None or resp.status_code >= 400:
             log.warning("robots.txt for %s unreachable; skipping this host for now", origin)
             parser.disallow_all = True
