@@ -3,8 +3,9 @@
 The search page is built in the browser, but /jobsearch/sitemap.xml lists every
 open job. A job already on record reuses its stored title and location; a new one
 costs a fetch of its page for the schema.org JobPosting data (title, location,
-date posted). New pages are read BATCH at a time for up to options.read_seconds
-(default 120) and options.new_per_check pages (default 1000) a check. Until every
+date posted, and qualifications for the experience filter). New pages are read
+BATCH at a time for up to options.read_seconds (default 120) and
+options.new_per_check pages (default 1000) a check. Until every
 job in the sitemap has been read, the listing isn't a removal snapshot.
 
 The sitemap has no dates and isn't in posting order, so a new posting can't jump
@@ -82,8 +83,11 @@ class MetaScraper(BaseScraper):
             for posting in iter_job_postings(data):
                 title = html_to_text(posting.get("title") or posting.get("name"))
                 if title:
+                    # Qualifications come as one string, "&nbsp;" between items.
+                    quals = str(posting.get("qualifications") or "").replace("&nbsp;", "\n").replace("\xa0", "\n")
                     return self.make_job(
                         job_id=job_id, title=title, url=url, location=_ld_location(posting),
                         employment_type=_employment_type(posting), date_posted=parse_date(posting.get("datePosted")),
+                        extra={"description": quals or None},
                     )  # fmt: skip
         return None

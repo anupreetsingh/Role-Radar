@@ -12,7 +12,8 @@ or https://qualcomm.eightfold.ai/careers. Options:
   query       keywords
   max_jobs    default 500
 Eightfold APIs rate-limit quickly, so give the host a generous delay in
-settings.http.host_delays.
+settings.http.host_delays. The experience filter reads a new match's description from
+/api/pcsx/position_details?position_id={id} (pcsx) or /api/apply/v2/jobs/{id} (apply).
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from role_radar.models import JobPosting
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, parse_date
 
 PAGE_SIZE = 10  # the largest page every Eightfold tenant serves
@@ -83,4 +85,17 @@ class EightfoldScraper(BaseScraper):
             location="; ".join(p for p in places if p) or None,
             department=item.get("department"),
             date_posted=parse_date(posted),
+            extra={"origin": origin, "position": item["id"], "pcsx": pcsx},
         )  # fmt: skip
+
+    description_costs_request = True
+
+    async def fetch_description(self, job: JobPosting) -> str | None:
+        origin, position = job.extra["origin"], job.extra["position"]
+        domain = self._domain(urlsplit(origin).netloc.lower())
+        if job.extra["pcsx"]:
+            data = await self.http.get_json(f"{origin}/api/pcsx/position_details",
+                                            params={"position_id": position, "domain": domain, "hl": "en"})
+            return ((data or {}).get("data") or {}).get("jobDescription")
+        data = await self.http.get_json(f"{origin}/api/apply/v2/jobs/{position}", params={"domain": domain})
+        return (data or {}).get("job_description")

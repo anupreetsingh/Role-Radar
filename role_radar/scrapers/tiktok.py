@@ -3,7 +3,8 @@
 Careers URL: https://lifeattiktok.com/search
   POST https://api.lifeattiktok.com/api/v1/public/supplier/search/job/posts
 The API filters by city codes only, so a check reads every listing (~4,300 jobs,
-~43 requests of ~425 KB with descriptions, which are dropped) and keeps jobs in
+~43 requests of ~425 KB with descriptions; only the requirements of US jobs are
+kept, for the experience filter) and keeps jobs in
 options.countries (default ["United States of America"]; [] keeps all). Other
 options: locations (TikTok city codes, e.g. CT_1103355), keyword, max_jobs
 (default 6000). Listings have no posting date. Check it less often than the
@@ -66,6 +67,7 @@ class TikTokScraper(BaseScraper):
                     location=_place(item.get("city_info")),
                     employment_type=(item.get("recruit_type") or {}).get("en_name"),
                     department=(item.get("job_category") or {}).get("en_name"),
+                    extra={"description": item.get("requirement")},
                 )  # fmt: skip
             offset += len(posts)
             if not posts or offset >= count:

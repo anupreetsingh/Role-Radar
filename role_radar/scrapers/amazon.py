@@ -50,6 +50,7 @@ class AmazonScraper(BaseScraper):
                     employment_type=item.get("job_schedule_type"),
                     department=item.get("job_category"),
                     date_posted=parse_date(item.get("posted_date")),
+                    extra={"description": item.get("basic_qualifications")},  # the preferred ones don't count
                 )  # fmt: skip
             offset += PAGE_SIZE
             if not data["jobs"] or (isinstance(hits, int) and offset >= hits):

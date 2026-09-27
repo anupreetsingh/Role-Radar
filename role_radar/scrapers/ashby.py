@@ -2,8 +2,8 @@
 
   GET https://api.ashbyhq.com/posting-api/job-board/{board}
 
-The API always includes descriptions and has no option to leave them out;
-they're ignored.
+The API always includes descriptions; they're kept (in memory, for this check) only
+for the experience filter.
 """
 
 from __future__ import annotations
@@ -46,4 +46,5 @@ class AshbyScraper(BaseScraper):
             employment_type=_humanize(item.get("employmentType")),
             department=item.get("department") or item.get("team"),
             date_posted=parse_date(item.get("publishedAt")),
+            extra={"description": item.get("descriptionHtml") or item.get("descriptionPlain")},
         )

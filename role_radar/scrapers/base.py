@@ -74,6 +74,14 @@ class BaseScraper(ABC):
         """Fill in fields only available from the job's own page. Default: no-op."""
         return job
 
+    # True when fetch_description() makes a request (rather than reading what the listing gave).
+    description_costs_request = False
+
+    async def fetch_description(self, job: JobPosting) -> str | None:
+        """The job's description (HTML or text; its qualifications are enough), for the
+        experience filter. None when this source has none. Default: what the listing gave."""
+        return job.extra.get("description")
+
     def make_job(self, **kwargs: Any) -> JobPosting:
         return JobPosting(company=self.company.name, source=self.name, **kwargs)
 

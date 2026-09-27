@@ -4,7 +4,9 @@
 
 Without `?content=true` the response has no descriptions, departments or
 offices, which makes it roughly 10x smaller. Title, location, URL, metadata
-and first_published are still included.
+and first_published are still included. The experience filter reads a new
+match's description from its own endpoint:
+  GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{id}
 """
 
 from __future__ import annotations
@@ -47,6 +49,12 @@ class GreenhouseScraper(BaseScraper):
             employment_type=self._employment_type(item.get("metadata") or []),
             date_posted=parse_date(item.get("first_published") or item.get("updated_at")),
         )
+
+    description_costs_request = True
+
+    async def fetch_description(self, job: JobPosting) -> str | None:
+        data = await self.http.get_json(f"https://boards-api.greenhouse.io/v1/boards/{self.board_token}/jobs/{job.job_id}")
+        return (data or {}).get("content")
 
     @staticmethod
     def _employment_type(metadata: list[dict[str, Any]]) -> str | None:

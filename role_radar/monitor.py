@@ -5,7 +5,8 @@ Flow of a pass:
   → for each due company (concurrently, bounded):
       load its state → scrape listing → fetch details only for unseen jobs whose
       filter needs a field the listing lacks (and that could still match)
-      → filter → diff against state
+      → filter → diff against state → read each new match's description once and
+      drop those asking for too much experience (filter.max_experience_years)
       → queue its new matches (or alert immediately if digests are disabled)
       → save its state and next check time straight away (fenced on the lease)
   → if the shared digest is due, confirm the lease and send the queued matches
@@ -29,6 +30,7 @@ from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, Union
 
 from role_radar.config import AppConfig, CompanyConfig, Settings
 from role_radar.digest import flush_digest
+from role_radar.experience import assess
 from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
@@ -180,6 +182,47 @@ async def _fetch_details(scraper: BaseScraper, job: JobPosting) -> bool:
         return False
 
 
+async def _read_description(scraper: BaseScraper, job: JobPosting) -> str | None:
+    try:
+        return await scraper.fetch_description(job)
+    except Exception as exc:
+        log.warning("[%s] couldn't read the description of %r (%s); keeping it", job.company, job.title, exc)
+        return None
+
+
+async def _screen_experience(company: CompanyConfig, scraper: BaseScraper, state: MonitorState,
+                             diff: CompanyDiff, settings: Settings) -> None:
+    """Drop the check's new matches whose description asks for more experience than the filter allows.
+
+    Each match's description is read once. Where that's a request per job, at most
+    max_detail_requests are read a check; the rest wait (unmatched, so the digest skips
+    them) for the next check. A dropped match is recorded as notified, with the reason,
+    so it never alerts. One whose description can't be read is kept.
+    """
+    records = state.jobs_for(company.name)
+    todo = [j for j in diff.to_notify if not records[j.uid].experience_checked]
+    held: list[JobPosting] = []
+    if scraper.description_costs_request and len(todo) > settings.max_detail_requests:
+        log.info("[%s] %d new matches to check for experience; checking %d this run",
+                 company.name, len(todo), settings.max_detail_requests)
+        todo, held = todo[: settings.max_detail_requests], todo[settings.max_detail_requests :]
+    texts = await asyncio.gather(*(_read_description(scraper, j) for j in todo))
+    stamp = to_iso(utcnow())
+    skip = {j.uid for j in held}
+    for job, text in zip(todo, texts):
+        rec = records[job.uid]
+        rec.experience_checked = True
+        verdict = assess(text, company.filter.max_experience_years)
+        log.debug("[%s] %s: %s", company.name, job.title, verdict.reason)
+        if not verdict.keep:
+            rec.notified_at, rec.dropped_for = stamp, verdict.reason
+            diff.suppressed.append((job, verdict.reason))
+            skip.add(job.uid)
+    for job in held:
+        records[job.uid].matched = False
+    diff.to_notify = [j for j in diff.to_notify if j.uid not in skip]
+
+
 async def _bounded(
     limit: int, jobs: Iterable[Callable[[], Awaitable[T]]], gates: Sequence[asyncio.Semaphore | None] | None = None
 ) -> list[T]:
@@ -275,6 +318,8 @@ async def check_company(
         repost_window_days=settings.repost_window_days,
         max_alert_age_days=company.max_alert_age_days,
     )
+    if company.filter.max_experience_years is not None and diff.to_notify:
+        await _screen_experience(company, scraper, state, diff, settings)
     changed = diff.new or diff.removed or diff.returned or diff.suppressed or diff.to_notify
     log.log(
         logging.INFO if changed else logging.DEBUG,

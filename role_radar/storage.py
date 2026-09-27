@@ -64,6 +64,10 @@ class SeenJob:
     removed_at: str | None = None
     detail_fetched: bool = False
     duplicate_of: str | None = None  # uid of an earlier posting this one repeats
+    # The experience filter (filters.max_experience_years) read this match's description:
+    # once checked it isn't read again, and a dropped match is recorded as notified.
+    experience_checked: bool = False
+    dropped_for: str | None = None  # why a match was recorded without alerting
     # Successful channels survive partial failures and runner handoffs. notified_at
     # remains empty until all configured channels have accepted the job.
     notified_channels: dict[str, str] = field(default_factory=dict)

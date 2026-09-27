@@ -3,8 +3,8 @@
   GET https://api.lever.co/v0/postings/{company}?mode=json&skip=N&limit=N
   (EU-hosted boards use api.eu.lever.co)
 
-The API always includes descriptions and has no option to leave them out;
-they're ignored.
+The API always includes descriptions; they're kept (in memory, for this check) only
+for the experience filter.
 """
 
 from __future__ import annotations
@@ -51,4 +51,13 @@ class LeverScraper(BaseScraper):
             employment_type=cats.get("commitment"),
             department=cats.get("department") or cats.get("team"),
             date_posted=parse_date(item.get("createdAt")),
+            extra={"description": _description(item)},
         )
+
+
+def _description(item: dict[str, Any]) -> str:
+    """The posting's text, with its lists ("Requirements", "Nice to have"...) under their headings."""
+    lists = "".join(f"<h3>{entry.get('text') or ''}</h3><ul>{entry.get('content') or ''}</ul>" for entry in item.get("lists") or [])
+    description = item.get("description") or item.get("descriptionPlain") or ""
+    additional = item.get("additional") or item.get("additionalPlain") or ""
+    return f"<div>{description}</div>{lists}<div>{additional}</div>"

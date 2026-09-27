@@ -7,7 +7,8 @@ Careers URL:  https://{tenant}.wd5.myworkdayjobs.com/[en-US/]{site}
 The listing has no employment type and shows "3 Locations" instead of the
 place names, so a job's detail is fetched only when the company's filter
 needs one of those: an employment-type rule, or a location rule for a job
-listed under "N Locations". The detail's description is ignored.
+listed under "N Locations". The experience filter reads a new match's
+description from the same detail.
 
 Large employers list thousands of jobs, so use options.search_text (and
 optionally options.applied_facets) to narrow the query, and options.max_jobs
@@ -115,12 +116,21 @@ class WorkdayScraper(BaseScraper):
     async def fetch_details(self, job: JobPosting) -> JobPosting:
         data = await self.http.get_json(f"{self.api}{job.extra['path']}")
         info = (data or {}).get("jobPostingInfo") or {}
+        job.extra["description"] = info.get("jobDescription")
         job.employment_type = info.get("timeType") or job.employment_type
         job.date_posted = parse_date(info.get("startDate")) or job.date_posted
         if info.get("location") and "location" in self.missing_fields(job):
             # Listing shows "3 Locations" (or nothing); the detail has the real names.
             job.location = "; ".join([info["location"], *(info.get("additionalLocations") or [])])
         return job
+
+    description_costs_request = True
+
+    async def fetch_description(self, job: JobPosting) -> str | None:
+        if "description" not in job.extra:  # the detail wasn't fetched for the filter
+            data = await self.http.get_json(f"{self.api}{job.extra['path']}")
+            job.extra["description"] = ((data or {}).get("jobPostingInfo") or {}).get("jobDescription")
+        return job.extra["description"]
 
     @staticmethod
     def _job_id(path: str, bullets: list[str]) -> str:

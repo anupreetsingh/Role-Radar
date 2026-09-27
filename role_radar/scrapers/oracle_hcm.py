@@ -9,6 +9,9 @@ the site; the site number comes from the path, or options.site).
 Results are newest first; a check reads options.max_jobs (default 500) and is a
 removal snapshot only when that covers them all. Options: site, keyword,
 location_id (the site's ID for a country or city), max_jobs, page_size (default 100).
+The experience filter reads a new match's description and qualifications from
+  GET https://{host}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails
+      ?onlyData=true&finder=ById;Id="{id}",siteNumber={site}
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ import re
 from typing import Any
 from urllib.parse import quote, urlsplit
 
+from role_radar.models import JobPosting
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, join_nonempty, parse_date
 
 _SITE = re.compile(r"/sites/([^/?#]+)")
@@ -74,4 +78,16 @@ class OracleHcmScraper(BaseScraper):
             employment_type=item.get("JobSchedule") or item.get("JobType"),
             department=item.get("JobFamily") or item.get("Organization"),
             date_posted=parse_date(item.get("PostedDate")),
+            extra={"origin": origin, "site": site},
         )  # fmt: skip
+
+    description_costs_request = True
+
+    async def fetch_description(self, job: JobPosting) -> str | None:
+        origin, site = job.extra["origin"], job.extra["site"]
+        data = await self.http.get_json(
+            f"{origin}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?onlyData=true"
+            f'&finder=ById;Id="{job.job_id}",siteNumber={site}'
+        )
+        items = (data or {}).get("items") or [{}]
+        return "".join(f"<div>{items[0].get(key) or ''}</div>" for key in ("ExternalDescriptionStr", "ExternalQualificationsStr"))

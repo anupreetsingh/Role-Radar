@@ -12,7 +12,9 @@ Keywords are case-insensitive and match on word boundaries, so "AI" matches
 slashes and underscores ("back end" matches "Back-End"). A keyword prefixed
 with "re:" is used as a raw regular expression.
 
-Job descriptions are never downloaded, so they can't be matched on.
+Keywords never look at job descriptions. `max_experience_years` does, separately:
+a new match whose description asks for more years is recorded but not alerted
+(experience.py; monitor.py reads each new match's description once).
 """
 
 from __future__ import annotations
@@ -59,13 +61,16 @@ class JobFilter:
     exclude_on: list[str] = field(default_factory=lambda: ["title"])
     locations: list[str] = field(default_factory=list)
     employment_types: list[str] = field(default_factory=list)
+    # Most years of experience a new match's description may ask for (a master's
+    # counts where the posting says it does). None: descriptions aren't read.
+    max_experience_years: int | None = None
 
     def __post_init__(self) -> None:
         for name in (*self.match_on, *self.exclude_on):
             if name == "description":
                 raise ValueError(
-                    "match_on/exclude_on can't use 'description': Role Radar no longer downloads job "
-                    "descriptions. Match on title (or location, employment_type, department) instead"
+                    "match_on/exclude_on can't use 'description': keywords don't match job descriptions. "
+                    "Match on title (or location, employment_type, department) instead"
                 )
             if name not in FIELD_GETTERS:
                 raise ValueError(f"Unknown filter field {name!r}; choose from {sorted(FIELD_GETTERS)}")
@@ -73,6 +78,9 @@ class JobFilter:
         self._exclude = [(k, compile_keyword(k)) for k in self.exclude_keywords]
         self._locations = [(k, compile_keyword(k)) for k in self.locations]
         self._types = [(k, compile_keyword(k)) for k in self.employment_types]
+        years = self.max_experience_years
+        if years is not None and (not isinstance(years, int) or isinstance(years, bool) or years < 0):
+            raise ValueError("max_experience_years must be a whole number >= 0")
 
     @classmethod
     def from_config(cls, cfg: dict[str, Any] | None) -> JobFilter:
@@ -81,7 +89,7 @@ class JobFilter:
         unknown = set(cfg) - known
         if unknown:
             raise ValueError(f"Unknown filter options: {sorted(unknown)}")
-        return cls(**{k: list(v) for k, v in cfg.items() if v is not None})
+        return cls(**{k: v if k == "max_experience_years" else list(v) for k, v in cfg.items() if v is not None})
 
     def fields_used(self) -> set[str]:
         """Job fields whose value can change this filter's verdict."""

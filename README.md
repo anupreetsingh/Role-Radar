@@ -146,10 +146,10 @@ alert again. The previous version behaved the same way.
 | TikTok | Public search API; the listing is filtered to US jobs locally | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
 
-**Job descriptions are not stored or used for matching.** A job's title, location, ID
-and URL are enough to alert on. Some feeds and APIs include descriptions in their
-listing responses; these are discarded. Detail pages are fetched only when listing
-metadata needed by a filter is missing.
+**Job descriptions are not stored or used for keyword matching.** A job's title,
+location, ID and URL are enough to alert on. Detail pages are fetched only when listing
+metadata needed by a filter is missing. The one exception is the
+[experience filter](#experience-filter), which reads each new match's description once.
 
 The ATS is detected from the URL, or you can set it with `ats:`. Nothing tries to get
 past CAPTCHAs, logins or robots.txt, and every request sends an honest User-Agent.
@@ -245,8 +245,31 @@ company's own `filters` replace them **one key at a time**.
 Matching is case-insensitive and respects word boundaries, so `AI` does not match
 "Maintain". A space in a keyword also matches `-`, `/` and `_`, and `re:` lets you use a
 regex. To change the logic itself, edit `JobFilter.evaluate` in `filters.py`. To make a
-new field matchable, add it to `FIELD_GETTERS`. Descriptions can't be matched, and a
+new field matchable, add it to `FIELD_GETTERS`. Keywords can't match descriptions, and a
 config that puts `description` in `match_on` or `exclude_on` is rejected at load time.
+
+### Experience filter
+
+With `max_experience_years: 2` (the default filters set it), each new title match's
+description is read once, before it's alerted. A match asking for more years is
+recorded without alerting, with the reason (`dropped_for` on the stored job, and a
+"not alerting" log line). How [experience.py](role_radar/experience.py) reads it:
+
+- Preferred / nice-to-have sections and phrases ("3+ years preferred", "is a plus") and
+  about-the-company text don't count.
+- Alternatives count: "3+ years, or a Master's", "BS + 4 yrs or MS + 2 yrs" and
+  "3+ years (2+ with a Master's)" fit 2 years; "MS and 3+ years" doesn't.
+- The job needs the most years any requirement asks for, so "2+ years of Go" beside
+  "4+ years of backend" needs 4.
+- Unclear means keep: no years found, a description that can't be read, or "a master's
+  may substitute for experience".
+
+Where descriptions come from: the listing already has them for Ashby, Lever, amazon.jobs
+(basic qualifications), Google (minimum qualifications), Meta (from the job page it
+already reads) and TikTok. Greenhouse, Workday, Oracle HCM, Eightfold and Apple take one
+request per new match, at most `max_detail_requests` a check (the rest wait for the next
+check). Other sources have no description, so their matches are kept. Set
+`max_experience_years: null` in a company's `filters` to skip reading its descriptions.
 
 The default role list covers application development (including full stack, frontend
 and backend), platforms/cloud, compilers/systems/embedded software, AI/research/data,

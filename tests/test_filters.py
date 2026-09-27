@@ -53,9 +53,9 @@ def test_regex_keyword():
 
 
 def test_description_filters_are_rejected():
-    with pytest.raises(ValueError, match="no longer downloads job descriptions"):
+    with pytest.raises(ValueError, match="keywords don.t match job descriptions"):
         JobFilter(include_keywords=["kubernetes"], match_on=["title", "description"])
-    with pytest.raises(ValueError, match="no longer downloads job descriptions"):
+    with pytest.raises(ValueError, match="keywords don.t match job descriptions"):
         JobFilter(exclude_keywords=["clearance"], exclude_on=["description"])
 
 

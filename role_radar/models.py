@@ -62,7 +62,8 @@ class JobPosting:
     employment_type: str | None = None
     department: str | None = None
     date_posted: date | None = None
-    # Job descriptions are deliberately not modelled: they're never downloaded or stored.
+    # Job descriptions aren't modelled or stored: only the experience filter reads one,
+    # once, through the scraper's fetch_description().
     # Scraper-specific data needed to fetch details later (never persisted).
     extra: dict = field(default_factory=dict, repr=False, compare=False)
     _uid: str | None = field(default=None, init=False, repr=False, compare=False)

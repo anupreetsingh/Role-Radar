@@ -58,9 +58,12 @@ class GoogleScraper(BaseScraper):
                     continue
                 places = [p[0] for p in (row[9] if len(row) > 9 and isinstance(row[9], list) else []) if p and p[0]]
                 created = row[12][0] if len(row) > 12 and isinstance(row[12], list) and row[12] else None
+                # The minimum qualifications (19), else all of them under their headings (4).
+                quals = next((q[1] for q in (row[19:20] + row[4:5]) if isinstance(q, list) and len(q) > 1 and q[1]), None)
                 jobs[str(job_id)] = self.make_job(
                     job_id=str(job_id), title=title.strip(), url=f"{endpoint}{job_id}",
                     location="; ".join(places) or None,
                     date_posted=datetime.fromtimestamp(created, tz=timezone.utc).date() if isinstance(created, int) else None,
+                    extra={"description": quals},
                 )  # fmt: skip
         return ScrapeResult(list(jobs.values()), complete=False)
