@@ -1,7 +1,10 @@
 import random
 from datetime import datetime, timedelta, timezone
 
-from role_radar.schedule import after_check, due_at, due_companies, next_due
+import pytest
+
+from role_radar.config import Settings
+from role_radar.schedule import after_check, due_at, due_companies, interval_for, next_due
 from role_radar.storage import CompanyMeta, from_iso, to_iso
 from tests.conftest import company
 
@@ -72,3 +75,22 @@ def test_last_successful_check_is_kept_through_failures():
     failed = after_check(ok, T0 + INTERVAL, INTERVAL, error="HTTP 503")
     assert failed.last_ok_at == to_iso(T0) and failed.last_checked_at == to_iso(T0 + INTERVAL)
     assert after_check(CompanyMeta(), T0, INTERVAL, error="timeout").last_ok_at is None
+
+
+def test_check_interval_by_ats_gives_those_companies_their_own_interval():
+    settings = Settings(check_interval_by_ats={"Workday": 180})
+    wd = company("W", url="https://acme.wd1.myworkdayjobs.com/External")
+    gh = company("G", url="https://job-boards.greenhouse.io/acme")
+    interval = interval_for(settings)
+    assert interval(wd) == timedelta(minutes=180) and interval(gh) == timedelta(minutes=30)
+    checked = {"W": CompanyMeta(last_checked_at=to_iso(T0 - timedelta(hours=1))),
+               "G": CompanyMeta(last_checked_at=to_iso(T0 - timedelta(hours=1)))}
+    assert [c.name for c in due_companies([wd, gh], checked, T0, interval)] == ["G"]  # W waits 3 hours
+    assert next_due([wd], checked, T0, interval) == T0 + timedelta(hours=2)
+
+
+@pytest.mark.parametrize("bad", [{"check_interval_by_ats": {"workday": 0}}, {"company_concurrency_by_ats": {"workday": 0}},
+                                 {"company_concurrency_by_ats": {"workday": 1.5}}])
+def test_per_ats_settings_are_validated(bad):
+    with pytest.raises(ValueError):
+        Settings(**bad)

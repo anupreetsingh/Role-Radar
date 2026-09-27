@@ -35,12 +35,18 @@ runtime:
 settings:
   check_interval_minutes: 30  # each company is checked when due, so load spreads across the interval
   digest_interval_minutes: 30 # combine all new matching jobs into one notification per half hour
-  notify_on_first_run: true   # set false before adding many companies at once
+  notify_on_first_run: false  # new companies record a baseline first; set true to alert on their open jobs
   repost_window_days: 30
   retention_days: 90
   max_detail_requests: 25
   max_company_concurrency: 40   # companies in flight; requests are limited separately below
   company_timeout: 300
+  # Workday boards take a request per 20 jobs, so they're checked less often and two at
+  # a time: roughly 4,500 requests per round, spread over four hours.
+  check_interval_by_ats:
+    workday: 240
+  company_concurrency_by_ats:
+    workday: 2
   http:
     max_concurrency: 16         # requests in flight across all hosts
     per_domain_delay: 1.0       # seconds between requests to one host...
@@ -49,6 +55,11 @@ settings:
       api.lever.co: 0.3
       api.eu.lever.co: 0.3
       api.ashbyhq.com: 0.3
+      # Every company's Workday tenant is a subdomain of these. A parent-domain key
+      # spaces all of its subdomains as one host, so ~150 tenants together make about
+      # 2 requests/s to Workday at most. A 429 from any of them pauses all of them.
+      myworkdayjobs.com: 0.5
+      myworkdaysite.com: 1.0
     connect_timeout: 10
     read_timeout: 30
     max_retries: 3
@@ -551,3 +562,1299 @@ companies:
   - name: Palantir
     url: https://jobs.lever.co/palantir
     ats: lever
+
+  # --- AI labs and AI-native startups ---
+
+  - name: Anthropic
+    url: https://job-boards.greenhouse.io/anthropic
+    ats: greenhouse
+
+  - name: Cerebras
+    url: https://jobs.ashbyhq.com/cerebras
+    ats: ashby
+
+  - name: Crusoe
+    url: https://jobs.ashbyhq.com/Crusoe
+    ats: ashby
+
+  - name: Cursor
+    url: https://jobs.ashbyhq.com/cursor
+    ats: ashby
+
+  - name: Etched
+    url: https://jobs.ashbyhq.com/etched
+    ats: ashby
+
+  - name: Field AI
+    url: https://jobs.lever.co/field-ai
+    ats: lever
+
+  - name: Glean
+    url: https://job-boards.greenhouse.io/gleanwork
+    ats: greenhouse
+
+  - name: Graphcore
+    url: https://job-boards.greenhouse.io/graphcore
+    ats: greenhouse
+
+  - name: Harvey
+    url: https://jobs.ashbyhq.com/harvey
+    ats: ashby
+
+  - name: Lambda
+    url: https://jobs.ashbyhq.com/lambda
+    ats: ashby
+
+  - name: NewsBreak
+    url: https://job-boards.greenhouse.io/newsbreak
+    ats: greenhouse
+
+  - name: OpenAI
+    url: https://jobs.ashbyhq.com/openai
+    ats: ashby
+
+  - name: Perplexity
+    url: https://jobs.ashbyhq.com/perplexity
+    ats: ashby
+
+  - name: Replit
+    url: https://jobs.ashbyhq.com/replit
+    ats: ashby
+
+  - name: Scale AI
+    url: https://job-boards.greenhouse.io/scaleai
+    ats: greenhouse
+
+  - name: Sierra AI
+    url: https://jobs.ashbyhq.com/sierra
+    ats: ashby
+
+  - name: Solace Health
+    url: https://jobs.ashbyhq.com/solace
+    ats: ashby
+
+  - name: Tenstorrent
+    url: https://job-boards.greenhouse.io/tenstorrent
+    ats: greenhouse
+
+  - name: Together AI
+    url: https://job-boards.greenhouse.io/togetherai
+    ats: greenhouse
+
+  - name: Truveta
+    url: https://job-boards.greenhouse.io/truveta
+    ats: greenhouse
+
+  - name: xAI
+    url: https://job-boards.greenhouse.io/xai
+    ats: greenhouse
+
+  # --- Big tech, cloud, enterprise software and media ---
+
+  - name: Adobe
+    url: https://adobe.wd5.myworkdayjobs.com/external_experienced
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Alkami Technology
+    url: https://alkami.wd12.myworkdayjobs.com/alkami
+    ats: workday
+
+  - name: Asana
+    url: https://job-boards.greenhouse.io/asana
+    ats: greenhouse
+
+  - name: Asure
+    url: https://asuresoftware.bamboohr.com/careers
+    ats: bamboohr
+
+  - name: Autodesk
+    url: https://autodesk.wd1.myworkdayjobs.com/Ext
+    ats: workday
+
+  - name: Axon
+    url: https://job-boards.greenhouse.io/axon
+    ats: greenhouse
+
+  - name: Blue Yonder
+    url: https://jda.wd5.myworkdayjobs.com/JDA_Careers
+    ats: workday
+
+  - name: Broadcom
+    url: https://broadcom.wd1.myworkdayjobs.com/External_Career
+    ats: workday
+
+  - name: Ciena
+    url: https://ciena.wd5.myworkdayjobs.com/Careers
+    ats: workday
+
+  - name: Cisco
+    url: https://cisco.wd5.myworkdayjobs.com/cisco_careers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Clearwater Analytics
+    url: https://clearwateranalytics.wd1.myworkdayjobs.com/Clearwater_Analytics_Careers
+    ats: workday
+
+  - name: CoStar Group
+    url: https://costar.wd1.myworkdayjobs.com/CoStarCareers
+    ats: workday
+
+  - name: Cox Enterprises
+    url: https://cox.wd1.myworkdayjobs.com/Cox_External_Career_Site_1
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: CrowdStrike
+    url: https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers
+    ats: workday
+
+  - name: Databricks
+    url: https://job-boards.greenhouse.io/databricks
+    ats: greenhouse
+
+  - name: Datadog
+    url: https://job-boards.greenhouse.io/datadog
+    ats: greenhouse
+
+  - name: Disney
+    url: https://disney.wd5.myworkdayjobs.com/disneycareer
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: eBay
+    url: https://ebay.wd5.myworkdayjobs.com/apply
+    ats: workday
+
+  - name: Expedia
+    url: https://expedia.wd108.myworkdayjobs.com/search
+    ats: workday
+
+  - name: F5
+    url: https://ffive.wd5.myworkdayjobs.com/f5jobs
+    ats: workday
+
+  - name: Figma
+    url: https://job-boards.greenhouse.io/figma
+    ats: greenhouse
+
+  - name: Gartner
+    url: https://gartner.wd5.myworkdayjobs.com/EXT
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Hewlett Packard Enterprise
+    url: https://hpe.wd5.myworkdayjobs.com/Jobsathpe
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: HP
+    url: https://hp.wd5.myworkdayjobs.com/EXTEU-AC-CareerSite
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: iHeartMedia
+    url: https://iheartmedia.wd5.myworkdayjobs.com/External_iHM
+    ats: workday
+
+  - name: LexisNexis (RELX)
+    url: https://relx.wd3.myworkdayjobs.com/relx
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country___Territory:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: LG Electronics
+    url: https://job-boards.greenhouse.io/lgelectronics
+    ats: greenhouse
+
+  - name: MongoDB
+    url: https://job-boards.greenhouse.io/mongodb
+    ats: greenhouse
+
+  - name: Motorola Solutions
+    url: https://motorolasolutions.wd5.myworkdayjobs.com/Careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Notion
+    url: https://jobs.ashbyhq.com/notion
+    ats: ashby
+
+  - name: OCLC
+    url: https://oclc.wd1.myworkdayjobs.com/OCLC_Careers
+    ats: workday
+
+  - name: Okta
+    url: https://job-boards.greenhouse.io/okta
+    ats: greenhouse
+
+  - name: Omnicom
+    url: https://interpublic.wd5.myworkdayjobs.com/omc
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Palo Alto Networks
+    url: https://paloaltonetworks.wd5.myworkdayjobs.com/panwexternalcareers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Pinterest
+    url: https://job-boards.greenhouse.io/pinterest
+    ats: greenhouse
+
+  - name: Pure Storage
+    url: https://job-boards.greenhouse.io/purestorage
+    ats: greenhouse
+
+  - name: Q2
+    url: https://q2ebanking.wd5.myworkdayjobs.com/Q2
+    ats: workday
+
+  - name: Red Hat
+    url: https://redhat.wd5.myworkdayjobs.com/jobs
+    ats: workday
+
+  - name: Reddit
+    url: https://job-boards.greenhouse.io/reddit
+    ats: greenhouse
+
+  - name: Relay (Relay Pro)
+    url: https://job-boards.greenhouse.io/relaypro
+    ats: greenhouse
+
+  - name: Roblox
+    url: https://job-boards.greenhouse.io/roblox
+    ats: greenhouse
+
+  - name: Salesforce
+    url: https://salesforce.wd12.myworkdayjobs.com/External_Career_Site
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        CF_-_REC_-_LRV_-_Job_Posting_Anchor_-_Country_from_Job_Posting_Location_Extended:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Snap
+    url: https://wd1.myworkdaysite.com/recruiting/snapchat/snap
+    ats: workday
+
+  - name: Snowflake
+    url: https://jobs.ashbyhq.com/snowflake
+    ats: ashby
+
+  - name: Sony Interactive Entertainment
+    url: https://job-boards.greenhouse.io/sonyinteractiveentertainmentglobal
+    ats: greenhouse
+
+  - name: Twilio
+    url: https://job-boards.greenhouse.io/twilio
+    ats: greenhouse
+
+  - name: Twitch
+    url: https://job-boards.greenhouse.io/twitch
+    ats: greenhouse
+
+  - name: Veeva Systems
+    url: https://jobs.lever.co/veeva
+    ats: lever
+
+  - name: Verkada
+    url: https://job-boards.greenhouse.io/verkada
+    ats: greenhouse
+
+  - name: Viavi Solutions
+    url: https://viavisolutions.wd1.myworkdayjobs.com/careers
+    ats: workday
+
+  - name: Waystar
+    url: https://waystar.wd1.myworkdayjobs.com/Waystar
+    ats: workday
+
+  - name: WellSky
+    url: https://wellsky.wd1.myworkdayjobs.com/WellSkyCareers
+    ats: workday
+
+  - name: Wolters Kluwer
+    url: https://wk.wd3.myworkdayjobs.com/External
+    ats: workday
+
+  - name: Workday
+    url: https://workday.wd5.myworkdayjobs.com/Workday
+    ats: workday
+
+  - name: Zoom
+    url: https://zoom.wd5.myworkdayjobs.com/zoom
+    ats: workday
+
+  - name: Zscaler
+    url: https://job-boards.greenhouse.io/zscaler
+    ats: greenhouse
+
+  - name: ZT Systems
+    url: https://connect.wd1.myworkdayjobs.com/ztsystemscareers
+    ats: workday
+
+  # --- Consumer internet and fintech ---
+
+  - name: Affirm
+    url: https://job-boards.greenhouse.io/affirm
+    ats: greenhouse
+
+  - name: Brex
+    url: https://job-boards.greenhouse.io/brex
+    ats: greenhouse
+
+  - name: Coinbase
+    url: https://job-boards.greenhouse.io/coinbase
+    ats: greenhouse
+
+  - name: DoorDash
+    url: https://job-boards.greenhouse.io/doordashusa
+    ats: greenhouse
+
+  - name: iCapital Network
+    url: https://job-boards.greenhouse.io/icapitalnetwork
+    ats: greenhouse
+
+  - name: Lyft
+    url: https://job-boards.greenhouse.io/lyft
+    ats: greenhouse
+
+  - name: Plaid
+    url: https://jobs.ashbyhq.com/plaid
+    ats: ashby
+
+  - name: Remitly
+    url: https://remitly.wd5.myworkdayjobs.com/Remitly_Careers
+    ats: workday
+
+  - name: Robinhood
+    url: https://job-boards.greenhouse.io/robinhood
+    ats: greenhouse
+
+  - name: Rocket Companies
+    url: https://quickenloans.wd5.myworkdayjobs.com/rocket_careers
+    ats: workday
+
+  - name: Stripe
+    url: https://job-boards.greenhouse.io/stripe
+    ats: greenhouse
+
+  # --- Semiconductors and hardware ---
+
+  - name: Analog Devices
+    url: https://analogdevices.wd1.myworkdayjobs.com/External
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Applied Materials
+    url: https://amat.wd1.myworkdayjobs.com/External
+    ats: workday
+    # US jobs only; the full board passes Workday's 2000-job listing limit
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: ASML
+    url: https://asml.wd3.myworkdayjobs.com/asmlext1
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Cadence
+    url: https://cadence.wd1.myworkdayjobs.com/External_Careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: GlobalFoundries
+    url: https://globalfoundries.wd1.myworkdayjobs.com/External
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Intel
+    url: https://intel.wd1.myworkdayjobs.com/External
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: KLA
+    url: https://kla.wd1.myworkdayjobs.com/Search
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Marvell
+    url: https://marvell.wd1.myworkdayjobs.com/MarvellCareers
+    ats: workday
+
+  - name: Micron
+    url: https://micron.wd1.myworkdayjobs.com/External
+    ats: workday
+    # engineering, information systems and technical job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - bff7a31dbdd301db168e7e0caa010662
+          - bff7a31dbdd301db8c6a850caa011462
+          - bff7a31dbdd30107ee937f0caa010862
+          - bff7a31dbdd3011b9dce800caa010a62
+
+  - name: Moog
+    url: https://moog.wd5.myworkdayjobs.com/moog_external_career_site
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: NXP
+    url: https://nxp.wd3.myworkdayjobs.com/careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Samsung Semiconductor
+    url: https://sec.wd3.myworkdayjobs.com/Samsung_Careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Teledyne
+    url: https://flir.wd1.myworkdayjobs.com/flircareers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Vishay
+    url: https://vishay.wd3.myworkdayjobs.com/VishayCareers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  # --- Autonomy, robotics and mobility ---
+
+  - name: Applied Intuition
+    url: https://jobs.ashbyhq.com/applied
+    ats: ashby
+
+  - name: Aptiv
+    url: https://aptiv.wd5.myworkdayjobs.com/aptiv_careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Bot Auto
+    url: https://job-boards.greenhouse.io/botauto
+    ats: greenhouse
+
+  - name: Caterpillar
+    url: https://cat.wd5.myworkdayjobs.com/CaterpillarCareers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: General Motors
+    url: https://generalmotors.wd5.myworkdayjobs.com/Careers_GM
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Lucid Motors
+    url: https://job-boards.greenhouse.io/lucidmotors
+    ats: greenhouse
+
+  - name: Magna
+    url: https://wd3.myworkdaysite.com/recruiting/magna/Magna
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Symbotic
+    url: https://symbotic.wd504.myworkdayjobs.com/Symbotic
+    ats: workday
+
+  - name: Toyota
+    url: https://toyota.wd503.myworkdayjobs.com/tmna
+    ats: workday
+
+  - name: Waymo
+    url: https://job-boards.greenhouse.io/waymo
+    ats: greenhouse
+
+  - name: Zoox
+    url: https://jobs.lever.co/zoox
+    ats: lever
+
+  # --- Quant trading, asset management and market infrastructure ---
+
+  - name: Akuna Capital
+    url: https://job-boards.greenhouse.io/akunacapital
+    ats: greenhouse
+
+  - name: Ascensus
+    url: https://ascensushr.wd1.myworkdayjobs.com/ascensuscareers
+    ats: workday
+
+  - name: Broadridge
+    url: https://broadridge.wd5.myworkdayjobs.com/careers
+    ats: workday
+
+  - name: DRW
+    url: https://job-boards.greenhouse.io/drweng
+    ats: greenhouse
+
+  - name: Fidelity Investments
+    url: https://fmr.wd1.myworkdayjobs.com/FidelityCareers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Fidelity Investments (campus)
+    url: https://fmr.wd1.myworkdayjobs.com/targeted
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: FIS
+    url: https://fis.wd5.myworkdayjobs.com/searchjobs
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Five Rings
+    url: https://job-boards.greenhouse.io/fiveringsllc
+    ats: greenhouse
+
+  - name: Hudson River Trading
+    url: https://job-boards.greenhouse.io/wehrtyou
+    ats: greenhouse
+
+  - name: IMC Trading
+    url: https://job-boards.greenhouse.io/imc
+    ats: greenhouse
+
+  - name: Invesco
+    url: https://invesco.wd1.myworkdayjobs.com/IVZ
+    ats: workday
+
+  - name: Jane Street
+    url: https://job-boards.greenhouse.io/janestreet
+    ats: greenhouse
+
+  - name: Jump Trading
+    url: https://job-boards.greenhouse.io/jumptrading
+    ats: greenhouse
+
+  - name: LPL Financial Holdings
+    url: https://lplfinancial.wd1.myworkdayjobs.com/university
+    ats: workday
+
+  - name: Nasdaq
+    url: https://nasdaq.wd1.myworkdayjobs.com/Global_External_Site
+    ats: workday
+
+  - name: Northern Trust
+    url: https://ntrs.wd1.myworkdayjobs.com/northerntrust
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: PIMCO
+    url: https://pimco.wd1.myworkdayjobs.com/pimco-careers
+    ats: workday
+
+  - name: Point72
+    url: https://job-boards.greenhouse.io/point72
+    ats: greenhouse
+
+  - name: Raymond James Financial
+    url: https://raymondjames.wd1.myworkdayjobs.com/RaymondJamesCareers
+    ats: workday
+
+  - name: SS&C
+    url: https://ssctech.wd1.myworkdayjobs.com/ssctechnologies
+    ats: workday
+
+  - name: State Street
+    url: https://statestreet.wd1.myworkdayjobs.com/Global
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Tower Research Capital
+    url: https://job-boards.greenhouse.io/towerresearchcapital
+    ats: greenhouse
+
+  - name: Vanguard
+    url: https://vanguard.wd5.myworkdayjobs.com/vanguard_external
+    ats: workday
+
+  - name: Virtu Financial
+    url: https://job-boards.greenhouse.io/virtu
+    ats: greenhouse
+
+  # --- Banks, payments and insurance ---
+
+  - name: AAA Club Alliance
+    url: https://ace.wd5.myworkdayjobs.com/careers
+    ats: workday
+
+  - name: Allstate
+    url: https://allstate.wd5.myworkdayjobs.com/allstate_careers
+    ats: workday
+
+  - name: Bank of America
+    url: https://ghr.wd1.myworkdayjobs.com/us-emplsv
+    ats: workday
+    options:
+      max_jobs: 3500
+
+  - name: Capital One
+    url: https://capitalone.wd12.myworkdayjobs.com/Capital_One
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Cigna Group
+    url: https://cigna.wd5.myworkdayjobs.com/cignacareers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Citi
+    url: https://citi.wd5.myworkdayjobs.com/2
+    ats: workday
+    # US jobs only; the full board passes Workday's 2000-job listing limit
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country_and_Jurisdiction:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Equifax
+    url: https://equifax.wd5.myworkdayjobs.com/External
+    ats: workday
+
+  - name: F.N.B. Corporation
+    url: https://fnbcorp.wd501.myworkdayjobs.com/FNBCORP
+    ats: workday
+
+  - name: Federal Reserve
+    url: https://rb.wd5.myworkdayjobs.com/FRS
+    ats: workday
+
+  - name: Great American Insurance
+    url: https://gaig.wd1.myworkdayjobs.com/GAIG_External
+    ats: workday
+
+  - name: Highmark Health
+    url: https://highmarkhealth.wd1.myworkdayjobs.com/highmark
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Huntington Bank
+    url: https://huntington.wd12.myworkdayjobs.com/HNBcareers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Integrity Marketing Group
+    url: https://integritymarketing.wd1.myworkdayjobs.com/Integrity
+    ats: workday
+
+  - name: KeyBank
+    url: https://keybank.wd5.myworkdayjobs.com/External_Career_Site
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: M&T Bank
+    url: https://mtb.wd5.myworkdayjobs.com/MTB
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Mastercard
+    url: https://mastercard.wd1.myworkdayjobs.com/CorporateCareers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: PNC
+    url: https://pnc.wd5.myworkdayjobs.com/External
+    ats: workday
+    # Technology, Business Analytics, Product, Project Management and Trainee job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 36fb33790998013dcc7599d053078601
+          - 36fb337909980188e18383d053074401
+          - d83c06f6b3dd101718f3a13456870000
+          - 36fb337909980123808392d053077601
+          - 36fb3379099801e9ad119dd053078e01
+
+  - name: RBC
+    url: https://rbc.wd3.myworkdayjobs.com/rbcglobal1
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: TD Bank
+    url: https://td.wd3.myworkdayjobs.com/TD_Bank_Careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Texas Capital Bank
+    url: https://texascapitalbank.wd12.myworkdayjobs.com/Careers
+    ats: workday
+
+  - name: TransUnion
+    url: https://transunion.wd5.myworkdayjobs.com/TransUnion
+    ats: workday
+
+  - name: Travelers
+    url: https://travelers.wd5.myworkdayjobs.com/External
+    ats: workday
+
+  - name: Truist
+    url: https://truist.wd1.myworkdayjobs.com/Careers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Visa
+    url: https://visa.wd5.myworkdayjobs.com/Visa
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Worldpay
+    url: https://worldpay.wd5.myworkdayjobs.com/Worldpay_External_Careers_Site
+    ats: workday
+
+  # --- Healthcare, life sciences, industrial and retail technology ---
+
+  - name: 3M
+    url: https://3m.wd1.myworkdayjobs.com/Search
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Abbott
+    url: https://abbott.wd5.myworkdayjobs.com/abbottcareers
+    ats: workday
+    # US jobs only; the full board passes Workday's 2000-job listing limit
+    options:
+      max_jobs: 3000
+      applied_facets:
+        Location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Allegion
+    url: https://allegion.wd5.myworkdayjobs.com/careers
+    ats: workday
+
+  - name: Becton Dickinson
+    url: https://bdx.wd1.myworkdayjobs.com/EXTERNAL_CAREER_SITE_USA
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Blissway
+    url: https://jobs.ashbyhq.com/blissway
+    ats: ashby
+
+  - name: Caris
+    url: https://wd12.myworkdaysite.com/recruiting/carislifesciences/CLS
+    ats: workday
+
+  - name: Carrier Global
+    url: https://carrier.wd5.myworkdayjobs.com/jobs
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        location_Country:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Danaher Corporation
+    url: https://danaher.wd1.myworkdayjobs.com/DanaherJobs
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: DraftKings
+    url: https://draftkings.wd1.myworkdayjobs.com/Employee_Referral_Portal
+    ats: workday
+
+  - name: Elevance Health
+    url: https://elevancehealth.wd1.myworkdayjobs.com/ANT
+    ats: workday
+
+  - name: Freeform
+    url: https://job-boards.greenhouse.io/freeformfuturecorp
+    ats: greenhouse
+
+  - name: GE Appliances
+    url: https://haier.wd3.myworkdayjobs.com/ge_appliances
+    ats: workday
+
+  - name: Genuine Parts Company
+    url: https://genpt.wd1.myworkdayjobs.com/Careers
+    ats: workday
+    # Technology and Product job families; the rest are mostly store and distribution roles
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 112b5250c25d1000ae070d1c31060000
+          - ff21b54cc2e210019c8bd4bff9700000
+
+  - name: Globus Medical
+    url: https://globusmedical.wd5.myworkdayjobs.com/GMED_Careers
+    ats: workday
+
+  - name: Hitachi
+    url: https://hitachi.wd1.myworkdayjobs.com/hitachi
+    ats: workday
+    # US jobs only; the full board passes Workday's 2000-job listing limit
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Johnson & Johnson
+    url: https://jj.wd5.myworkdayjobs.com/JJ
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Lowe's
+    url: https://lowes.wd5.myworkdayjobs.com/LWS_External_CS
+    ats: workday
+    # Digital and Technology job families; the full board is 12,000+ mostly store roles
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 02b0c958653f01dc63f0e6fafb055345
+          - afb941e45f461009d3a1165a2df20000
+          - 02b0c958653f01d9810ce8fafb055745
+
+  - name: Medtronic
+    url: https://medtronic.wd1.myworkdayjobs.com/redeploymentmedtroniccareers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Merck
+    url: https://msd.wd5.myworkdayjobs.com/searchjobs
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Novartis
+    url: https://novartis.wd3.myworkdayjobs.com/Novartis_Careers
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Philips
+    url: https://philips.wd3.myworkdayjobs.com/jobs-and-careers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Scientific Games
+    url: https://sglottery.wd5.myworkdayjobs.com/ScientificGamesExternalCareers
+    ats: workday
+
+  - name: SharkNinja
+    url: https://job-boards.greenhouse.io/sharkninjaoperatingllc
+    ats: greenhouse
+
+  - name: Technology Service Corporation
+    url: https://tsc.wd12.myworkdayjobs.com/TSC-Careers
+    ats: workday
+
+  - name: The Home Depot
+    url: https://homedepot.wd5.myworkdayjobs.com/CareerDepot
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Uline
+    url: https://uline.wd1.myworkdayjobs.com/Uline_Careers
+    ats: workday
+
+  - name: Viridien
+    url: https://cgg.wd103.myworkdayjobs.com/viridiencareers
+    ats: workday
+
+  # --- Consulting, IT services and national labs ---
+
+  - name: Accenture
+    url: https://job-boards.greenhouse.io/accenturefederalservices
+    ats: greenhouse
+
+  - name: AHEAD
+    url: https://jobs.lever.co/thinkahead
+    ats: lever
+
+  - name: Argonne National Laboratory
+    url: https://argonne.wd1.myworkdayjobs.com/Argonne_Careers
+    ats: workday
+
+  - name: Brookhaven Lab
+    url: https://bnl.wd1.myworkdayjobs.com/externa
+    ats: workday
+
+  - name: Guidehouse
+    url: https://guidehouse.wd1.myworkdayjobs.com/external
+    ats: workday
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Huron
+    url: https://huron.wd1.myworkdayjobs.com/huroncareers
+    ats: workday
+
+  - name: ICF International
+    url: https://icf.wd5.myworkdayjobs.com/icfexternal_career_site
+    ats: workday
+
+  # --- Defense, aerospace and space (many roles need US citizenship or a clearance) ---
+
+  - name: AeroVironment
+    url: https://avav.wd1.myworkdayjobs.com/avav
+    ats: workday
+
+  - name: Airbus
+    url: https://ag.wd3.myworkdayjobs.com/Airbus
+    ats: workday
+    # US jobs only; the full board passes Workday's 2000-job listing limit
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Allen Control Systems
+    url: https://jobs.ashbyhq.com/allen-control-systems
+    ats: ashby
+
+  - name: Amentum
+    url: https://pae.wd1.myworkdayjobs.com/amentum_careers
+    ats: workday
+    # Engineering and IT job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 69b866c075b6101c8c1a97fc22e983bb
+          - 69b866c075b6101c8c1aa3532a1783c3
+
+  - name: Anduril
+    url: https://job-boards.greenhouse.io/andurilindustries
+    ats: greenhouse
+
+  - name: Blue Origin
+    url: https://blueorigin.wd5.myworkdayjobs.com/blueorigin
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Boeing
+    url: https://boeing.wd1.myworkdayjobs.com/EXTERNAL_CAREERS
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Booz Allen
+    url: https://bah.wd1.myworkdayjobs.com/bah_jobs
+    ats: workday
+    # Technology and Engineering & Science job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 1fdcf957357510db71b852c4ebf522a6
+          - 1fdcf957357510db71b84de9df3222a4
+
+  - name: CACI
+    url: https://caci.wd1.myworkdayjobs.com/external
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: CAE
+    url: https://cae.wd3.myworkdayjobs.com/career
+    ats: workday
+
+  - name: CesiumAstro
+    url: https://jobs.lever.co/CesiumAstro
+    ats: lever
+
+  - name: Curtiss-Wright Corporation
+    url: https://curtisswright.wd1.myworkdayjobs.com/cw_external_career_site
+    ats: workday
+
+  - name: Draper
+    url: https://draper.wd5.myworkdayjobs.com/Draper_Careers
+    ats: workday
+
+  - name: GDIT
+    url: https://gdit.wd5.myworkdayjobs.com/external_career_site
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: General Dynamics Electric Boat
+    url: https://careers-gdeb.icims.com/jobs/search
+    ats: icims
+
+  - name: General Dynamics Mission Systems
+    url: https://careers-gdms.icims.com/jobs/search
+    ats: icims
+
+  - name: Intuitive Research and Technology
+    url: https://intuitive.wd1.myworkdayjobs.com/irtc_careers
+    ats: workday
+
+  - name: KBR
+    url: https://kbr.wd5.myworkdayjobs.com/KBR_Careers
+    ats: workday
+    options:
+      max_jobs: 3000
+
+  - name: Leidos
+    url: https://leidos.wd5.myworkdayjobs.com/External
+    ats: workday
+    # Engineering and IT job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 96064918a76d1023f15857f0a8156d30
+          - 96064918a76d1023f1586f686a4d6d3c
+
+  - name: Nightwing
+    url: https://nwis.wd12.myworkdayjobs.com/NW
+    ats: workday
+
+  - name: Northrop Grumman
+    url: https://ngc.wd1.myworkdayjobs.com/Northrop_Grumman_External_Site
+    ats: workday
+    # Engineering, IT and Technical Support job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - a111b0a898f10171f1426263e7007578
+          - a111b0a898f1018af8043a63e7007178
+          - a111b0a898f101fd03f53064e7009378
+
+  - name: Northwood Space
+    url: https://jobs.ashbyhq.com/NorthwoodSpace
+    ats: ashby
+
+  - name: Radiance Technologies
+    url: https://radiancetech.wd12.myworkdayjobs.com/Radiance_External
+    ats: workday
+
+  - name: Relativity Space
+    url: https://job-boards.greenhouse.io/relativity
+    ats: greenhouse
+
+  - name: Rocket Lab
+    url: https://job-boards.greenhouse.io/rocketlab
+    ats: greenhouse
+
+  - name: RTX
+    url: https://globalhr.wd5.myworkdayjobs.com/rec_rtx_ext_gateway
+    ats: workday
+    # Digital Technology and Engineering job families
+    options:
+      max_jobs: 3000
+      applied_facets:
+        jobFamilyGroup:
+          - 4af3a9414ae11010c76a87724762dca7
+          - bac5186f63f210324b590667f0243ccd
+
+  - name: Saronic
+    url: https://jobs.ashbyhq.com/saronic
+    ats: ashby
+
+  - name: Shield AI
+    url: https://jobs.lever.co/shieldai
+    ats: lever
+
+  - name: Sierra Nevada Corporation
+    url: https://snc.wd1.myworkdayjobs.com/snc_external_career_site
+    ats: workday
+
+  - name: SpaceX
+    url: https://job-boards.greenhouse.io/spacex
+    ats: greenhouse
+
+  - name: Systems & Technology Research
+    url: https://job-boards.greenhouse.io/systemstechnologyresearch
+    ats: greenhouse
+
+  - name: The Aerospace Corporation
+    url: https://aero.wd5.myworkdayjobs.com/external
+    ats: workday
+
+  - name: Torch Technologies
+    url: https://starfish.wd501.myworkdayjobs.com/Careers
+    ats: workday
+
+  - name: True Anomaly
+    url: https://job-boards.greenhouse.io/trueanomalyinc
+    ats: greenhouse
+
+  - name: Vantor
+    url: https://maxar.wd1.myworkdayjobs.com/Vantor
+    ats: workday
+
+  - name: Voyager Technologies
+    url: https://job-boards.greenhouse.io/voyagertechnologiesinc
+    ats: greenhouse

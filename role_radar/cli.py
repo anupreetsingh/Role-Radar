@@ -43,7 +43,7 @@ from role_radar.instance import InstanceLock
 from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
 from role_radar.runner import EXIT_LEASE_HELD, Runner
-from role_radar.schedule import due_companies, next_due
+from role_radar.schedule import due_companies, interval_for, next_due
 from role_radar.storage import JsonStateStore, StateStore, from_iso, utcnow
 
 log = logging.getLogger("role-radar")
@@ -195,7 +195,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     enabled = [c for c in config.companies if c.enabled]
     schedule = backend.store.load_schedule()
-    interval = config.settings.check_interval
+    interval = interval_for(config.settings)
     due = due_companies(enabled, schedule, now, interval)
     upcoming = next_due(enabled, schedule, now, interval)
     line = f"Companies:      {len(enabled)} enabled, {len(due)} due now"

@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_USER_AGENT = "RoleRadar/1.0 (personal job-alert monitor; +https://github.com/)"
 RETRY_STATUSES = {429, 500, 502, 503, 504}
+RATE_LIMIT_PAUSE = 60.0  # seconds to hold a rate-limited host (and hosts sharing its spacing) without Retry-After
 
 # The big ATS APIs serve every company's board from one host, so they get a
 # shorter delay than per_domain_delay. settings.http.host_delays adds to and
@@ -52,7 +53,9 @@ class HttpSettings:
     max_concurrency: int = 16
     per_domain_delay: float = 1.0  # minimum seconds between requests to one host
     # Per-host overrides of per_domain_delay, e.g. {"boards-api.greenhouse.io": 0.25}.
-    # A key also covers its subdomains; the most specific key wins.
+    # A key also covers its subdomains; the most specific key wins. Subdomains covered
+    # by a parent-domain key share its spacing, as one host: {"myworkdayjobs.com": 0.3}
+    # keeps every company's Workday tenant together under one rate.
     host_delays: dict[str, float] = field(default_factory=dict)
     connect_timeout: float = 10.0
     read_timeout: float = 30.0
@@ -70,11 +73,19 @@ class HttpSettings:
         self.host_delays = delays
 
     def delay_for(self, host: str) -> float:
-        """Minimum seconds between requests to `host`."""
+        """Minimum seconds between requests to `host` (or to its throttle_key)."""
+        key = self._delay_key(host)
+        return {**DEFAULT_HOST_DELAYS, **self.host_delays}[key] if key else self.per_domain_delay
+
+    def throttle_key(self, host: str) -> str:
+        """The name whose request spacing `host` shares: its host_delays key, else itself."""
+        return self._delay_key(host) or host.lower()
+
+    def _delay_key(self, host: str) -> str | None:
         host = host.lower()
         delays = {**DEFAULT_HOST_DELAYS, **self.host_delays}
         matches = [name for name in delays if host == name or host.endswith("." + name)]
-        return delays[max(matches, key=len)] if matches else self.per_domain_delay
+        return max(matches, key=len) if matches else None
 
 
 @dataclass
@@ -230,22 +241,33 @@ class HttpClient:
         # A missing robots.txt (4xx) just means "no restrictions", not a failure.
         failed = resp.status_code >= 500 or (resp.status_code >= 400 and not robots)
         self.stats.record(host, nbytes, error=failed)
+        if resp.status_code == 429:
+            self._pause(host, self._retry_after(resp) or RATE_LIMIT_PAUSE)
         return resp
+
+    def _pause(self, host: str, seconds: float) -> None:
+        """Hold every request sharing `host`'s spacing for `seconds`, not just this one's retry."""
+        key = self.settings.throttle_key(host)
+        resume = time.monotonic() + seconds - self.settings.delay_for(host)
+        self._domain_last[key] = max(self._domain_last.get(key, 0.0), resume)
+        log.warning("%s rate-limited us; pausing requests to %s for %.0fs", host, key, seconds)
 
     async def _wait_turn(self, host: str) -> None:
         """Wait out the host's spacing, then take a global slot (returned held).
 
         The host lock is kept until the slot is taken, so the spacing is
         measured from when requests actually start, not from when they
-        finished waiting on the host.
+        finished waiting on the host. Hosts under a parent-domain delay share
+        one lock and spacing (see HttpSettings.host_delays).
         """
-        lock = self._domain_locks.setdefault(host, asyncio.Lock())
+        key = self.settings.throttle_key(host)
+        lock = self._domain_locks.setdefault(key, asyncio.Lock())
         async with lock:
-            wait = self._domain_last.get(host, 0.0) + self.settings.delay_for(host) - time.monotonic()
+            wait = self._domain_last.get(key, 0.0) + self.settings.delay_for(host) - time.monotonic()
             if wait > 0:
                 await asyncio.sleep(wait)
             await self._global.acquire()
-            self._domain_last[host] = time.monotonic()
+            self._domain_last[key] = time.monotonic()
 
     def _backoff(self, attempt: int) -> float:
         delay = self.settings.backoff_base * (2**attempt)

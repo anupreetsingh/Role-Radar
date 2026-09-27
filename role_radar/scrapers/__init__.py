@@ -44,4 +44,12 @@ def scraper_class_for(url: str, ats: str | None = None) -> type[BaseScraper]:
     return GenericScraper
 
 
-__all__ = ["SCRAPERS", "BaseScraper", "ScrapeResult", "ScraperError", "scraper_class_for"]
+def ats_name(url: str, ats: str | None = None) -> str | None:
+    """The scraper name a company resolves to (e.g. "workday"), or None if `ats` is unknown."""
+    try:
+        return scraper_class_for(url, ats).name
+    except ValueError:
+        return None
+
+
+__all__ = ["SCRAPERS", "BaseScraper", "ScrapeResult", "ScraperError", "ats_name", "scraper_class_for"]

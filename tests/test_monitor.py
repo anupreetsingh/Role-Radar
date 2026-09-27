@@ -321,3 +321,28 @@ def test_secret_loading_failure_saves_pending_jobs_for_retry(monkeypatch):
     notifier = RecordingNotifier()
     assert run_monitor(monkeypatch, store, notifier, check_all=True) == 0
     assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
+
+
+def test_bounded_gates_limit_their_jobs_without_holding_other_jobs_slots():
+    from role_radar.monitor import _bounded
+
+    running, peak, order = [0], [0], []
+
+    def job(name, seconds):
+        async def run():
+            running[0] += 1
+            peak[0] = max(peak[0], running[0]) if name.startswith("wd") else peak[0]
+            await asyncio.sleep(seconds)
+            running[0] -= 1
+            order.append(name)
+            return name
+        return run
+
+    async def go():
+        gate = asyncio.Semaphore(1)
+        jobs = [job(f"wd{i}", 0.05) for i in range(4)] + [job("gh", 0)]
+        return await _bounded(2, jobs, [gate] * 4 + [None])
+
+    assert asyncio.run(go()) == ["wd0", "wd1", "wd2", "wd3", "gh"]
+    assert peak[0] == 1  # one gated job at a time
+    assert order[0] == "gh"  # the ungated job didn't queue behind gated ones

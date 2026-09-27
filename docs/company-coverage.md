@@ -8,10 +8,11 @@ whether it belongs in the list.
 
 ## Enabled employers
 
-The 67 enabled employers are defined in [the configuration](../config/companies.yaml).
+The 300 enabled employers are defined in [the configuration](../config/companies.yaml).
 The latest source check is in [the validation report](company-validation.json).
 Counts in that report are a dated observation, not a promise that a position remains
-open or that its requirements fit the candidate.
+open or that its requirements fit the candidate. The report predates the US tech
+expansion below; its config hash identifies the 67-employer list it checked.
 
 ### Scientific computing, simulation and healthcare
 
@@ -34,6 +35,98 @@ ChurnZero, Identity Digital, Kinaxis and D2L.
 Cockroach Labs, SingleStore, Yugabyte, Grafana Labs, Imply, Fivetran, Auvik, Rubrik,
 Druva, Elastic, ClickHouse, BrowserStack, Cohere, NVIDIA, Ashby, Ramp, Sentry, Discord
 and Palantir.
+
+## US tech expansion (September 2026)
+
+233 employers added on 2026-09-27 to widen US coverage. Candidates came from
+employers posting US software, data, hardware, product and quant roles in the
+SimplifyJobs new-grad dataset, on boards Role Radar can read. Each was kept only if
+a live `role-radar list-matches` run with the default filters found at least five
+matching US openings, and its matches were mostly software, data or IT roles rather
+than civil, mechanical or HVAC engineering titles. Universities, state agencies,
+staffing firms and small cleared-contract shops were left out. Many defense and
+aerospace roles require US citizenship or a clearance.
+
+### AI labs and AI-native startups
+
+Anthropic, Cerebras, Crusoe, Cursor, Etched, Field AI, Glean, Graphcore, Harvey, Lambda,
+NewsBreak, OpenAI, Perplexity, Replit, Scale AI, Sierra AI, Solace Health, Tenstorrent,
+Together AI, Truveta and xAI.
+
+### Big tech, cloud, enterprise software and media
+
+Adobe, Alkami Technology, Asana, Asure, Autodesk, Axon, Blue Yonder, Broadcom, Ciena,
+Cisco, Clearwater Analytics, CoStar Group, Cox Enterprises, CrowdStrike, Databricks,
+Datadog, Disney, eBay, Expedia, F5, Figma, Gartner, Hewlett Packard Enterprise, HP,
+iHeartMedia, LexisNexis (RELX), LG Electronics, MongoDB, Motorola Solutions, Notion,
+OCLC, Okta, Omnicom, Palo Alto Networks, Pinterest, Pure Storage, Q2, Red Hat, Reddit,
+Relay (Relay Pro), Roblox, Salesforce, Snap, Snowflake, Sony Interactive Entertainment,
+Twilio, Twitch, Veeva Systems, Verkada, Viavi Solutions, Waystar, WellSky, Wolters
+Kluwer, Workday, Zoom, Zscaler and ZT Systems.
+
+### Consumer internet and fintech
+
+Affirm, Brex, Coinbase, DoorDash, iCapital Network, Lyft, Plaid, Remitly, Robinhood,
+Rocket Companies and Stripe.
+
+### Semiconductors and hardware
+
+Analog Devices, Applied Materials, ASML, Cadence, GlobalFoundries, Intel, KLA, Marvell,
+Micron, Moog, NXP, Samsung Semiconductor, Teledyne and Vishay.
+
+### Autonomy, robotics and mobility
+
+Applied Intuition, Aptiv, Bot Auto, Caterpillar, General Motors, Lucid Motors, Magna,
+Symbotic, Toyota, Waymo and Zoox.
+
+### Quant trading, asset management and market infrastructure
+
+Akuna Capital, Ascensus, Broadridge, DRW, Fidelity Investments, Fidelity Investments
+(campus), FIS, Five Rings, Hudson River Trading, IMC Trading, Invesco, Jane Street, Jump
+Trading, LPL Financial Holdings, Nasdaq, Northern Trust, PIMCO, Point72, Raymond James
+Financial, SS&C, State Street, Tower Research Capital, Vanguard and Virtu Financial.
+
+### Banks, payments and insurance
+
+AAA Club Alliance, Allstate, Bank of America, Capital One, Cigna Group, Citi, Equifax,
+F.N.B. Corporation, Federal Reserve, Great American Insurance, Highmark Health,
+Huntington Bank, Integrity Marketing Group, KeyBank, M&T Bank, Mastercard, PNC, RBC, TD
+Bank, Texas Capital Bank, TransUnion, Travelers, Truist, Visa and Worldpay.
+
+### Healthcare, life sciences, industrial and retail technology
+
+3M, Abbott, Allegion, Becton Dickinson, Blissway, Caris, Carrier Global, Danaher
+Corporation, DraftKings, Elevance Health, Freeform, GE Appliances, Genuine Parts
+Company, Globus Medical, Hitachi, Johnson & Johnson, Lowe's, Medtronic, Merck, Novartis,
+Philips, Scientific Games, SharkNinja, Technology Service Corporation, The Home Depot,
+Uline and Viridien.
+
+### Consulting, IT services and national labs
+
+Accenture, AHEAD, Argonne National Laboratory, Brookhaven Lab, Guidehouse, Huron and ICF
+International.
+
+### Defense, aerospace and space
+
+AeroVironment, Airbus, Allen Control Systems, Amentum, Anduril, Blue Origin, Boeing,
+Booz Allen, CACI, CAE, CesiumAstro, Curtiss-Wright Corporation, Draper, GDIT, General
+Dynamics Electric Boat, General Dynamics Mission Systems, Intuitive Research and
+Technology, KBR, Leidos, Nightwing, Northrop Grumman, Northwood Space, Radiance
+Technologies, Relativity Space, Rocket Lab, RTX, Saronic, Shield AI, Sierra Nevada
+Corporation, SpaceX, Systems & Technology Research, The Aerospace Corporation, Torch
+Technologies, True Anomaly, Vantor and Voyager Technologies.
+
+### Large Workday boards
+
+Workday reports at most 2,000 jobs for some tenants, and its listing order is not
+always newest first, so large boards read with `options.max_jobs: 3000` and, where a
+board would still exceed the limit or carry mostly unrelated roles, an
+`applied_facets` filter: US jobs only, or technology and engineering job families
+(Booz Allen, Leidos, Northrop Grumman, RTX, Amentum, Micron, PNC, Lowe's, Genuine
+Parts). All Workday tenants share one request rate through the `myworkdayjobs.com`
+and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
+are checked every four hours, two at a time, so the list stays well under Workday's
+per-IP rate limit.
 
 ## How the less conventional sources are covered
 
@@ -63,9 +156,9 @@ detail checks are bounded per pass, so some multi-location roles can take anothe
 check to resolve. See the README's configuration section for the title rules and
 eligibility limitations.
 
-The first monitoring pass can include already-open matching roles because
-`notify_on_first_run` is enabled. Subsequent passes use the existing deduplication
-and half-hour digest behavior.
+`notify_on_first_run` is disabled, so a newly added employer's first check records
+its open roles as a baseline; only roles posted after that alert. Subsequent passes
+use the existing deduplication and half-hour digest behavior.
 
 ## Expansion queue
 

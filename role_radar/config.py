@@ -53,15 +53,38 @@ class Settings:
     # and each host's delay; this just keeps enough work queued for other hosts.
     max_company_concurrency: int = 40
     company_timeout: float = 300.0
+    # Per-ATS overrides of check_interval_minutes, e.g. {"workday": 180}, for platforms
+    # whose boards take many requests each.
+    check_interval_by_ats: dict[str, float] = field(default_factory=dict)
+    # Per-ATS caps on companies checked at once, e.g. {"workday": 2}. A company waits
+    # for its ATS's turn before taking one of max_company_concurrency's slots.
+    company_concurrency_by_ats: dict[str, int] = field(default_factory=dict)
     http: HttpSettings = field(default_factory=HttpSettings)
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.digest_interval_minutes) or self.digest_interval_minutes < 0:
             raise ValueError("settings.digest_interval_minutes must be a finite nonnegative number")
+        intervals = {}
+        for ats, minutes in (self.check_interval_by_ats or {}).items():
+            if not isinstance(minutes, (int, float)) or not math.isfinite(minutes) or minutes <= 0:
+                raise ValueError(f"settings.check_interval_by_ats[{ats!r}] must be a positive number of minutes")
+            intervals[str(ats).strip().lower()] = float(minutes)
+        self.check_interval_by_ats = intervals
+        limits = {}
+        for ats, limit in (self.company_concurrency_by_ats or {}).items():
+            if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+                raise ValueError(f"settings.company_concurrency_by_ats[{ats!r}] must be a whole number >= 1")
+            limits[str(ats).strip().lower()] = limit
+        self.company_concurrency_by_ats = limits
 
     @property
     def check_interval(self) -> timedelta:
         return timedelta(minutes=self.check_interval_minutes)
+
+    def check_interval_for(self, ats: str | None) -> timedelta:
+        """The check interval for companies on `ats` (a scraper name)."""
+        minutes = self.check_interval_by_ats.get((ats or "").lower())
+        return timedelta(minutes=minutes) if minutes else self.check_interval
 
 
 # RuntimeSettings field → environment variables that override it, first one set wins.

@@ -179,8 +179,8 @@ completed alerts are not replayed when another channel is added.
 ### Scheduling
 
 Companies aren't all checked at once. Each one is checked when it's **due**: when
-`check_interval_minutes` (30) have passed since its last check, or straight away if it
-has never been checked. Each company's state is saved as soon as that company finishes,
+`check_interval_minutes` (30; Workday companies 240, via `check_interval_by_ats`) have
+passed since its last check, or straight away if it has never been checked. Each company's state is saved as soon as that company finishes,
 so an interrupted pass loses at most the companies still in flight. Those companies are
 still due and get picked up next time.
 
@@ -587,12 +587,24 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   request per second per host. The shared ATS APIs are exceptions:
   `boards-api.greenhouse.io` gets 0.25 s, and `api.lever.co` / `api.ashbyhq.com` get
   0.3 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
-  subdomains. Most boards take one request, so a full round of 1,000 companies takes a
-  few minutes, and the schedule spreads that round over the half hour.
+  subdomains, and subdomains under a parent-domain key share one rate. An HTTP 429
+  pauses every host sharing that rate for the Retry-After time (or 60 s). Most boards
+  take one request, so a full round of 1,000 companies takes a few minutes, and the
+  schedule spreads that round over the half hour.
+- Workday is the exception: one request per 20 jobs, and every company's tenant sits
+  on the same service, which answers bursts from one IP with HTTP 429. The config
+  spaces all `myworkdayjobs.com` tenants as one host (0.5 s), checks at most two
+  Workday companies at a time (`settings.company_concurrency_by_ats`), and checks
+  them every four hours (`settings.check_interval_by_ats`). With ~150 Workday
+  companies that is about 4,500 requests per round, under 0.5 requests/s on average.
 - Detail requests are made only when a filter needs a field the listing lacks, only for
   unseen jobs that could still match, and at most `max_detail_requests` per company per
   check. Any left over are fetched at the next check.
-- For very large Workday tenants, set `options.search_text` and `options.max_jobs`.
+- For very large Workday tenants, set `options.max_jobs` and narrow the listing with
+  `options.applied_facets` (e.g. the US country ID `bc33aa3152ec42d4995f4791a106ed09`
+  under the board's country facet, or its technology job families) or
+  `options.search_text`. Some tenants report at most 2,000 jobs, and not every board
+  lists newest first, so keep a faceted board under 2,000.
 - When adding many companies at once, set `notify_on_first_run: false`, or run once with
   `--baseline`.
 

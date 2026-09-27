@@ -33,8 +33,8 @@ from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
 from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
-from role_radar.schedule import after_check, due_companies, next_due
-from role_radar.scrapers import BaseScraper, scraper_class_for
+from role_radar.schedule import after_check, due_companies, interval_for, next_due
+from role_radar.scrapers import BaseScraper, ats_name, scraper_class_for
 from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
 from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile, settle_duplicates
 
@@ -178,24 +178,36 @@ async def _fetch_details(scraper: BaseScraper, job: JobPosting) -> bool:
         return False
 
 
-async def _bounded(limit: int, jobs: Iterable[Callable[[], Awaitable[T]]]) -> list[T]:
+async def _bounded(
+    limit: int, jobs: Iterable[Callable[[], Awaitable[T]]], gates: Sequence[asyncio.Semaphore | None] | None = None
+) -> list[T]:
     """Run each job, at most `limit` at a time, returning results in order.
 
+    A job with a gate waits for it before taking one of the `limit` slots, so jobs
+    queued behind a narrow gate don't hold slots other jobs could use.
     If one raises, the others are cancelled and the exception propagates.
     """
     sem = asyncio.Semaphore(limit)
 
-    async def one(job: Callable[[], Awaitable[T]]) -> T:
-        async with sem:
-            return await job()
+    async def one(job: Callable[[], Awaitable[T]], gate: asyncio.Semaphore | None) -> T:
+        async with gate or contextlib.nullcontext():
+            async with sem:
+                return await job()
 
-    tasks = [asyncio.ensure_future(one(job)) for job in jobs]
+    jobs = list(jobs)
+    tasks = [asyncio.ensure_future(one(job, gate)) for job, gate in zip(jobs, gates or [None] * len(jobs))]
     try:
         return await asyncio.gather(*tasks)
     finally:
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+
+
+def _ats_gates(companies: Sequence[CompanyConfig], settings: Settings) -> list[asyncio.Semaphore | None]:
+    """Each company's gate from settings.company_concurrency_by_ats (shared per ATS), or None."""
+    shared = {ats: asyncio.Semaphore(n) for ats, n in settings.company_concurrency_by_ats.items()}
+    return [shared.get(ats_name(c.url, c.ats) or "") for c in companies]
 
 
 async def check_company(
@@ -317,7 +329,9 @@ async def process_company(
     pruned = state.prune(settings.retention_days, now)
     if pruned:
         log.info("[%s] pruned %d long-removed job(s)", company.name, pruned)
-    record.meta = outcome.meta = after_check(record.meta, now, settings.check_interval, error=outcome.error)
+    record.meta = outcome.meta = after_check(
+        record.meta, now, settings.check_interval_for(ats_name(company.url, company.ats)), error=outcome.error
+    )
     if not dry_run:
         await _save(store, record, lease, save_lock, deadline, unsaved)
     return outcome
@@ -441,9 +455,9 @@ async def run_pass(
 
     started = time.monotonic()
     schedule = await asyncio.to_thread(store.load_schedule)
-    due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), settings.check_interval)
+    due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), interval_for(settings))
     if not due:
-        result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+        result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
         if not baseline and not dry_run and not await _stopping(should_stop):
             await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
         result.seconds = time.monotonic() - started
@@ -473,16 +487,18 @@ async def run_pass(
             log.error("[%s] state could not be loaded or saved: %s", company.name, msg)
             return CompanyOutcome(company.name, error=msg)
 
+    gates = _ats_gates(due, settings)
+
     async with HttpClient(settings.http, robots=robots) as http:
         try:
-            result.outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: guarded(c) for c in due])
+            result.outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: guarded(c) for c in due], gates)
         except LeaseLost as exc:
             log.error("Stopped: %s. Unfinished companies are still due for whoever holds the lease.", exc)
             result.lease_lost = True
 
     result.requests, result.bytes = http.stats.requests, http.stats.bytes
     schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
-    result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+    result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
     if not baseline and not dry_run and not result.lease_lost and not await _stopping(should_stop):
         await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
     result.seconds = time.monotonic() - started
@@ -583,8 +599,9 @@ async def print_matches(companies: list[CompanyConfig], settings: Settings) -> i
             log.error("[%s] failed: %s", company.name, str(exc) or type(exc).__name__)
             return CompanyOutcome(company.name, error=str(exc))
 
+    gates = _ats_gates(companies, settings)
     async with HttpClient(settings.http) as http:
-        outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: one(c) for c in companies])
+        outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: one(c) for c in companies], gates)
     for o in outcomes:
         for job in o.matched:
             print(f"{o.company} | {job.title} | {job.location or '-'} | {job.url}")

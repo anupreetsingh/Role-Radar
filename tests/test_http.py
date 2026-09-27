@@ -58,8 +58,27 @@ def test_host_delay_overrides():
     assert s.delay_for("other.org") == 1.0
     assert s.delay_for("boards-api.greenhouse.io") == 0.25  # built-in default
     assert HttpSettings(host_delays={"boards-api.greenhouse.io": 2}).delay_for("boards-api.greenhouse.io") == 2
+    assert s.throttle_key("Jobs.Example.com") == "example.com"  # subdomains share the parent's spacing
+    assert s.throttle_key("api.example.com") == "api.example.com"
+    assert s.throttle_key("other.org") == "other.org"
     with pytest.raises(ValueError):
         HttpSettings(host_delays={"a.example": -1})
+
+
+def test_parent_domain_delay_spaces_subdomains_together():
+    starts = []
+
+    def handler(request):
+        starts.append(time.monotonic())
+        return httpx.Response(200, text="ok")
+
+    async def go():
+        async with make_client(handler, host_delays={"wd.example": 0.15}) as http:
+            await asyncio.gather(*(http.get_text(f"https://t{i}.wd.example/jobs") for i in range(3)))
+
+    asyncio.run(go())
+    gaps = [b - a for a, b in zip(starts, starts[1:])]
+    assert len(gaps) == 2 and min(gaps) >= 0.14  # three tenants, one shared rate
 
 
 def test_stats_count_requests_bytes_and_errors():
@@ -186,3 +205,25 @@ def test_missing_robots_txt_is_not_counted_as_a_failure():
     http = HttpClient(HttpSettings(per_domain_delay=0, max_retries=0), transport=httpx.MockTransport(handler))
     asyncio.run(go(http))
     assert (http.stats.requests, sum(s.errors for s in http.stats.hosts.values())) == (2, 0)
+
+
+def test_rate_limit_pauses_every_host_sharing_the_spacing():
+    starts = {}
+
+    def handler(request):
+        starts.setdefault(request.url.host, time.monotonic())
+        if request.url.host == "t1.wd.example":
+            return httpx.Response(429, headers={"Retry-After": "1"})
+        return httpx.Response(200, text="ok")
+
+    async def go():
+        async with make_client(handler, host_delays={"wd.example": 0}, max_retries=0) as http:
+            with pytest.raises(FetchError):
+                await http.get_text("https://t1.wd.example/jobs")
+            await http.get_text("https://t2.wd.example/jobs")  # another tenant, same rate
+            await http.get_text("https://other.example/")  # unrelated host: not paused
+
+    began = time.monotonic()
+    asyncio.run(go())
+    assert starts["t2.wd.example"] - starts["t1.wd.example"] >= 0.9
+    assert starts["other.example"] - began < 3

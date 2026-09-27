@@ -19,13 +19,26 @@ from __future__ import annotations
 
 import random
 from datetime import datetime, timedelta
-from typing import Iterable
+from typing import Callable, Iterable, Union
 
-from role_radar.config import CompanyConfig
+from role_radar.config import CompanyConfig, Settings
+from role_radar.scrapers import ats_name
 from role_radar.storage import CompanyMeta, from_iso, to_iso
 
 MAX_BACKOFF = 8  # longest interval for a failing company, as a multiple of the normal one
 _rng = random.Random()
+
+# One interval for every company, or a function giving each company's own.
+Interval = Union[timedelta, Callable[[CompanyConfig], timedelta]]
+
+
+def interval_for(settings: Settings) -> Callable[[CompanyConfig], timedelta]:
+    """Each company's check interval: its ATS's settings.check_interval_by_ats, else the default."""
+    return lambda company: settings.check_interval_for(ats_name(company.url, company.ats))
+
+
+def _interval(interval: Interval, company: CompanyConfig) -> timedelta:
+    return interval if isinstance(interval, timedelta) else interval(company)
 
 
 def due_at(meta: CompanyMeta | None, interval: timedelta) -> datetime | None:
@@ -40,12 +53,12 @@ def due_at(meta: CompanyMeta | None, interval: timedelta) -> datetime | None:
 
 
 def due_companies(
-    companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, interval: timedelta
+    companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, interval: Interval
 ) -> list[CompanyConfig]:
     """Companies due at `now`: never-checked ones first (in config order), then the most overdue."""
     due = []
     for company in companies:
-        at = due_at(schedule.get(company.name), interval)
+        at = due_at(schedule.get(company.name), _interval(interval, company))
         if at is None or at <= now:
             due.append((at is not None, at or now, company))
     due.sort(key=lambda d: d[:2])
@@ -53,10 +66,10 @@ def due_companies(
 
 
 def next_due(
-    companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, interval: timedelta
+    companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, interval: Interval
 ) -> datetime | None:
     """The earliest time any of `companies` is due (`now` if one never was checked); None if there are none."""
-    times = [due_at(schedule.get(c.name), interval) or now for c in companies]
+    times = [due_at(schedule.get(c.name), _interval(interval, c)) or now for c in companies]
     return min(times, default=None)
 
 
