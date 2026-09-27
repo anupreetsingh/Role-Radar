@@ -33,7 +33,7 @@ runtime:
   config_url: s3://role-radar-configbucket-sgxptx7mtuif/companies.yaml
   secrets: ssm:/role-radar/
   region: us-east-1
-  profile: role-radar-admin
+  profile: role-radar  # the laptop IAM user (permanent key); role-radar-admin is only for sam deploy
 
 settings:
   # Target: a new job reaches you within 30 minutes (check every 20 + digest every 10).
