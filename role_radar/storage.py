@@ -76,6 +76,7 @@ class CompanyMeta:
     next_check_at: str | None = None
     failures: int = 0  # consecutive failed checks
     last_error: str | None = None
+    last_ok_at: str | None = None  # the last check that succeeded
 
     @classmethod
     def from_dict(cls, data: dict) -> CompanyMeta:
@@ -98,8 +99,13 @@ class CompanyRecord:
 
     @property
     def is_new(self) -> bool:
-        """Never checked and nothing recorded (a migrated company has jobs but no schedule)."""
-        return self.meta.last_checked_at is None and not self.jobs
+        """Never checked successfully, and nothing recorded (a migrated company has jobs but no schedule).
+
+        A first check that failed doesn't count, so `notify_on_first_run: false`
+        still applies to the first check that works.
+        """
+        checked_ok = self.meta.last_ok_at or (self.meta.last_checked_at and not self.meta.failures)
+        return not checked_ok and not self.jobs
 
 
 @dataclass

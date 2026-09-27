@@ -106,9 +106,14 @@ the fencing token.
 [tests/test_handoff.py](tests/test_handoff.py) plays each of these out against fake AWS
 (moto), including a laptop whose clock runs slow, and runners racing for the lease.
 
-**Known exception.** If a runner sends an alert and then crashes, or is killed, before
-that company's save commits, the next check sends the alert again. The previous version
-behaved the same way.
+**If a save fails after the alerts went out** (DynamoDB throttling that outlasts its
+retries, say), the runner retries the save for about a minute and a half. If it still
+fails, the runner remembers what it sent, so a later check of that company doesn't send
+it again, and it leaves the company alone for 2 minutes.
+
+**Known exception.** If a runner sends an alert and then crashes, is killed, or loses the
+lease before that company's save commits, whoever checks the company next sends the
+alert again. The previous version behaved the same way.
 
 ### Supported sources
 
@@ -257,11 +262,11 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar start` | Runs until you quit (Ctrl+C). Takes the lease and checks companies as they come due. If Lambda holds the lease, it asks Lambda to hand over and takes over once it has. |
 | `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. |
 | `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, the latest alerts, and whether the pushed config matches your local file. |
-| `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease) or `--baseline` (record everything as seen, no alerts). |
+| `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease), `--baseline` (record everything as seen, no alerts) or `--local-config` (read the local file instead of the pushed copy). |
 | `role-radar list-matches` | Prints every job matching right now. Reads no state, sends nothing. |
 | `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
 | `role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE` | Copies state between stores (either direction). |
-| `role-radar login-item on\|off` | Starts `role-radar start` whenever you log in to your Mac. It's a launchd agent with RunAtLoad and no KeepAlive, so quitting it stays quit until your next login. It logs to `~/Library/Logs/role-radar.log`. |
+| `role-radar login-item on\|off` | Starts `role-radar start` whenever you log in to your Mac. It's a launchd agent with RunAtLoad and no KeepAlive, so quitting it stays quit until your next login. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a login item can't see your shell's environment variables. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
 file is `$ROLE_RADAR_CONFIG_FILE`, else `./config/companies.yaml`, else
@@ -294,8 +299,10 @@ role-radar run --once                             # real pass over the due compa
 role-radar run --once --baseline                  # mark everything current as seen, no alerts
 ```
 
-If no notification settings are found, alerts go to stdout. With the default
-`runtime:` (JSON storage, secrets from the environment), no AWS account is needed.
+With `secrets: env` and no notification settings, alerts go to stdout. With the default
+`runtime:` (JSON storage, secrets from the environment), no AWS account is needed. With
+secrets in SSM, no settings means alerts stay pending: they're retried, and on Lambda the
+error alarm fires, rather than alerts vanishing into a log.
 
 ## Deploy to AWS
 
@@ -310,7 +317,9 @@ You need:
 - Admin credentials for deploying, for example `aws configure --profile admin`. The
   laptop gets its own restricted user in step 4.
 
-**1. Deploy the stack.** First check your Lambda concurrency quota. Reserving 1 for
+**1. Deploy the stack.** The Lambda starts running every 5 minutes right away, but it
+does nothing until you push a config in step 7. First check your Lambda concurrency
+quota. Reserving 1 for
 this function needs at least 11, and some new accounts start at 10:
 
 ```bash
@@ -378,33 +387,34 @@ aws iam create-access-key --user-name role-radar-laptop --profile admin
 aws configure --profile role-radar    # paste the key pair; same region as the stack
 ```
 
-**5. Install the CLI and push the config:**
+**5. Install the CLI:** `pipx install '.[aws]'`
 
-```bash
-pipx install '.[aws]'
-role-radar config push
-```
-
-**6. Choose how the first checks behave.** Each company's first check records every job
-that's currently open. Pick one:
+**6. Record what's already open, before Lambda starts.** Lambda has been running every
+5 minutes since step 1, but it does nothing until a config has been pushed (step 7). So
+do this first. Each company's first check records every job that's currently open;
+pick one:
 
 - Move existing state over, if you have any:
   `role-radar migrate --from json:seen_jobs.json --to dynamodb:<TableName>`.
 - Record everything that's open now without alerting (recommended for many companies):
-  `role-radar run --once --baseline`.
-- Or get alerted about current matches too (`notify_on_first_run: true`, the default).
+  `role-radar run --once --baseline --local-config`. `--local-config` reads your local
+  file, since nothing has been pushed yet.
+- Or skip this and get alerted about current matches too (`notify_on_first_run: true`,
+  the default).
 
-The very first pass writes every job at every company. At 25 WCU that's throttled, and
-boto3 retries it, so 1,000 companies can take an hour or more. Companies that aren't
-finished stay due and are picked up by later passes. For a faster first load, switch the
-table to on-demand for the day (see [Throttling](#throttling-and-on-demand-capacity)) and
-switch back afterwards.
+The first full write covers every job at every company. At 25 WCU that's throttled
+(throttled requests are retried), so 1,000 companies can take an hour or more.
+Switching the table to on-demand for the day avoids that (see
+[Throttling](#throttling-and-on-demand-capacity)). Switch back afterwards. If
+`run --once --baseline` reports companies that failed to save, run it again. Both
+commands hold the lease while they work.
 
-**7. Run it:**
+**7. Push the config and run it:**
 
 ```bash
+role-radar config push         # Lambda starts checking from its next run
 role-radar start               # in a terminal; Ctrl+C to quit (Lambda takes over)
-role-radar login-item on       # or: start it at every login
+role-radar login-item on       # or: start it at every login (needs secrets in SSM, step 2)
 role-radar status              # who has the lease, last passes, due companies, alerts
 ```
 

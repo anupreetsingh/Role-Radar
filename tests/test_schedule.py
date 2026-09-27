@@ -64,3 +64,11 @@ def test_next_due():
     assert next_due(companies, schedule, T0, INTERVAL) == T0 + timedelta(minutes=5)
     assert next_due(companies, {"A": schedule["A"]}, T0, INTERVAL) == T0  # B never checked: due now
     assert next_due([], schedule, T0, INTERVAL) is None
+
+
+def test_last_successful_check_is_kept_through_failures():
+    ok = after_check(CompanyMeta(), T0, INTERVAL)
+    assert ok.last_ok_at == to_iso(T0)
+    failed = after_check(ok, T0 + INTERVAL, INTERVAL, error="HTTP 503")
+    assert failed.last_ok_at == to_iso(T0) and failed.last_checked_at == to_iso(T0 + INTERVAL)
+    assert after_check(CompanyMeta(), T0, INTERVAL, error="timeout").last_ok_at is None

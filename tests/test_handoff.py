@@ -20,8 +20,8 @@ from role_radar import monitor, runner as runner_module, schedule
 from role_radar.backends import Backend, ConfigSource
 from role_radar.config import RuntimeSettings
 from role_radar.http_client import HttpClient
-from role_radar.monitor import EXIT_LEASE_LOST
-from role_radar.runner import Runner
+from role_radar.monitor import EXIT_LEASE_LOST, PassResult
+from role_radar.runner import Runner, Skipped
 from tests.conftest import Clock
 from tests.test_monitor import RecordingNotifier
 
@@ -160,7 +160,7 @@ def test_quitting_the_laptop_lets_lambda_carry_on(world):
     world.sites["c3"] = listing(3, extra=("Backend Developer, Software Developer II",))  # one new match
     world.clock.advance(3600)  # an hour later every company is due again
     result = asyncio.run(lam.lambda_pass(840, holder="lambda:run1"))
-    assert result is not None and len(result.checked) == 6  # took over at once: the lease was released
+    assert isinstance(result, PassResult) and len(result.checked) == 6  # took over at once: the lease was released
     (new,) = alerted(lam_alerts)
     assert new == "c3:bamboohr:303" and set(alerted(laptop_alerts).values()) == {1}
 
@@ -176,13 +176,13 @@ def test_closing_the_lid_hands_over_once_the_lease_expires(world):
     asyncio.run(laptop_pass_then_lid_closes())
     scraped = len(world.scrapes)
     world.clock.advance(60)
-    assert asyncio.run(lam.lambda_pass(840, holder="lambda:run1")) is None  # still the laptop's
+    assert isinstance(asyncio.run(lam.lambda_pass(840, holder="lambda:run1")), Skipped)  # still the laptop's
     assert len(world.scrapes) == scraped
 
     world.clock.advance(3600)  # long after the lease expired; companies are due again
     world.sites["c0"] = listing(0, extra=("Software Developer (Payments)",))
     result = asyncio.run(lam.lambda_pass(840, holder="lambda:run2"))
-    assert result is not None and len(result.checked) == 6 and lam.lease.epoch is None  # released at the end
+    assert isinstance(result, PassResult) and len(result.checked) == 6 and lam.lease.epoch is None  # released
     assert set(alerted(lam_alerts)) == {"c0:bamboohr:003"}
     assert set(alerted(laptop_alerts).values()) == {1}
 
@@ -195,7 +195,7 @@ def test_lease_expiring_mid_pass_stops_the_laptop_before_it_saves_or_alerts(worl
         async def lid_closes_during_c1(site):
             if site == "c1" and not world.lease().holder.startswith("lambda"):
                 world.clock.advance(200)  # asleep past the 3-minute lease...
-                assert await lam.lambda_pass(840, holder="lambda:run1")  # ...so Lambda takes over meanwhile
+                assert isinstance(await lam.lambda_pass(840, holder="lambda:run1"), PassResult)  # ...so Lambda takes over
 
         await laptop._take_lease()
         world.hook = lid_closes_during_c1
@@ -218,7 +218,7 @@ def test_laptop_with_a_slow_clock_is_stopped_by_the_stored_lease(world):
     async def go():
         async def lambda_takes_over_during_c1(site):
             if site == "c1" and world.lease().holder == "laptop:mac":
-                assert await lam.lambda_pass(840, holder="lambda:run1")
+                assert isinstance(await lam.lambda_pass(840, holder="lambda:run1"), PassResult)
 
         await laptop._take_lease()
         world.hook = lambda_takes_over_during_c1
@@ -308,7 +308,8 @@ def test_lambda_does_no_scraping_while_the_laptop_holds_the_lease(world):
         for _ in range(5):
             world.clock.advance(60)
             assert laptop.lease.renew(180)
-        assert asyncio.run(lam.lambda_pass(840, holder="lambda:tick")) is None
+        skipped = asyncio.run(lam.lambda_pass(840, holder="lambda:tick"))
+        assert isinstance(skipped, Skipped) and skipped.reason == "laptop:mac holds the lease"
     assert world.scrapes == [] and lam_alerts.batches == []
     assert "lambda" not in world.store().last_runs()
     assert world.lease().holder == "laptop:mac" and world.lease().epoch == 1

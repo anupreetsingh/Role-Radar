@@ -131,40 +131,51 @@ class DynamoLease(Lease):
         log.info("Lease acquired by %s (epoch %d) for %.0fs", self.holder, self.epoch, ttl)
         return True
 
+    # Each call below works on the epoch it started with, and only forgets that
+    # epoch: a slow call from before a re-acquire must not wipe the new one.
+
     def renew(self, ttl: float) -> bool:
-        if self.epoch is None:
+        epoch = self.epoch
+        if epoch is None:
             return False
         now = self.clock()
         try:
             self._update(
                 "SET #exp = :exp, renewed_at = :iso",
-                "#epoch = :epoch AND #holder = :holder",
-                {":exp": _num(now + ttl), ":iso": {"S": _iso(now)}, **self._mine()},
+                # Not after a release: a renewal still in flight mustn't bring the lease back.
+                "#epoch = :epoch AND #holder = :holder AND attribute_not_exists(released_at)",
+                {":exp": _num(now + ttl), ":iso": {"S": _iso(now)}, **self._mine(epoch)},
             )
         except ClientError as exc:
             if _error_code(exc) != "ConditionalCheckFailedException":
                 raise
             log.warning("Lease lost: another runner took over from %s", self.holder)
-            self.epoch = None
+            self._forget(epoch)
             return False
-        self.expires_at = now + ttl
+        if self.epoch == epoch:
+            self.expires_at = now + ttl
         return True
 
     def release(self) -> None:
-        if self.epoch is None:
+        epoch = self.epoch
+        if epoch is None:
             return
         now = self.clock()
         try:
             self._update(
                 "SET #exp = :now, released_at = :iso",
                 "#epoch = :epoch AND #holder = :holder",
-                {":now": _num(now), ":iso": {"S": _iso(now)}, **self._mine()},
+                {":now": _num(now), ":iso": {"S": _iso(now)}, **self._mine(epoch)},
             )
             log.info("Lease released by %s", self.holder)
         except ClientError as exc:
             if _error_code(exc) != "ConditionalCheckFailedException":
                 raise
         finally:
+            self._forget(epoch)
+
+    def _forget(self, epoch: int | None) -> None:
+        if self.epoch == epoch:
             self.epoch = None
 
     def read(self) -> LeaseInfo | None:
@@ -176,9 +187,10 @@ class DynamoLease(Lease):
 
     def verify(self) -> None:
         self.check()
+        epoch = self.epoch
         info = self.read()
-        if not info or info.epoch != self.epoch or info.holder != self.holder or info.expires_at <= self.clock():
-            self.epoch = None
+        if not info or info.epoch != epoch or info.holder != self.holder or info.expires_at <= self.clock():
+            self._forget(epoch)
             raise LeaseLost(f"{self.holder} no longer holds the lease (now {info.holder if info else 'nobody'})")
 
     def request_handoff(self) -> None:
@@ -200,8 +212,8 @@ class DynamoLease(Lease):
                 return info.requested_by
         return None
 
-    def condition_check(self) -> dict[str, Any]:
-        """A transaction item that fails unless we still hold the lease with the same epoch."""
+    def condition_check(self, epoch: int) -> dict[str, Any]:
+        """A transaction item that fails unless we still hold the lease with this epoch."""
         self.check()
         return {
             "ConditionCheck": {
@@ -209,16 +221,16 @@ class DynamoLease(Lease):
                 "Key": _key(LEASE, LEASE),
                 "ConditionExpression": "#epoch = :epoch AND #holder = :holder AND #exp > :now",
                 "ExpressionAttributeNames": dict(self._NAMES),
-                "ExpressionAttributeValues": {":now": _num(self.clock()), **self._mine()},
+                "ExpressionAttributeValues": {":now": _num(self.clock()), **self._mine(epoch)},
             }
         }
 
-    def _mine(self) -> dict[str, Any]:
-        return {":epoch": {"N": str(self.epoch)}, ":holder": {"S": self.holder}}
+    def _mine(self, epoch: int | None = None) -> dict[str, Any]:
+        return {":epoch": {"N": str(self.epoch if epoch is None else epoch)}, ":holder": {"S": self.holder}}
 
     def _update(self, expression: str, condition: str, values: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
         names = {k: v for k, v in self._NAMES.items() if k in expression or k in condition}
-        for attempt in range(5):
+        for attempt in range(10):
             try:
                 return self.client.update_item(
                     TableName=self.table,
@@ -231,9 +243,9 @@ class DynamoLease(Lease):
                 )
             except ClientError as exc:
                 # A company save's lease check can briefly conflict with this update.
-                if _error_code(exc) != "TransactionConflictException" or attempt == 4:
+                if _error_code(exc) != "TransactionConflictException" or attempt == 9:
                     raise
-                _backoff(attempt)
+                _backoff(attempt, cap=1.0)
         raise AssertionError("unreachable")
 
 
@@ -303,10 +315,13 @@ class DynamoStateStore(StateStore):
         writes += [self._alert_row(record, uid) for uid in record.alerted if record.jobs.get(uid)]
         writes.append({"Put": {"TableName": self.table, "Item": _item(SCHEDULE, record.name, compact(record.meta))}})
 
+        epoch = self.lease.epoch if self.lease else None
+        if self.lease and epoch is None:
+            raise LeaseLost(f"{self.lease.holder} doesn't hold the lease; nothing was saved")
         size = MAX_TRANSACTION - 1 if self.lease else MAX_TRANSACTION
         for start in range(0, len(writes), size):
             chunk = writes[start : start + size]
-            self._transact([self.lease.condition_check(), *chunk] if self.lease else chunk)
+            self._transact([self.lease.condition_check(epoch), *chunk] if self.lease else chunk, epoch)
         record.loaded = current
         record.alerted = []
 
@@ -323,7 +338,7 @@ class DynamoStateStore(StateStore):
         sk = f"{job.notified_at}#{record.name}#{uid}"
         return {"Put": {"TableName": self.table, "Item": _item(ALERTS, sk, {k: v for k, v in attrs.items() if v})}}
 
-    def _transact(self, items: list[dict[str, Any]]) -> None:
+    def _transact(self, items: list[dict[str, Any]], epoch: int | None = None) -> None:
         # boto3 doesn't retry cancelled transactions, so throttling (common on a
         # small provisioned table during a big first load) is retried here, ~20 s in all.
         for attempt in range(TRANSACTION_ATTEMPTS):
@@ -335,7 +350,7 @@ class DynamoStateStore(StateStore):
                     raise
                 reasons = [r.get("Code", "None") for r in exc.response.get("CancellationReasons", [])]
                 if self.lease and reasons and reasons[0] == "ConditionalCheckFailed":
-                    self.lease.epoch = None
+                    self.lease._forget(epoch)
                     raise LeaseLost(f"{self.lease.holder} lost the lease; nothing was saved") from exc
                 if not _RETRYABLE_TXN.intersection(reasons) or attempt == TRANSACTION_ATTEMPTS - 1:
                     raise
@@ -362,22 +377,11 @@ class DynamoStateStore(StateStore):
             args["ExclusiveStartKey"] = page["LastEvaluatedKey"]
 
     def save(self, state: MonitorState) -> None:
-        """Write every job and schedule row in `state`; rows not in it are left alone.
+        """Write every company in `state`, one company at a time, fenced on the lease like any save.
 
-        Meant for migrating into a new table: batch writes, fenced only by
-        verifying the lease first.
+        Rows not in `state` are left alone. Meant for migrating into a new
+        table; a migration that stops part-way can simply be run again.
         """
-        if self.lease:
-            self.lease.verify()
-        items = [_item(company, uid, compact(job)) for company, jobs in state.companies.items() for uid, job in jobs.items()]
-        items += [_item(SCHEDULE, company, compact(meta)) for company, meta in state.meta.items() if compact(meta)]
-        for start in range(0, len(items), 25):
-            pending = [{"PutRequest": {"Item": item}} for item in items[start : start + 25]]
-            for attempt in range(10):
-                resp = self.client.batch_write_item(RequestItems={self.table: pending})
-                pending = resp.get("UnprocessedItems", {}).get(self.table, [])
-                if not pending:
-                    break
-                _backoff(attempt)
-            else:
-                raise RuntimeError(f"DynamoDB kept {len(pending)} item(s) unprocessed; try again later")
+        for name in sorted(set(state.companies) | set(state.meta)):
+            record = CompanyRecord(name, state.companies.get(name, {}), state.meta.get(name, CompanyMeta()), loaded={})
+            self.save_company(record)

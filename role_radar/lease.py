@@ -19,6 +19,7 @@ clock shows how long the process was away.
 from __future__ import annotations
 
 import math
+import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -119,3 +120,34 @@ class LocalLease(Lease):
         if self.epoch is None:
             return None
         return LeaseInfo(holder=self.holder, epoch=self.epoch, expires_at=self.expires_at)
+
+
+class LeaseKeeper:
+    """Keeps a lease renewed from a background thread, for long synchronous jobs (migrate).
+
+        with LeaseKeeper(lease):
+            ...   # lease.check() keeps passing while renewals succeed
+    """
+
+    def __init__(self, lease: Lease, ttl: float = 180.0, every: float = 60.0) -> None:
+        self.lease, self.ttl, self.every = lease, ttl, every
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, name="lease-keeper", daemon=True)
+
+    def __enter__(self) -> Lease:
+        self._thread.start()
+        return self.lease
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        self._thread.join()
+
+    def _run(self) -> None:
+        wait = self.every
+        while not self._stop.wait(wait):
+            try:
+                if not self.lease.renew(self.ttl):
+                    return  # taken over: the job's next lease check stops it
+                wait = self.every
+            except Exception:  # e.g. offline; try again soon
+                wait = min(self.every, 10.0)

@@ -67,8 +67,11 @@ class S3Text:
         try:
             obj = self.s3.get_object(**kwargs)
         except ClientError as exc:
-            if exc.response.get("Error", {}).get("Code") in ("304", "NotModified") and self.text is not None:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in ("304", "NotModified") and self.text is not None:
                 return self.text
+            if code in ("NoSuchKey", "404"):
+                raise FileNotFoundError(f"{self.url} doesn't exist yet: run `role-radar config push`") from exc
             raise
         self.text = obj["Body"].read().decode("utf-8")
         self.etag = obj.get("ETag")

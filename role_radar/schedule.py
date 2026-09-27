@@ -78,4 +78,5 @@ def after_check(
         next_check_at=to_iso((checked_at + delay).replace(microsecond=0)),
         failures=failures,
         last_error=error[:300] if error else None,
+        last_ok_at=meta.last_ok_at if error else to_iso(checked_at),
     )

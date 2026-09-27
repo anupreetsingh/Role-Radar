@@ -1,10 +1,13 @@
 """lambda_handler against fake AWS (moto): S3 config, DynamoDB state and lease, SSM secrets."""
 
+import time
+
 import httpx
 import pytest
 
 from role_radar import monitor
 from role_radar.http_client import HttpClient
+from role_radar.notifications import DiscordNotifier
 from tests.conftest import fixture_json
 
 pytest.importorskip("moto")
@@ -31,7 +34,7 @@ class FakeContext:
 
 @pytest.fixture
 def deployed(table, monkeypatch):
-    """What the SAM stack provides: the table, the config in S3, the environment variables."""
+    """What the SAM stack provides (table, config bucket, environment), plus the pushed config."""
     import boto3
 
     s3 = boto3.client("s3", region_name="us-east-1")
@@ -41,11 +44,28 @@ def deployed(table, monkeypatch):
         "ROLE_RADAR_STORAGE": "dynamodb",
         "ROLE_RADAR_TABLE": table[1],
         "ROLE_RADAR_CONFIG_URL": "s3://role-radar-config/companies.yaml",
-        "ROLE_RADAR_SECRETS": "ssm:/role-radar/",  # empty: alerts go to the log
+        "ROLE_RADAR_SECRETS": "ssm:/role-radar/",
     }.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setattr(lambda_handler, "_runner", None)  # a cold start
     return table
+
+
+@pytest.fixture
+def discord(fake_aws, monkeypatch):
+    """A Discord webhook in SSM; messages are captured instead of sent."""
+    import boto3
+
+    boto3.client("ssm", region_name="us-east-1").put_parameter(
+        Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/hook", Type="SecureString"
+    )
+    sent = []
+
+    async def send(self, jobs):
+        sent.append([j.uid for j in jobs])
+
+    monkeypatch.setattr(DiscordNotifier, "send", send)
+    return sent
 
 
 @pytest.fixture
@@ -62,10 +82,10 @@ def sites(monkeypatch):
     return state
 
 
-def test_lambda_checks_due_companies_then_releases_the_lease(deployed, sites, capsys):
+def test_lambda_checks_due_companies_then_releases_the_lease(deployed, sites, discord):
     summary = lambda_handler.handler({}, FakeContext())
     assert (summary["checked"], summary["alerts"], summary["failed"]) == (1, 2, 0)
-    assert "NEW JOB" in capsys.readouterr().out  # no channels configured: printed to the log
+    assert len(discord) == 1 and len(discord[0]) == 2
 
     client, name = deployed
     info = DynamoLease(client, name, "laptop:mac").read()
@@ -81,8 +101,33 @@ def test_lambda_checks_due_companies_then_releases_the_lease(deployed, sites, ca
 def test_lambda_exits_at_once_while_the_laptop_holds_the_lease(deployed, sites):
     client, name = deployed
     DynamoLease(client, name, "laptop:mac").acquire(180)
-    assert lambda_handler.handler({}, FakeContext()) == {"skipped": True, "holder": "laptop:mac"}
+    assert lambda_handler.handler({}, FakeContext()) == {"skipped": True, "reason": "laptop:mac holds the lease"}
     assert sites["requests"] == 0
+
+
+def test_lambda_idles_until_the_config_is_pushed(deployed, sites):
+    import boto3
+
+    boto3.client("s3", region_name="us-east-1").delete_object(Bucket="role-radar-config", Key="companies.yaml")
+    result = lambda_handler.handler({}, FakeContext())  # no error, so no alarm during setup
+    assert result["skipped"] and "role-radar config push" in result["reason"]
+    assert sites["requests"] == 0 and DynamoLease(deployed[0], deployed[1], "x").read() is None
+
+
+def test_missing_secrets_keep_alerts_pending_and_trip_the_alarm(deployed, sites, discord, monkeypatch):
+    import boto3
+
+    ssm = boto3.client("ssm", region_name="us-east-1")
+    ssm.delete_parameter(Name="/role-radar/DISCORD_WEBHOOK_URL")  # e.g. misnamed
+    with pytest.raises(RuntimeError, match="undelivered"):
+        lambda_handler.handler({}, FakeContext())
+    record = DynamoStateStore(*deployed).load_company("Continental Finance")
+    assert not any(j.notified_at for j in record.jobs.values())  # nothing silently marked as sent
+
+    ssm.put_parameter(Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/hook", Type="SecureString")
+    monkeypatch.setattr(lambda_handler._runner, "clock", lambda: time.time() + 3600)  # an hour later: due again
+    summary = lambda_handler.handler({}, FakeContext())
+    assert summary["alerts"] == 2 and len(discord) == 1
 
 
 def test_lambda_raises_when_every_company_fails(deployed, sites):

@@ -31,6 +31,10 @@ class CompanyDiff:
     removed: list[str] = field(default_factory=list)
     suppressed: list[tuple[JobPosting, str]] = field(default_factory=list)  # (job, reason)
     unchanged: int = 0
+    # uid → uid of a posting it duplicates that is being alerted in this same check.
+    # Recorded as duplicate_of only once that alert has gone out (record_delivery):
+    # if it fails and the other posting closes, this one must still alert.
+    pending_duplicates: dict[str, str] = field(default_factory=dict)
 
 
 def dedupe(jobs: list[JobPosting]) -> list[JobPosting]:
@@ -100,7 +104,10 @@ def reconcile(
         rec = records[job.uid]
         owner = owners.get(job.fingerprint)
         if owner and owner != job.uid:
-            rec.duplicate_of = owner
+            if records[owner].notified_at:
+                rec.duplicate_of = owner
+            else:  # claimed earlier in this check; final once its alert is delivered
+                diff.pending_duplicates[job.uid] = owner
             kind = "repost of removed job" if records[owner].removed_at else "duplicate of open job"
             diff.suppressed.append((job, f"{kind} {owner}"))
             continue
@@ -119,3 +126,17 @@ def mark_notified(state: MonitorState, jobs: list[JobPosting], now: datetime | N
         rec = state.jobs_for(job.company).get(job.uid)
         if rec:
             rec.notified_at = stamp
+
+
+def record_delivery(state: MonitorState, diff: CompanyDiff, now: datetime | None = None) -> None:
+    """After the alerts in `diff` went out: mark them notified, and settle the duplicates they own."""
+    mark_notified(state, diff.to_notify, now)
+    settle_duplicates(state, diff)
+
+
+def settle_duplicates(state: MonitorState, diff: CompanyDiff) -> None:
+    """Record duplicate_of for the check's duplicates whose original has now been alerted."""
+    records = state.jobs_for(diff.company)
+    for uid, owner in diff.pending_duplicates.items():
+        if uid in records and owner in records and records[owner].notified_at:
+            records[uid].duplicate_of = owner

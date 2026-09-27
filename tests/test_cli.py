@@ -138,6 +138,7 @@ def test_login_item_writes_a_run_at_load_agent_without_keepalive(config, tmp_pat
     monkeypatch.setattr(launchd, "_launchctl", lambda *args, check=True: calls.append(args))
     monkeypatch.setattr(cli.sys, "platform", "darwin")
     monkeypatch.setenv("AWS_PROFILE", "role-radar")
+    config.write_text(config.read_text().replace("  storage: json\n", "  storage: json\n  secrets: ssm:/role-radar/\n"))
 
     assert cli.main(["login-item", "on", "--config", str(config)]) == 0
     path = tmp_path / "Library" / "LaunchAgents" / "com.roleradar.start.plist"
@@ -175,3 +176,36 @@ def test_default_config_path_prefers_the_environment(tmp_path, monkeypatch):
 @pytest.mark.parametrize("seconds, text", [(5, "5s"), (125, "2m 05s"), (3 * 3600 + 60, "3h 01m"), (2 * 86400 + 7200, "2d 2h")])
 def test_duration(seconds, text):
     assert cli.duration(seconds) == text
+
+
+def test_start_keeps_trying_when_the_config_is_unreachable_at_login(config, monkeypatch):
+    from role_radar import backends
+
+    calls = []
+
+    def offline(self):
+        calls.append(1)
+        raise ConnectionError("network is unreachable")
+
+    async def serve(self, stop):  # the loop itself retries; here, just return
+        return 0
+
+    monkeypatch.setattr(backends.ConfigSource, "load", offline)
+    monkeypatch.setattr(cli.Runner, "serve", serve)
+    assert cli.main(["start", "--config", str(config)]) == 0  # didn't give up at startup
+    assert calls == [1]
+
+
+def test_login_item_refuses_secrets_from_the_shell(config, monkeypatch):
+    monkeypatch.setattr(cli.sys, "platform", "darwin")
+    monkeypatch.setattr(launchd, "_launchctl", lambda *args, check=True: pytest.fail("must not install"))
+    assert cli.main(["login-item", "on", "--config", str(config)]) == cli.EXIT_USAGE  # secrets: env
+
+
+def test_run_can_use_the_local_file_before_the_first_push(config, capsys):
+    # config_url points at a bucket that doesn't exist; --local-config reads the file instead.
+    config.write_text(config.read_text().replace("  storage: json\n", "  storage: json\n  config_url: s3://nowhere/companies.yaml\n"))
+    assert cli.main(["run", "--once", "--baseline", "--local-config", "--config", str(config)]) == 0
+    state = JsonStateStore(config.parent / "state.json").load()
+    assert sum(bool(j.notified_at) for j in state.companies["Continental Finance"].values()) == 2  # recorded, not sent
+    assert "NEW JOB" not in capsys.readouterr().out

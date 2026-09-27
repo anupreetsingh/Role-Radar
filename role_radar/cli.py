@@ -21,13 +21,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
 import os
 import signal
 import socket
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -37,7 +38,7 @@ from role_radar import __version__, aws, launchd
 from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend, resolve_runtime
 from role_radar.config import RuntimeSettings, parse_config
 from role_radar.instance import InstanceLock
-from role_radar.lease import Lease
+from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
 from role_radar.runner import EXIT_LEASE_HELD, Runner
 from role_radar.schedule import due_companies, next_due
@@ -113,7 +114,12 @@ def cmd_start(args: argparse.Namespace) -> int:
     try:
         ctx = context(args)
         runner = make_runner(ctx, f"laptop:{hostname()}")
-        runner.config()  # a broken config should stop us here, not in the loop
+        try:
+            runner.config()  # a broken config should stop us here, not in the loop
+        except (ValueError, FileNotFoundError):
+            raise
+        except Exception as exc:  # offline (e.g. just logged in, Wi-Fi not up yet): keep trying
+            log.warning("Can't read the config from %s yet (%s); will keep trying", runner.source.description, exc)
         log.info("Role Radar started: state in %s, config from %s", describe(ctx.runtime), runner.source.description)
 
         async def serve() -> int:
@@ -136,6 +142,10 @@ def cmd_stop(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     ctx = context(args)
+    if args.local_config:  # e.g. a baseline before the first `config push`
+        if not ctx.config_path:
+            raise ValueError("--local-config needs a local config file (--config PATH)")
+        ctx = Context(ctx.config_path, replace(ctx.runtime, config_url=None), ctx.clients)
     runner = make_runner(ctx, f"cli:{hostname()}")
     options: dict[str, Any] = {
         "baseline": args.baseline,
@@ -252,16 +262,18 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     target, lease = open_store_spec(args.target, ctx, holder)
     state = source.load()
     jobs = sum(len(j) for j in state.companies.values())
-    if lease and not lease.acquire(600):
+    if lease and not lease.acquire(180):
         info = lease.read()
         print(f"{info.holder if info else 'Another runner'} has the lease on the target. Quit it (role-radar stop) and try again.", file=sys.stderr)
         return EXIT_LEASE_HELD
     try:
-        existing = target.load()
-        if (existing.companies or existing.meta) and not args.force:
-            print(f"{args.target} already has state for {len(existing.companies or existing.meta)} companies; add --force to merge into it", file=sys.stderr)
-            return 1
-        target.save(state)
+        # Held and renewed for as long as the copy takes; every company's write is fenced on it.
+        with LeaseKeeper(lease) if lease else contextlib.nullcontext():
+            existing = target.load()
+            if (existing.companies or existing.meta) and not args.force:
+                print(f"{args.target} already has state for {len(existing.companies or existing.meta)} companies; add --force to merge into it", file=sys.stderr)
+                return 1
+            target.save(state)
     finally:
         if lease:
             lease.release()
@@ -278,6 +290,11 @@ def cmd_login_item(args: argparse.Namespace) -> int:
     ctx = context(args)
     if not ctx.config_path:
         raise ValueError("the login item needs your config file: pass --config PATH")
+    if not ctx.runtime.ssm_path:
+        raise ValueError(
+            "the login item can't see DISCORD_WEBHOOK_URL / SMTP_* from your shell, so its alerts would "
+            "only reach a log file. Put them in SSM Parameter Store and set runtime.secrets: ssm:/role-radar/"
+        )
     config_path = ctx.config_path.resolve()
     log_file = launchd.log_dir() / "role-radar.log"
     program = [sys.executable, "-m", "role_radar", "start", "--config", str(config_path), "--log-file", str(log_file)]
@@ -320,7 +337,10 @@ def when(value: str | float | datetime | None) -> str:
     elif isinstance(value, (int, float)):
         value = datetime.fromtimestamp(value, tz=timezone.utc)
     delta = (value - utcnow()).total_seconds()
-    rel = f"in {duration(delta)}" if delta > 0 else f"{duration(-delta)} ago"
+    if abs(delta) < 1:
+        rel = "just now"
+    else:
+        rel = f"in {duration(delta)}" if delta > 0 else f"{duration(-delta)} ago"
     return f"{value.astimezone():%a %H:%M} ({rel})"
 
 
@@ -376,6 +396,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--company", action="append", default=[], metavar="NAME", help="only this company, due or not (repeatable)")
     p.add_argument("--dry-run", action="store_true", help="print alerts instead of sending them; save nothing, take no lease")
     p.add_argument("--baseline", action="store_true", help="record every company's current jobs as seen, without alerting")
+    p.add_argument("--local-config", action="store_true", help="read companies from the local file, not runtime.config_url")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("list-matches", parents=[common], help="print every job matching right now")

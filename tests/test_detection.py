@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from role_radar.storage import CompanyMeta, JsonStateStore, MonitorState, to_iso
-from role_radar.tracker import dedupe, mark_notified, reconcile
+from role_radar.tracker import dedupe, mark_notified, reconcile, record_delivery
 from tests.conftest import job
 
 T0 = datetime(2026, 9, 1, tzinfo=timezone.utc)
@@ -14,7 +14,7 @@ def run(state, jobs, *, matching=None, now=T0, complete=True, notify=True, windo
         state, "Acme", jobs, {j.uid: j.uid in matching for j in jobs},
         complete=complete, notify=notify, repost_window_days=window, now=now,
     )  # fmt: skip
-    mark_notified(state, diff.to_notify, now)
+    record_delivery(state, diff, now)
     return diff
 
 
@@ -202,3 +202,21 @@ def test_version_1_state_file_still_loads(tmp_path):
     record = store.load_company("Acme")
     assert record.jobs["acme:test:1"].notified_at and store.load_schedule() == {}
     assert not record.is_new  # has history, so notify_on_first_run doesn't apply
+
+
+def test_same_check_duplicate_still_alerts_if_the_first_posting_never_did():
+    state = MonitorState()
+    first, twin = job("Software Engineer", "101", location="Austin"), job("Software Engineer", "102", location="Austin")
+    diff = reconcile(state, "Acme", [first, twin], {first.uid: True, twin.uid: True}, now=T0)
+    assert [j.uid for j in diff.to_notify] == [first.uid] and diff.pending_duplicates == {twin.uid: first.uid}
+    assert state.jobs_for("Acme")[twin.uid].duplicate_of is None  # every channel failed: nothing settled
+    diff = run(state, [twin], now=T0 + timedelta(minutes=30))  # the first posting has closed
+    assert [j.uid for j in diff.to_notify] == [twin.uid]
+
+
+def test_same_check_duplicate_is_settled_once_the_alert_goes_out():
+    state = MonitorState()
+    first, twin = job("Software Engineer", "101", location="Austin"), job("Software Engineer", "102", location="Austin")
+    run(state, [first, twin])
+    assert state.jobs_for("Acme")[twin.uid].duplicate_of == first.uid
+    assert run(state, [twin], now=T0 + timedelta(minutes=30)).to_notify == []

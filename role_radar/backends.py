@@ -107,13 +107,18 @@ class NotifierSource:
     def __call__(self) -> list[Notifier]:
         with self._lock:
             if self._notifiers is None:
-                if self.runtime.ssm_path:
+                path = self.runtime.ssm_path
+                if path:
                     clients = self._clients or AwsClients(self.runtime)
-                    settings = aws.ssm_parameters(clients.ssm, self.runtime.ssm_path)
+                    settings = aws.ssm_parameters(clients.ssm, path)
                 else:
                     settings = self._env
-                self._notifiers = notifiers_from_env(settings)
-                log.info("Alert channels: %s", ", ".join(n.name for n in self._notifiers))
+                # With SSM, no settings is a mistake: print nothing and keep alerts pending instead.
+                self._notifiers = notifiers_from_env(settings, console_fallback=not path)
+                if self._notifiers:
+                    log.info("Alert channels: %s", ", ".join(n.name for n in self._notifiers))
+                else:
+                    log.error("No alert channel settings under %s: add DISCORD_WEBHOOK_URL or SMTP_HOST + EMAIL_TO", path)
             return self._notifiers
 
     def invalidate(self) -> None:

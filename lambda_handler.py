@@ -20,7 +20,7 @@ from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_b
 from role_radar.config import RuntimeSettings
 from role_radar.http_client import RobotsCache
 from role_radar.monitor import EXIT_FAILED, EXIT_NOTHING
-from role_radar.runner import LAMBDA_WORK_SECONDS, Runner
+from role_radar.runner import LAMBDA_WORK_SECONDS, Runner, Skipped
 
 logging.getLogger().setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 # httpx logs request URLs (webhook URLs are secrets); botocore at DEBUG logs decrypted SSM values.
@@ -54,10 +54,9 @@ def handler(event: Any, context: Any) -> dict[str, Any]:
     work_seconds = float(os.environ.get("ROLE_RADAR_WORK_SECONDS", LAMBDA_WORK_SECONDS))
     holder = f"lambda:{getattr(context, 'aws_request_id', 'local')[:8]}"
     result = asyncio.run(runner.lambda_pass(remaining, work_seconds, holder))
-    if result is None:
-        info = runner.lease.read()
-        log.info("%s holds the lease; nothing to do", info.holder if info else "Another runner")
-        return {"skipped": True, "holder": info.holder if info else None}
+    if isinstance(result, Skipped):  # the laptop has the lease, or no config was pushed yet
+        log.info("Nothing to do: %s", result.reason)
+        return {"skipped": True, "reason": result.reason}
 
     summary = result.summary()
     # Raise (so the CloudWatch error alarm fires) only for problems worth an email:

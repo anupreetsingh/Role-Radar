@@ -4,11 +4,13 @@ All new jobs from one run go out as a single batch per channel. Jobs with the
 same company + title (e.g. one role in several cities) are grouped into one
 entry so they don't read as duplicate alerts.
 
-Channels are configured purely from environment variables so secrets never
-live in the repo:
+Channels are configured from these settings (environment variables, or the
+same names in SSM Parameter Store), so secrets never live in the repo:
   DISCORD_WEBHOOK_URL
   SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_SECURITY, EMAIL_FROM, EMAIL_TO
-If none are set, alerts are printed to stdout.
+With environment variables and none set, alerts are printed to stdout (handy
+locally). With SSM, no channels means alerts stay pending, so they're never
+lost to a log nobody reads.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ import ssl
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email.message import EmailMessage
+from typing import Callable
 
 import httpx
 
@@ -189,7 +192,8 @@ class EmailNotifier(Notifier):
 # -- wiring ---------------------------------------------------------------------
 
 
-def notifiers_from_env(env: dict[str, str] | None = None) -> list[Notifier]:
+def notifiers_from_env(env: dict[str, str] | None = None, console_fallback: bool = True) -> list[Notifier]:
+    """The channels `env` configures; if none, the console (or nothing, without console_fallback)."""
     env = dict(os.environ if env is None else env)
     notifiers: list[Notifier] = []
     if env.get("DISCORD_WEBHOOK_URL"):
@@ -207,19 +211,27 @@ def notifiers_from_env(env: dict[str, str] | None = None) -> list[Notifier]:
                 security=security,
             )
         )
-    return notifiers or [ConsoleNotifier()]
+    if not notifiers and console_fallback:
+        return [ConsoleNotifier()]
+    return notifiers
 
 
-async def notify_all(notifiers: list[Notifier], jobs: list[JobPosting]) -> bool:
+async def notify_all(notifiers: list[Notifier], jobs: list[JobPosting], check: Callable[[], None] | None = None) -> bool:
     """Send via every channel. True if at least one channel delivered.
 
     "At least one" (rather than "all") avoids re-sending to a working channel
-    every run just because another channel is misconfigured.
+    every run just because another channel is misconfigured. `check` runs
+    before each channel and may raise to stop sending (e.g. the lease was lost).
     """
     if not jobs:
         return True
+    if not notifiers:
+        log.error("No alert channel is configured; %d job(s) stay pending", len(jobs))
+        return False
     delivered = False
     for notifier in notifiers:
+        if check:
+            check()
         try:
             await notifier.send(jobs)
             delivered = True

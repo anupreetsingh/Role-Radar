@@ -244,3 +244,43 @@ def test_whole_state_save_and_load_for_migration(table):
     state.meta["Acme"] = CompanyMeta(last_checked_at="2026-09-01T00:00:00Z")
     store.save(state)
     assert store.load().to_dict() == state.to_dict()
+
+
+def test_a_renewal_cannot_bring_back_a_released_lease(table):
+    clock = Clock()
+    laptop = lease(table, "laptop:mac", clock)
+    laptop.acquire(180)
+    epoch = laptop.epoch
+    laptop.release()
+    laptop.epoch = epoch  # as if a renewal was already in flight when the release happened
+    assert not laptop.renew(180)
+    assert lease(table, "lambda", clock).acquire(900)  # Lambda isn't locked out
+
+
+def test_a_stale_lease_call_does_not_forget_a_newer_epoch(table):
+    clock = Clock()
+    laptop = lease(table, "laptop:mac", clock)
+    laptop.acquire(180)
+    laptop._forget(laptop.epoch - 1)  # e.g. a renewal from before a re-acquire failing late
+    assert laptop.epoch == 1 and laptop.held
+
+
+def test_migration_stops_when_the_lease_is_taken(table):
+    clock = Clock()
+    held = lease(table, "migrate:mac", clock)
+    held.acquire(180)
+    store = store_for(table, held, clock)
+    state = MonitorState()
+    for name in ("Acme", "Globex"):
+        state.jobs_for(name)[f"{name.lower()}:x:1"] = SeenJob("Engineer", "u", "fp", "2026-09-01T00:00:00Z")
+
+    real = store.save_company
+
+    def save_then_lose_the_lease(record):
+        real(record)
+        put_lease_item(table, holder="lambda", epoch=9, expires_at=clock() + 900)
+
+    store.save_company = save_then_lose_the_lease
+    with pytest.raises(LeaseLost):
+        store.save(state)
+    assert set(DynamoStateStore(*table).load().companies) == {"Acme"}  # nothing written after the loss

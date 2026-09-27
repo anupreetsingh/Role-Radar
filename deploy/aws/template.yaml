@@ -148,6 +148,10 @@ Resources:
               Effect: Allow
               Action: s3:GetObject
               Resource: !Sub ${ConfigBucket.Arn}/companies.yaml
+            - Sid: ListConfigBucket # so a config not pushed yet reads as "not found", not "access denied"
+              Effect: Allow
+              Action: s3:ListBucket
+              Resource: !GetAtt ConfigBucket.Arn
             - Sid: ReadSecrets
               Effect: Allow
               Action: ssm:GetParametersByPath
@@ -246,6 +250,10 @@ Resources:
               - s3:GetObject
               - s3:PutObject # role-radar config push
             Resource: !Sub ${ConfigBucket.Arn}/companies.yaml
+          - Sid: ListConfigBucket
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt ConfigBucket.Arn
           - Sid: ReadSecrets
             Effect: Allow
             Action: ssm:GetParametersByPath

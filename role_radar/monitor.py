@@ -17,6 +17,8 @@ the lease picks them up. runner.py decides when passes run and holds the lease.
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import inspect
 import logging
 import os
 import time
@@ -31,8 +33,8 @@ from role_radar.models import JobPosting
 from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
 from role_radar.schedule import after_check, due_companies, next_due
 from role_radar.scrapers import BaseScraper, scraper_class_for
-from role_radar.storage import CompanyMeta, MonitorState, SeenJob, StateStore, to_iso, utcnow
-from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile
+from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
+from role_radar.tracker import CompanyDiff, dedupe, reconcile, record_delivery, settle_duplicates
 
 log = logging.getLogger("monitor")
 
@@ -41,7 +43,37 @@ T = TypeVar("T")
 Notifiers = Union[Sequence[Notifier], Callable[[], Sequence[Notifier]]]
 
 EXIT_OK, EXIT_FAILED, EXIT_NOTHING, EXIT_LEASE_LOST = 0, 1, 2, 3
-SAVE_MARGIN = 20.0  # seconds kept free before a deadline for alerting and saving
+# Seconds kept free before a deadline, so a company that finishes late can still
+# fetch secrets, alert (Discord may ask us to wait) and save (with retries).
+SAVE_MARGIN = 120.0
+SAVE_RETRIES_AFTER_ALERTS = 4  # extra save attempts once alerts have gone out...
+SAVE_RETRY_BASE = 5.0  # ...5, 10, 20, 40 s apart
+UNSAVED_HOLD = 120.0  # a company whose save failed isn't retried for this long
+
+
+class Unsaved:
+    """What this runner couldn't save, so it neither re-sends alerts nor retries at once.
+
+    A failed save leaves the company due, and its next check would send the
+    same alerts again. This remembers them for the life of the process (a warm
+    Lambda keeps it between runs).
+    """
+
+    def __init__(self) -> None:
+        self.sent: dict[str, dict[str, str]] = {}  # company → uid → notified_at: alerted, not saved
+        self._retry_at: dict[str, float] = {}
+
+    def failed(self, company: str, record: CompanyRecord) -> None:
+        alerted = {uid: record.jobs[uid].notified_at for uid in record.alerted if uid in record.jobs}
+        self.sent.setdefault(company, {}).update({uid: at for uid, at in alerted.items() if at})
+        self._retry_at[company] = time.monotonic() + UNSAVED_HOLD
+
+    def saved(self, company: str) -> None:
+        self.sent.pop(company, None)
+        self._retry_at.pop(company, None)
+
+    def holding(self, company: str) -> bool:
+        return self._retry_at.get(company, 0.0) > time.monotonic()
 
 
 @dataclass
@@ -232,6 +264,9 @@ async def process_company(
     notify: bool = True,
     dry_run: bool = False,
     timeout: float | None = None,
+    unsaved: Unsaved | None = None,
+    save_lock: asyncio.Lock | None = None,
+    deadline: float | None = None,
 ) -> CompanyOutcome:
     """Check one company, alert on its new matches, then save its state right away.
 
@@ -251,31 +286,92 @@ async def process_company(
         log.error("[%s] failed: %s", company.name, msg)
         outcome = CompanyOutcome(company.name, error=msg)
 
-    to_notify = outcome.diff.to_notify if outcome.diff else []
-    if to_notify:
-        if not dry_run:
-            # Never alert without the lease: after a pause, another runner may already have.
-            lease.check()
-            await asyncio.to_thread(lease.verify)
-        channels = await asyncio.to_thread(notifiers)
-        outcome.delivered = await notify_all(list(channels), to_notify)
-        if outcome.delivered:
-            mark_notified(state, to_notify)
-            record.alerted = [j.uid for j in to_notify]
-        else:
-            log.error("[%s] no notification channel succeeded; %d job(s) will be retried next check", company.name, len(to_notify))
-            invalidate = getattr(notifiers, "invalidate", None)
-            if invalidate:  # re-read the channel settings next time, in case they changed
-                invalidate()
+    diff = outcome.diff
+    if diff:
+        if unsaved and not dry_run:
+            _skip_already_sent(diff, record, unsaved.sent.get(company.name, {}))
+        if diff.to_notify:
+            outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run)
+        settle_duplicates(state, diff)
 
     pruned = state.prune(settings.retention_days, now)
     if pruned:
         log.info("[%s] pruned %d long-removed job(s)", company.name, pruned)
     record.meta = outcome.meta = after_check(record.meta, now, settings.check_interval, error=outcome.error)
     if not dry_run:
-        lease.check()  # fail fast; the store also checks the stored lease in the same transaction
-        await asyncio.to_thread(store.save_company, record)
+        await _save(store, record, lease, save_lock, deadline, unsaved)
     return outcome
+
+
+def _skip_already_sent(diff: CompanyDiff, record: CompanyRecord, sent: dict[str, str]) -> None:
+    """Jobs this runner alerted before a failed save: record them as notified instead of sending again."""
+    already = [j for j in diff.to_notify if j.uid in sent]
+    if not already:
+        return
+    log.info("[%s] not re-sending %d alert(s) that went out before a failed save", diff.company, len(already))
+    for job in already:
+        record.jobs[job.uid].notified_at = sent[job.uid]
+    diff.to_notify = [j for j in diff.to_notify if j.uid not in sent]
+    record.alerted += [j.uid for j in already]
+
+
+async def _alert(
+    diff: CompanyDiff,
+    state: MonitorState,
+    record: CompanyRecord,
+    notifiers: Callable[[], Sequence[Notifier]],
+    lease: Lease,
+    dry_run: bool,
+) -> bool:
+    """Send one company's new matches; True if a channel took them."""
+    # Fetch the channels (secrets) first, so nothing slow sits between the lease check and sending.
+    channels = list(await asyncio.to_thread(notifiers))
+    if not dry_run:
+        # Never alert without the lease: after a pause, another runner may already have.
+        lease.check()
+        await asyncio.to_thread(lease.verify)
+    delivered = await notify_all(channels, diff.to_notify, check=None if dry_run else lease.check)
+    if delivered:
+        record_delivery(state, diff)
+        record.alerted += [j.uid for j in diff.to_notify]
+    else:
+        log.error("[%s] no notification channel succeeded; %d job(s) will be retried next check", diff.company, len(diff.to_notify))
+        invalidate = getattr(notifiers, "invalidate", None)
+        if invalidate:  # re-read the channel settings next time, in case they changed
+            invalidate()
+    return delivered
+
+
+async def _save(
+    store: StateStore,
+    record: CompanyRecord,
+    lease: Lease,
+    lock: asyncio.Lock | None,
+    deadline: float | None,
+    unsaved: Unsaved | None,
+) -> None:
+    """Save the company, trying harder once alerts have gone out: unsaved, they'd be sent again."""
+    attempts = 1 + (SAVE_RETRIES_AFTER_ALERTS if record.alerted else 0)
+    for attempt in range(attempts):
+        lease.check()  # fail fast; the store also checks the stored lease in the same transaction
+        try:
+            async with lock or contextlib.nullcontext():
+                await asyncio.to_thread(store.save_company, record)
+        except LeaseLost:
+            raise
+        except Exception as exc:
+            wait = min(SAVE_RETRY_BASE * 2**attempt, 60.0)
+            out_of_time = deadline is not None and time.monotonic() + wait > deadline
+            if attempt == attempts - 1 or out_of_time:
+                if unsaved:
+                    unsaved.failed(record.name, record)
+                raise
+            log.warning("[%s] couldn't save (%s); its alerts already went out, so retrying in %.0fs", record.name, exc, wait)
+            await asyncio.sleep(wait)
+        else:
+            if unsaved:
+                unsaved.saved(record.name)
+            return
 
 
 async def run_pass(
@@ -288,16 +384,19 @@ async def run_pass(
     baseline: bool = False,
     only: set[str] | None = None,
     check_all: bool = False,
-    should_stop: Callable[[], bool] | None = None,
+    should_stop: Callable[[], bool | Awaitable[bool]] | None = None,
     deadline: float | None = None,
     robots: RobotsCache | None = None,
+    unsaved: Unsaved | None = None,
     clock: Callable[[], datetime] = utcnow,
 ) -> PassResult:
     """Check the companies that are due (all of them with check_all, baseline or only).
 
     The caller must already hold `lease` (a LocalLease is used when none is given).
-    No new company starts once `should_stop()` returns true or `deadline`
-    (time.monotonic) is near; companies already started finish and are saved.
+    No new company starts once `should_stop()` (sync or async) returns true or
+    `deadline` (time.monotonic) is near; companies already started finish and
+    are saved. Saves are made one at a time, so this runner's transactions
+    don't conflict with each other on the lease they all check.
     """
     settings = config.settings
     result = PassResult()
@@ -320,17 +419,19 @@ async def run_pass(
 
     started = time.monotonic()
     channels = _channels(notifiers, dry_run)
+    save_lock = asyncio.Lock()
 
     async def guarded(company: CompanyConfig) -> CompanyOutcome:
         timeout = settings.company_timeout
         if deadline is not None:
             timeout = min(timeout, deadline - time.monotonic() - SAVE_MARGIN)
-        if timeout <= 0 or (should_stop and should_stop()):
+        if timeout <= 0 or (unsaved and unsaved.holding(company.name)) or await _stopping(should_stop):
             return CompanyOutcome(company.name, skipped=True)
         try:
             return await process_company(
                 company, http, store, channels, settings,
                 now=clock(), lease=lease, notify=not baseline, dry_run=dry_run, timeout=timeout,
+                unsaved=unsaved, save_lock=save_lock, deadline=deadline,
             )  # fmt: skip
         except LeaseLost:
             raise
@@ -354,6 +455,15 @@ async def run_pass(
     _log_pass(result, len(due), http, dry_run)
     write_step_summary(result.outcomes, result.alerts)
     return result
+
+
+async def _stopping(should_stop: Callable[[], bool | Awaitable[bool]] | None) -> bool:
+    if should_stop is None:
+        return False
+    result = should_stop()
+    if inspect.isawaitable(result):
+        result = await result
+    return bool(result)
 
 
 def _channels(notifiers: Notifiers, dry_run: bool) -> Callable[[], Sequence[Notifier]]:

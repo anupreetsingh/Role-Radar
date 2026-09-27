@@ -31,6 +31,7 @@ def build_plist(program: list[str], env: dict[str, str], working_dir: Path) -> d
         "Label": LABEL,
         "ProgramArguments": program,
         "RunAtLoad": True,  # at login; there's deliberately no KeepAlive
+        "ExitTimeOut": 60,  # after SIGTERM, time to finish the companies in flight before launchd kills it
         "ProcessType": "Background",
         "WorkingDirectory": str(working_dir),
         "EnvironmentVariables": env,

@@ -134,3 +134,29 @@ def test_secrets_are_reread_after_a_failed_delivery(fake_aws, monkeypatch):
     source.invalidate()
     (new,) = source()
     assert new._url == "https://discord.invalid/new"
+
+
+def test_ssm_without_channel_settings_gives_no_channels(fake_aws):
+    source = NotifierSource(RuntimeSettings(secrets="ssm:/role-radar/", region="us-east-1").with_env({}))
+    assert source() == []  # never a silent console fallback: alerts stay pending
+
+
+def test_sending_stops_between_channels_once_the_lease_is_gone():
+    import asyncio
+
+    from role_radar.lease import LeaseLost
+    from role_radar.notifications import notify_all
+    from tests.conftest import job
+    from tests.test_monitor import RecordingNotifier
+
+    first, second = RecordingNotifier(), RecordingNotifier()
+    checks = []
+
+    def check():
+        checks.append(1)
+        if len(checks) > 1:  # the lid closed while the first channel was sending
+            raise LeaseLost("lease expired")
+
+    with pytest.raises(LeaseLost):
+        asyncio.run(notify_all([first, second], [job()], check=check))
+    assert len(first.batches) == 1 and second.batches == []

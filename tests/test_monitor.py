@@ -232,3 +232,61 @@ def test_discord_messages_respect_length_limit():
     messages = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
     assert all(len(m) <= 2000 for m in messages)
     assert sum(m.count("NEW JOB") for m in messages) == 60
+
+
+class FlakyStore(MemoryStateStore):
+    """Saves fail while `failing` is true (e.g. DynamoDB throttling that outlasts the retries)."""
+
+    def __init__(self):
+        super().__init__()
+        self.failing = False
+        self.attempts = 0
+
+    def save_company(self, record):
+        self.attempts += 1
+        if self.failing:
+            raise RuntimeError("ThrottlingException")
+        super().save_company(record)
+
+
+def test_alerts_sent_before_a_failed_save_are_not_sent_again(monkeypatch):
+    monkeypatch.setattr(monitor, "SAVE_RETRIES_AFTER_ALERTS", 1)
+    monkeypatch.setattr(monitor, "UNSAVED_HOLD", 0.2)
+    monkeypatch.setattr(monitor, "SAVE_RETRY_BASE", 0)
+    store, notifier, unsaved = FlakyStore(), RecordingNotifier(), monitor.Unsaved()
+    config = AppConfig(settings=build_config().settings, companies=build_config().companies[:1])
+
+    store.failing = True
+    run_monitor(monkeypatch, store, notifier, config=config, unsaved=unsaved)
+    assert len(notifier.batches) == 1 and store.attempts == 2  # sent, then the save failed twice
+    assert unsaved.holding("Continental Finance")
+    run_monitor(monkeypatch, store, notifier, config=config, unsaved=unsaved)
+    assert store.attempts == 2  # held: not even re-checked yet
+
+    import time as _time
+
+    _time.sleep(0.25)
+    store.failing = False
+    run_monitor(monkeypatch, store, notifier, config=config, unsaved=unsaved)  # still due: checked again
+    assert len(notifier.batches) == 1  # ...but the same alerts weren't sent twice
+    jobs = store.load_company("Continental Finance").jobs
+    assert sum(bool(j.notified_at) for j in jobs.values()) == 2 and not unsaved.sent
+
+
+def test_first_run_rule_survives_a_failed_first_check(monkeypatch):
+    settings = Settings(notify_on_first_run=False, http=HttpSettings(per_domain_delay=0, respect_robots=False, max_retries=0))
+    company = CompanyConfig(
+        name="Continental Finance",
+        url="https://contfinco.bamboohr.com/careers",
+        filter=JobFilter(include_keywords=["software developer", "data engineer"]),
+    )
+    config = AppConfig(settings=settings, companies=[company])
+    store, notifier, status = MemoryStateStore(), RecordingNotifier(), {"code": 503}
+
+    def handler(request):
+        return httpx.Response(status["code"], json=fixture_json("bamboohr_list.json"))
+
+    run_monitor(monkeypatch, store, notifier, config=config, handler=handler)  # first check fails
+    status["code"] = 200
+    run_monitor(monkeypatch, store, notifier, config=config, handler=handler, check_all=True)
+    assert notifier.batches == []  # still its first successful check: recorded silently

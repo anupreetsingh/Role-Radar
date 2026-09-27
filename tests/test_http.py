@@ -174,3 +174,15 @@ def test_robots_status_handling_follows_rfc9309(status, allowed):
     else:
         with pytest.raises(RobotsDisallowed):
             asyncio.run(go())
+
+
+def test_missing_robots_txt_is_not_counted_as_a_failure():
+    def handler(request):
+        return httpx.Response(404) if request.url.path == "/robots.txt" else httpx.Response(200, text="ok")
+
+    async def go(http):
+        await http.get_text("https://a.example/jobs")
+
+    http = HttpClient(HttpSettings(per_domain_delay=0, max_retries=0), transport=httpx.MockTransport(handler))
+    asyncio.run(go(http))
+    assert (http.stats.requests, sum(s.errors for s in http.stats.hosts.values())) == (2, 0)

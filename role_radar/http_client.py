@@ -215,7 +215,7 @@ class HttpClient:
             attempt += 1
             await asyncio.sleep(delay)
 
-    async def _send(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+    async def _send(self, method: str, url: str, *, robots: bool = False, **kwargs: Any) -> httpx.Response:
         host = urlsplit(url).hostname or ""
         await self._wait_turn(host)
         try:
@@ -227,7 +227,9 @@ class HttpClient:
             self._global.release()
         # Bytes as received (compressed). Responses built in memory (tests) report 0 there.
         nbytes = resp.num_bytes_downloaded or len(resp.content)
-        self.stats.record(host, nbytes, error=resp.status_code >= 400)
+        # A missing robots.txt (4xx) just means "no restrictions", not a failure.
+        failed = resp.status_code >= 500 or (resp.status_code >= 400 and not robots)
+        self.stats.record(host, nbytes, error=failed)
         return resp
 
     async def _wait_turn(self, host: str) -> None:
@@ -282,7 +284,7 @@ class HttpClient:
         5xx / network ("unreachable") → disallow everything, retried after a few minutes
         """
         try:
-            resp = await self._send("GET", f"{origin}/robots.txt")
+            resp = await self._send("GET", f"{origin}/robots.txt", robots=True)
         except httpx.HTTPError:
             resp = None
         if resp is not None and 400 <= resp.status_code < 500 and resp.status_code != 429:
