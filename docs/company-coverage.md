@@ -8,7 +8,7 @@ whether it belongs in the list.
 
 ## Enabled employers
 
-The 338 enabled employers are defined in [the configuration](../config/companies.yaml).
+The 301 enabled employers are defined in [the configuration](../config/companies.yaml).
 The latest source check is in [the validation report](company-validation.json).
 Counts in that report are a dated observation, not a promise that a position remains
 open or that its requirements fit the candidate. The report predates the US tech
@@ -44,8 +44,10 @@ SimplifyJobs new-grad dataset, on boards Role Radar can read. Each was kept only
 a live `role-radar list-matches` run with the default filters found at least five
 matching US openings, and its matches were mostly software, data or IT roles rather
 than civil, mechanical or HVAC engineering titles. Universities, state agencies,
-staffing firms and small cleared-contract shops were left out. Many defense and
-aerospace roles require US citizenship or a clearance.
+staffing firms and small cleared-contract shops were left out. Defense, aerospace and
+space employers were added too, then removed later that day (along with Technology
+Service Corporation), since most of their roles need US citizenship or a security
+clearance.
 
 ### AI labs and AI-native startups
 
@@ -98,23 +100,12 @@ Bank, Texas Capital Bank, TransUnion, Travelers, Truist, Visa and Worldpay.
 3M, Abbott, Allegion, Becton Dickinson, Blissway, Caris, Carrier Global, Danaher
 Corporation, DraftKings, Elevance Health, Freeform, GE Appliances, Genuine Parts
 Company, Globus Medical, Hitachi, Johnson & Johnson, Lowe's, Medtronic, Merck, Novartis,
-Philips, Scientific Games, SharkNinja, Technology Service Corporation, The Home Depot,
-Uline and Viridien.
+Philips, Scientific Games, SharkNinja, The Home Depot, Uline and Viridien.
 
 ### Consulting, IT services and national labs
 
 Accenture, AHEAD, Argonne National Laboratory, Brookhaven Lab, Guidehouse, Huron and ICF
 International.
-
-### Defense, aerospace and space
-
-AeroVironment, Airbus, Allen Control Systems, Amentum, Anduril, Blue Origin, Boeing,
-Booz Allen, CACI, CAE, CesiumAstro, Curtiss-Wright Corporation, Draper, GDIT, General
-Dynamics Electric Boat, General Dynamics Mission Systems, Intuitive Research and
-Technology, KBR, Leidos, Nightwing, Northrop Grumman, Northwood Space, Radiance
-Technologies, Relativity Space, Rocket Lab, RTX, Saronic, Shield AI, Sierra Nevada
-Corporation, SpaceX, Systems & Technology Research, The Aerospace Corporation, Torch
-Technologies, True Anomaly, Vantor and Voyager Technologies.
 
 ### Large Workday boards
 
@@ -122,9 +113,8 @@ Workday reports at most 2,000 jobs for some tenants, and its listing order is no
 always newest first, so large boards read with `options.max_jobs: 3000` and, where a
 board would still exceed the limit or carry mostly unrelated roles, an
 `applied_facets` filter: US jobs only, or technology and engineering job families
-(Booz Allen, Leidos, Northrop Grumman, RTX, Amentum, Micron, PNC, Lowe's, Genuine
-Parts). All Workday tenants share one request rate through the `myworkdayjobs.com`
-and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
+(Micron, PNC, Lowe's, Genuine Parts). All Workday tenants share one request rate
+through the `myworkdayjobs.com` and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
 are checked every four hours, two at a time, so the list stays well under Workday's
 per-IP rate limit. Between those, a quick check every 10 minutes reads each board's newest
 page. In a September 2026 sample, 9 of 10 boards listed newest first (NVIDIA, Bank of
