@@ -107,7 +107,7 @@ Resources:
       Handler: lambda_handler.handler
       Runtime: python3.13 # `sam build` needs a local python3.13 (or use --use-container)
       Architectures: [arm64]
-      MemorySize: 256
+      MemorySize: 512 # 256 ran out of memory (and CPU) with ~340 companies
       Timeout: 840 # 14 minutes: it stops starting companies after 10 (ROLE_RADAR_WORK_SECONDS)
       ReservedConcurrentExecutions: !If [ReserveConcurrency, !Ref ReservedConcurrency, !Ref AWS::NoValue]
       LoggingConfig:

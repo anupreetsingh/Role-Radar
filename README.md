@@ -420,7 +420,7 @@ The stack creates:
 - The DynamoDB table (provisioned 25 RCU / 25 WCU, TTL, point-in-time recovery,
   deletion protection).
 - The config bucket (versioned, private).
-- The Lambda (arm64, 256 MB, 14-minute timeout, reserved concurrency 1, outside any VPC,
+- The Lambda (arm64, 512 MB, 14-minute timeout, reserved concurrency 1, outside any VPC,
   so no NAT gateway) and its 5-minute EventBridge schedule.
 - A CloudWatch error alarm with an email subscription, and a $5/month AWS Budget alert.
 - `LaptopPolicy`, an IAM policy for the laptop user.
@@ -506,7 +506,7 @@ emails you at 80% of actual spend, or if the month is forecast to exceed $5.
 
 | Service | This project's use | Always-free allowance (checked 2026-09-26) |
 |---|---|---|
-| Lambda (arm64, 256 MB) | 8,640 runs/month. When the laptop is off, about 10–60 s each: 20k–130k GB-s. Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
+| Lambda (arm64, 512 MB) | 8,640 runs/month. When the laptop is off, about 10–60 s each: 43k–259k GB-s. Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
 | DynamoDB (provisioned) | 25 RCU / 25 WCU, a few MB. A check costs about 4 WCU (transactional writes cost 2 per item) and 6 RCU | 25 WCU, 25 RCU, 25 GB per region ([pricing](https://aws.amazon.com/dynamodb/pricing/provisioned/), [transactions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)) |
 | EventBridge Scheduler | 8,640 invocations/month | 14M per month ([pricing](https://aws.amazon.com/eventbridge/pricing/)) |
 | CloudWatch | Under 1 GB of logs/month (kept 14 days), 1 alarm | 5 GB of logs, 10 alarms ([pricing](https://aws.amazon.com/cloudwatch/pricing/)) |
