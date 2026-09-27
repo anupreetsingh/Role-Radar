@@ -16,7 +16,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
 
@@ -127,8 +127,38 @@ def format_bytes(n: float) -> str:
     return f"{n / 1024**2:.1f} MB"
 
 
+class RobotsCache:
+    """Parsed robots.txt per origin, kept across runs.
+
+    A long-running process (or a warm Lambda) shares one cache between
+    HttpClients, so each robots.txt is fetched about twice a day rather than on
+    every pass. RFC 9309 asks crawlers not to reuse a copy for more than 24 hours.
+    """
+
+    def __init__(self, ttl: float = 12 * 3600, unreachable_ttl: float = 600, clock: Callable[[], float] = time.time) -> None:
+        self.ttl = ttl
+        self.unreachable_ttl = unreachable_ttl  # an unreachable robots.txt blocks the host only this long
+        self.clock = clock
+        self._entries: dict[str, tuple[RobotFileParser | None, float]] = {}
+
+    def get(self, origin: str) -> tuple[bool, RobotFileParser | None]:
+        """(found, parser). A None parser means no restrictions."""
+        entry = self._entries.get(origin)
+        if entry and entry[1] > self.clock():
+            return True, entry[0]
+        return False, None
+
+    def put(self, origin: str, parser: RobotFileParser | None, unreachable: bool = False) -> None:
+        self._entries[origin] = (parser, self.clock() + (self.unreachable_ttl if unreachable else self.ttl))
+
+
 class HttpClient:
-    def __init__(self, settings: HttpSettings | None = None, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        settings: HttpSettings | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        robots: RobotsCache | None = None,
+    ) -> None:
         self.settings = s = settings or HttpSettings()
         self._client = httpx.AsyncClient(
             headers={"User-Agent": s.user_agent, "Accept": "application/json, text/html;q=0.9, */*;q=0.5"},
@@ -140,7 +170,7 @@ class HttpClient:
         self._global = asyncio.Semaphore(s.max_concurrency)
         self._domain_locks: dict[str, asyncio.Lock] = {}
         self._domain_last: dict[str, float] = {}
-        self._robots: dict[str, RobotFileParser | None] = {}
+        self.robots = robots or RobotsCache()
         self._robots_locks: dict[str, asyncio.Lock] = {}
 
     async def __aenter__(self) -> HttpClient:
@@ -239,27 +269,28 @@ class HttpClient:
         origin = f"{parts.scheme}://{parts.netloc}"
         lock = self._robots_locks.setdefault(origin, asyncio.Lock())
         async with lock:
-            if origin not in self._robots:
-                self._robots[origin] = await self._load_robots(origin)
-        parser = self._robots[origin]
+            found, parser = self.robots.get(origin)
+            if not found:
+                parser, unreachable = await self._load_robots(origin)
+                self.robots.put(origin, parser, unreachable)
         return parser is None or parser.can_fetch(self.settings.user_agent, url)
 
-    async def _load_robots(self, origin: str) -> RobotFileParser | None:
-        """Fetch robots.txt, following RFC 9309 status handling.
+    async def _load_robots(self, origin: str) -> tuple[RobotFileParser | None, bool]:
+        """Fetch robots.txt, following RFC 9309 status handling. Returns (parser, unreachable).
 
-        4xx ("unavailable")        → no restrictions
-        5xx / network ("unreachable") → disallow everything for this run
+        4xx ("unavailable")           → no restrictions (None)
+        5xx / network ("unreachable") → disallow everything, retried after a few minutes
         """
         try:
             resp = await self._send("GET", f"{origin}/robots.txt")
         except httpx.HTTPError:
             resp = None
         if resp is not None and 400 <= resp.status_code < 500 and resp.status_code != 429:
-            return None
+            return None, False
         parser = RobotFileParser()
         if resp is None or resp.status_code >= 400:
-            log.warning("robots.txt for %s unreachable; skipping this host for this run", origin)
+            log.warning("robots.txt for %s unreachable; skipping this host for now", origin)
             parser.disallow_all = True
-            return parser
+            return parser, True
         parser.parse(resp.text.splitlines())
-        return parser
+        return parser, False

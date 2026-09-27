@@ -25,6 +25,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 2  # 2 added "schedule"; version 1 files still load
+ALERT_LOG_SIZE = 50  # alerts the JSON store remembers for `status`
 
 
 def utcnow() -> datetime:
@@ -107,6 +108,9 @@ class MonitorState:
     companies: dict[str, dict[str, SeenJob]] = field(default_factory=dict)
     # company name → schedule
     meta: dict[str, CompanyMeta] = field(default_factory=dict)
+    # For `status` with JSON storage: each runner's last pass, and the latest alerts.
+    runs: dict[str, dict] = field(default_factory=dict)
+    alerts: list[dict] = field(default_factory=list)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
         return self.companies.setdefault(company, {})
@@ -136,13 +140,18 @@ class MonitorState:
         self.meta[record.name] = CompanyMeta.from_dict(asdict(record.meta))
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "version": SCHEMA_VERSION,
             "companies": {
                 company: {uid: compact(job) for uid, job in jobs.items()} for company, jobs in self.companies.items() if jobs
             },
             "schedule": {company: compact(meta) for company, meta in self.meta.items() if compact(meta)},
         }
+        if self.runs:
+            data["runs"] = self.runs
+        if self.alerts:
+            data["alerts"] = self.alerts
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> MonitorState:
@@ -151,7 +160,7 @@ class MonitorState:
             for company, jobs in (data.get("companies") or {}).items()
         }
         meta = {company: CompanyMeta.from_dict(m) for company, m in (data.get("schedule") or {}).items()}
-        return cls(companies=companies, meta=meta)
+        return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []))
 
 
 class StateStore(ABC):
@@ -170,6 +179,19 @@ class StateStore(ABC):
 
     @abstractmethod
     def save(self, state: MonitorState) -> None: ...
+
+    # -- for `role-radar status` ----------------------------------------------
+
+    def record_run(self, runner: str, summary: dict) -> None:
+        """Remember a runner's last pass. Default: not kept."""
+
+    def last_runs(self) -> dict[str, dict]:
+        """runner → summary of its last pass."""
+        return {}
+
+    def recent_alerts(self, limit: int = 10) -> list[dict]:
+        """The latest alerts sent, newest first: company, title, location, url, notified_at, by."""
+        return []
 
 
 class MemoryStateStore(StateStore):
@@ -196,8 +218,29 @@ class MemoryStateStore(StateStore):
 
     def save_company(self, record: CompanyRecord) -> None:
         with self._lock:
-            self._current().put(record)
+            state = self._current()
+            state.put(record)
+            for uid in record.alerted:
+                job = record.jobs[uid]
+                state.alerts.append(
+                    {"company": record.name, "title": job.title, "location": job.location, "url": job.url, "notified_at": job.notified_at}
+                )
+            del state.alerts[:-ALERT_LOG_SIZE]
+            record.alerted = []
             self._persist()
+
+    def record_run(self, runner: str, summary: dict) -> None:
+        with self._lock:
+            self._current().runs[runner] = dict(summary)
+            self._persist()
+
+    def last_runs(self) -> dict[str, dict]:
+        with self._lock:
+            return {runner: dict(s) for runner, s in self._current().runs.items()}
+
+    def recent_alerts(self, limit: int = 10) -> list[dict]:
+        with self._lock:
+            return [dict(a) for a in reversed(self._current().alerts[-limit:])]
 
     def load(self) -> MonitorState:
         with self._lock:

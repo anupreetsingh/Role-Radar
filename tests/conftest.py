@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Callable
@@ -46,10 +47,16 @@ def make_job():
 
 
 @pytest.fixture(autouse=True)
-def _no_runtime_env(monkeypatch):
-    """Keep ROLE_RADAR_* settings from the developer's shell out of the tests."""
+def _isolated(monkeypatch, tmp_path_factory):
+    """Keep ROLE_RADAR_* settings from the developer's shell out of the tests, and
+    ~/.role-radar untouched; undo cli.setup_logging()'s changes to the root logger."""
     for name in [n for n in os.environ if n.startswith("ROLE_RADAR_")]:
         monkeypatch.delenv(name)
+    monkeypatch.setenv("ROLE_RADAR_HOME", str(tmp_path_factory.mktemp("role-radar-home")))
+    root = logging.getLogger()
+    handlers, level = root.handlers[:], root.level
+    yield
+    root.handlers[:], root.level = handlers, level
 
 
 class Clock:

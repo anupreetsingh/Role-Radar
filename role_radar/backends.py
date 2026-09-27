@@ -74,12 +74,20 @@ class ConfigSource:
     def description(self) -> str:
         return self.runtime.config_url or str(self.local_config)
 
-    def load(self) -> AppConfig:
+    def read_text(self) -> str:
         if self._s3:
-            return parse_config(self._s3.read(), self.runtime.config_url or "s3")
+            return self._s3.read()
         if not self.local_config:
-            raise FileNotFoundError("no config file given and runtime.config_url isn't set")
-        return load_config(self.local_config)
+            raise FileNotFoundError(
+                "no config: pass --config, set ROLE_RADAR_CONFIG_FILE, or set runtime.config_url / ROLE_RADAR_CONFIG_URL"
+            )
+        return self.local_config.read_text(encoding="utf-8")
+
+    def load(self) -> AppConfig:
+        text = self.read_text()
+        if self._s3 or not self.local_config:
+            return parse_config(text, self.description)
+        return parse_config(text, str(self.local_config), as_json=self.local_config.suffix == ".json")
 
 
 class NotifierSource:

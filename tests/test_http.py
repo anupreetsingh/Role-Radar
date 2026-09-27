@@ -4,7 +4,7 @@ import time
 import httpx
 import pytest
 
-from role_radar.http_client import FetchError, HttpClient, HttpSettings, RobotsDisallowed, format_bytes
+from role_radar.http_client import FetchError, HttpClient, HttpSettings, RobotsCache, RobotsDisallowed, format_bytes
 from tests.conftest import make_client
 
 
@@ -130,6 +130,31 @@ def test_respects_robots_txt():
 
     with pytest.raises(RobotsDisallowed):
         asyncio.run(go())
+
+
+def test_robots_cache_is_shared_across_clients_until_it_expires():
+    fetched = []
+
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            fetched.append(1)
+            return httpx.Response(200, text="User-agent: *\nDisallow: /private/\n")
+        return httpx.Response(200, text="ok")
+
+    now = [1000.0]
+    cache = RobotsCache(ttl=3600, clock=lambda: now[0])
+
+    async def one_run():
+        settings = HttpSettings(per_domain_delay=0, max_retries=0)
+        async with HttpClient(settings, transport=httpx.MockTransport(handler), robots=cache) as http:
+            await http.get_text("https://a.example/jobs")
+
+    asyncio.run(one_run())
+    asyncio.run(one_run())
+    assert len(fetched) == 1  # the second run reused the parsed robots.txt
+    now[0] += 3601
+    asyncio.run(one_run())
+    assert len(fetched) == 2
 
 
 @pytest.mark.parametrize("status, allowed", [(404, True), (401, True), (403, True), (503, False)])

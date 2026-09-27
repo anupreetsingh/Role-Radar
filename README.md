@@ -37,7 +37,9 @@ All modules live in the `role_radar/` package.
 
 | Module | Role |
 |---|---|
-| `monitor.py` | CLI entry point and orchestration |
+| `cli.py` | The `role-radar` command |
+| `runner.py` | Holds the lease and runs passes: the laptop loop, `run --once`, Lambda |
+| `monitor.py` | One pass: due companies → scrape → filter → alert → save |
 | `schedule.py` | Which companies are due, and when each is next checked |
 | `config.py` | Loads and validates `companies.yaml` (JSON also accepted), including `runtime:` |
 | `models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
@@ -50,6 +52,8 @@ All modules live in the `role_radar/` package.
 | `aws.py` | boto3 helpers: the config file in S3, secrets in SSM |
 | `backends.py` | Picks the store, lease, config source and secrets from `runtime:` |
 | `notifications.py` | `Notifier` interface + Discord, email and console |
+| `instance.py` | One `role-radar start` per machine; how `stop` finds it |
+| `launchd.py` | The macOS login item |
 
 ### Supported sources
 
@@ -189,26 +193,59 @@ To write another backend, subclass `storage.StateStore`. Runs use `load_schedule
 (every company's next check time), then `load_company()` and `save_company()` around
 each company's check. `load()` and `save()` move a whole state at once, for migration.
 
+## Commands
+
+Install the `role-radar` command. [pipx](https://pipx.pypa.io) keeps it in its own
+environment:
+
+```bash
+pipx install '.[aws]'                 # from the project directory; drop [aws] for JSON-only use
+```
+
+| Command | What it does |
+|---|---|
+| `role-radar start` | Runs until you quit (Ctrl+C). Takes the lease and checks companies as they come due. If Lambda holds the lease, it asks Lambda to hand over and takes over once it has. |
+| `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. |
+| `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, the latest alerts, and whether the pushed config matches your local file. |
+| `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease) or `--baseline` (record everything as seen, no alerts). |
+| `role-radar list-matches` | Prints every job matching right now. Reads no state, sends nothing. |
+| `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
+| `role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE` | Copies state between stores (either direction). |
+| `role-radar login-item on\|off` | Starts `role-radar start` whenever you log in to your Mac. It's a launchd agent with RunAtLoad and no KeepAlive, so quitting it stays quit until your next login. It logs to `~/Library/Logs/role-radar.log`. |
+
+Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
+file is `$ROLE_RADAR_CONFIG_FILE`, else `./config/companies.yaml`, else
+`~/.config/role-radar/companies.yaml`.
+
+On Ctrl+C, SIGTERM or SIGHUP, `start` stops starting companies, lets the ones in flight
+finish and save, and releases the lease. A second Ctrl+C quits at once; the lease then
+expires within 3 minutes. Only one `start` runs per machine: a second one sees the
+first and exits.
+
+Exit codes: `0` ok · `1` every company failed, or an alert couldn't be delivered ·
+`2` bad config or usage · `3` the lease was lost mid-pass · `4` another runner holds
+the lease.
+
 ## Run locally
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -e '.[aws]' -r requirements-dev.txt
 
-python -m pytest                                # tests
-python -m role_radar.monitor --list-matches     # show every job matching now (no state, no alerts)
-python -m role_radar.monitor --dry-run -v       # check due companies, print alerts, save nothing
-python -m role_radar.monitor --all --dry-run    # the same for every company, due or not
-python -m role_radar.monitor --company "Continental Finance" --dry-run
+python -m pytest                                  # tests
+role-radar list-matches                           # every job matching now (no state, no alerts)
+role-radar run --once --dry-run -v                # check due companies, print alerts, save nothing
+role-radar run --once --all --dry-run             # the same for every company, due or not
+role-radar run --once --company "Continental Finance" --dry-run
 
-cp .env.example .env                      # fill in a Discord webhook and/or SMTP settings
+cp .env.example .env                              # fill in a Discord webhook and/or SMTP settings
 set -a; source .env; set +a
-python -m role_radar.monitor                    # real run of due companies: sends alerts, saves state
-python -m role_radar.monitor --baseline         # mark everything current as seen, no alerts
+role-radar run --once                             # real pass over the due companies
+role-radar run --once --baseline                  # mark everything current as seen, no alerts
 ```
 
-If no notification env vars are set, alerts go to stdout. The exit code is `1` when
-every company failed or no notification channel delivered, and `0` otherwise.
+If no notification settings are found, alerts go to stdout. With the default
+`runtime:` (JSON storage, secrets from the environment), no AWS account is needed.
 
 ## GitHub Secrets
 

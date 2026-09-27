@@ -48,7 +48,7 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           BASELINE: ${{ inputs.baseline && '--baseline' || '' }}
-        run: python -m role_radar.monitor $BASELINE
+        run: python -m role_radar run --once $BASELINE
 
       # Runs even if the scraper exited non-zero (e.g. one channel failed), so
       # progress from successful companies is kept. Skipped if the run was cancelled.

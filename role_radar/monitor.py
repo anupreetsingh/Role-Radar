@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-"""Role Radar: check careers pages and alert on newly posted matching jobs.
+"""One pass over the companies that are due: scrape, detect new jobs, alert, save.
 
-Flow of one run:
+Flow of a pass:
   load config + every company's schedule → pick the companies that are due
   → for each due company (concurrently, bounded):
       load its state → scrape listing → fetch details only for unseen jobs whose
@@ -10,33 +9,29 @@ Flow of one run:
       → confirm the lease is still ours → alert on its new matches
       → save its state and next check time straight away (fenced on the lease)
 
-If the lease turns out to be lost, the run stops without saving or sending
+If the lease turns out to be lost, the pass stops without saving or sending
 anything more. The companies it didn't finish are still due, so whoever holds
-the lease picks them up.
+the lease picks them up. runner.py decides when passes run and holds the lease.
 """
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import logging
 import os
-import socket
-import sys
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Awaitable, Callable, Iterable, Sequence, TypeVar, Union
+from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, Union
 
-from role_radar.backends import ConfigSource, NotifierSource, open_backend, resolve_runtime
 from role_radar.config import AppConfig, CompanyConfig, Settings
-from role_radar.http_client import HttpClient
+from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
 from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
 from role_radar.schedule import after_check, due_companies, next_due
 from role_radar.scrapers import BaseScraper, scraper_class_for
-from role_radar.storage import MonitorState, SeenJob, StateStore, to_iso, utcnow
+from role_radar.storage import CompanyMeta, MonitorState, SeenJob, StateStore, to_iso, utcnow
 from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile
 
 log = logging.getLogger("monitor")
@@ -45,7 +40,8 @@ T = TypeVar("T")
 # A list of channels, or a function that builds them the first time they're needed.
 Notifiers = Union[Sequence[Notifier], Callable[[], Sequence[Notifier]]]
 
-EXIT_LEASE_LOST = 3
+EXIT_OK, EXIT_FAILED, EXIT_NOTHING, EXIT_LEASE_LOST = 0, 1, 2, 3
+SAVE_MARGIN = 20.0  # seconds kept free before a deadline for alerting and saving
 
 
 @dataclass
@@ -56,6 +52,8 @@ class CompanyOutcome:
     matched: list[JobPosting] = field(default_factory=list)
     diff: CompanyDiff | None = None
     delivered: bool = True  # False when there were alerts and no channel took them
+    meta: CompanyMeta | None = None  # the schedule saved after this check
+    skipped: bool = False  # due, but not started (stopping, or out of time)
 
     @property
     def ok(self) -> bool:
@@ -64,6 +62,63 @@ class CompanyOutcome:
     @property
     def alerted(self) -> int:
         return len(self.diff.to_notify) if self.diff and self.delivered else 0
+
+
+@dataclass
+class PassResult:
+    """What one pass did, for logs, `status` and exit codes."""
+
+    enabled: int = 0
+    outcomes: list[CompanyOutcome] = field(default_factory=list)
+    lease_lost: bool = False
+    seconds: float = 0.0
+    requests: int = 0
+    bytes: int = 0
+    next_due: datetime | None = None
+    finished_at: datetime | None = None
+    nothing_configured: bool = False
+
+    @property
+    def checked(self) -> list[CompanyOutcome]:
+        return [o for o in self.outcomes if not o.skipped]
+
+    @property
+    def failed(self) -> list[CompanyOutcome]:
+        return [o for o in self.checked if not o.ok]
+
+    @property
+    def alerts(self) -> int:
+        return sum(o.alerted for o in self.outcomes)
+
+    @property
+    def undelivered(self) -> list[CompanyOutcome]:
+        return [o for o in self.outcomes if not o.delivered]
+
+    @property
+    def exit_code(self) -> int:
+        if self.nothing_configured:
+            return EXIT_NOTHING
+        if self.lease_lost:
+            return EXIT_LEASE_LOST
+        checked = self.checked
+        if (checked and len(self.failed) == len(checked)) or self.undelivered:
+            return EXIT_FAILED
+        return EXIT_OK
+
+    def summary(self) -> dict[str, Any]:
+        """For the store's run log (`role-radar status`)."""
+        return {
+            "finished_at": to_iso(self.finished_at or utcnow()),
+            "checked": len(self.checked),
+            "failed": len(self.failed),
+            "alerts": self.alerts,
+            "undelivered": len(self.undelivered),
+            "skipped": len(self.outcomes) - len(self.checked),
+            "seconds": round(self.seconds, 1),
+            "requests": self.requests,
+            "bytes": self.bytes,
+            "lease_lost": self.lease_lost,
+        }
 
 
 def _needs_details(rec: SeenJob | None) -> bool:
@@ -112,7 +167,7 @@ async def check_company(
     scraper = scraper_class_for(company.url, company.ats)(company, http)
     result = await scraper.fetch_jobs()
     jobs = dedupe([j.freeze_identity() for j in result.jobs if j.title])
-    log.info("[%s] %d job(s) listed via %s", company.name, len(jobs), scraper.name)
+    log.debug("[%s] %d job(s) listed via %s", company.name, len(jobs), scraper.name)
 
     # Only fetch detail pages when the filter needs a field the listing lacks, for
     # jobs that could still match and haven't been handled.
@@ -153,9 +208,11 @@ async def check_company(
         notify=notify and (settings.notify_on_first_run or not first_run),
         repost_window_days=settings.repost_window_days,
     )
-    log.info(
-        "[%s] matched=%d new=%d alert=%d removed=%d returned=%d suppressed=%d",
-        company.name, len(matched), len(diff.new), len(diff.to_notify),
+    changed = diff.new or diff.removed or diff.returned or diff.suppressed or diff.to_notify
+    log.log(
+        logging.INFO if changed else logging.DEBUG,
+        "[%s] listed=%d matched=%d new=%d alert=%d removed=%d returned=%d suppressed=%d",
+        company.name, len(jobs), len(matched), len(diff.new), len(diff.to_notify),
         len(diff.removed), len(diff.returned), len(diff.suppressed),
     )  # fmt: skip
     for job, reason in diff.suppressed:
@@ -174,6 +231,7 @@ async def process_company(
     lease: Lease,
     notify: bool = True,
     dry_run: bool = False,
+    timeout: float | None = None,
 ) -> CompanyOutcome:
     """Check one company, alert on its new matches, then save its state right away.
 
@@ -186,7 +244,7 @@ async def process_company(
     try:
         outcome = await asyncio.wait_for(
             check_company(company, http, state, settings, notify=notify, first_run=record.is_new),
-            timeout=settings.company_timeout,
+            timeout=timeout or settings.company_timeout,
         )
     except Exception as exc:  # one broken company must not stop the run
         msg = str(exc) or type(exc).__name__
@@ -210,14 +268,14 @@ async def process_company(
     pruned = state.prune(settings.retention_days, now)
     if pruned:
         log.info("[%s] pruned %d long-removed job(s)", company.name, pruned)
-    record.meta = after_check(record.meta, now, settings.check_interval, error=outcome.error)
+    record.meta = outcome.meta = after_check(record.meta, now, settings.check_interval, error=outcome.error)
     if not dry_run:
         lease.check()  # fail fast; the store also checks the stored lease in the same transaction
         await asyncio.to_thread(store.save_company, record)
     return outcome
 
 
-async def run(
+async def run_pass(
     config: AppConfig,
     store: StateStore,
     notifiers: Notifiers,
@@ -226,49 +284,51 @@ async def run(
     dry_run: bool = False,
     baseline: bool = False,
     only: set[str] | None = None,
-    list_matches: bool = False,
     check_all: bool = False,
+    should_stop: Callable[[], bool] | None = None,
+    deadline: float | None = None,
+    robots: RobotsCache | None = None,
     clock: Callable[[], datetime] = utcnow,
-) -> int:
-    """One pass over the companies that are due (all of them with check_all, baseline or only).
+) -> PassResult:
+    """Check the companies that are due (all of them with check_all, baseline or only).
 
     The caller must already hold `lease` (a LocalLease is used when none is given).
-    Returns 0 on success, 1 if every company failed or an alert couldn't be
-    delivered, 2 if there was nothing configured, 3 if the lease was lost.
+    No new company starts once `should_stop()` returns true or `deadline`
+    (time.monotonic) is near; companies already started finish and are saved.
     """
     settings = config.settings
+    result = PassResult()
     companies = [c for c in config.companies if c.enabled and (not only or c.name.lower() in only)]
+    result.enabled = len(companies)
     if not companies:
         log.error("No companies to check")
-        return 2
-    if list_matches:
-        return await print_matches(companies, settings)
+        result.nothing_configured = True
+        return result
     if lease is None:
         lease = LocalLease("local")
         lease.acquire(0)
 
-    if not (check_all or baseline or only):
-        schedule = await asyncio.to_thread(store.load_schedule)
-        now = clock()
-        due = due_companies(companies, schedule, now, settings.check_interval)
-        log.info("%d of %d companies due", len(due), len(companies))
-        if not due:
-            upcoming = next_due(companies, schedule, now, settings.check_interval)
-            log.info("Nothing to do; next check due at %s", to_iso(upcoming) if upcoming else "-")
-            return 0
-        companies = due
+    schedule = await asyncio.to_thread(store.load_schedule)
+    due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), settings.check_interval)
+    if not due:
+        result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+        log.debug("Nothing due; next check at %s", to_iso(result.next_due) if result.next_due else "-")
+        return result
 
     started = time.monotonic()
-    if dry_run:
-        channels: Callable[[], Sequence[Notifier]] = lambda: [ConsoleNotifier()]  # noqa: E731
-    else:
-        channels = notifiers if callable(notifiers) else (lambda: notifiers)
+    channels = _channels(notifiers, dry_run)
 
     async def guarded(company: CompanyConfig) -> CompanyOutcome:
+        timeout = settings.company_timeout
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic() - SAVE_MARGIN)
+        if timeout <= 0 or (should_stop and should_stop()):
+            return CompanyOutcome(company.name, skipped=True)
         try:
             return await process_company(
-                company, http, store, channels, settings, now=clock(), lease=lease, notify=not baseline, dry_run=dry_run
-            )
+                company, http, store, channels, settings,
+                now=clock(), lease=lease, notify=not baseline, dry_run=dry_run, timeout=timeout,
+            )  # fmt: skip
         except LeaseLost:
             raise
         except Exception as exc:  # loading or saving state failed; the company stays due
@@ -276,36 +336,57 @@ async def run(
             log.error("[%s] state could not be loaded or saved: %s", company.name, msg)
             return CompanyOutcome(company.name, error=msg)
 
-    async with HttpClient(settings.http) as http:
+    async with HttpClient(settings.http, robots=robots) as http:
         try:
-            outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: guarded(c) for c in companies])
+            result.outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: guarded(c) for c in due])
         except LeaseLost as exc:
             log.error("Stopped: %s. Unfinished companies are still due for whoever holds the lease.", exc)
-            return EXIT_LEASE_LOST
+            result.lease_lost = True
 
-    log.info("Checked %d companies in %.1fs: %s", len(companies), time.monotonic() - started, http.stats.summary())
-    for host, stats in http.stats.busiest():
-        log.debug("  %s: %d requests, %d bytes, %d failed", host, stats.requests, stats.bytes, stats.errors)
+    result.seconds = time.monotonic() - started
+    result.requests, result.bytes = http.stats.requests, http.stats.bytes
+    result.finished_at = clock()
+    schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
+    result.next_due = next_due(companies, schedule, clock(), settings.check_interval)
+    _log_pass(result, len(due), http, dry_run)
+    write_step_summary(result.outcomes, result.alerts)
+    return result
+
+
+def _channels(notifiers: Notifiers, dry_run: bool) -> Callable[[], Sequence[Notifier]]:
     if dry_run:
-        log.info("Dry run: state not saved")
+        return lambda: [ConsoleNotifier()]
+    return notifiers if callable(notifiers) else (lambda: notifiers)
 
-    failed = [o for o in outcomes if not o.ok]
-    undelivered = [o for o in outcomes if not o.delivered]
-    alerted = sum(o.alerted for o in outcomes)
+
+def _log_pass(result: PassResult, due: int, http: HttpClient, dry_run: bool) -> None:
+    skipped = len(result.outcomes) - len(result.checked)
     log.info(
-        "Done: %d/%d companies ok, %d new alert(s)%s",
-        len(outcomes) - len(failed), len(outcomes), alerted,
-        f"; failed: {', '.join(o.company for o in failed)}" if failed else "",
+        "Checked %d of %d due companies in %.1fs: %d failed, %d alert(s)%s%s; %s",
+        len(result.checked), due, result.seconds, len(result.failed), result.alerts,
+        f", {skipped} left for later" if skipped else "",
+        " (dry run: nothing saved)" if dry_run else "",
+        http.stats.summary(top=5),
     )  # fmt: skip
-    write_step_summary(outcomes, alerted)
+    for host, stats in http.stats.busiest():
+        log.debug("  %s: %d requests, %s, %d failed", host, stats.requests, format_bytes(stats.bytes), stats.errors)
+    if result.failed:
+        log.info("Failed: %s", ", ".join(o.company for o in result.failed))
 
-    if len(failed) == len(outcomes) or undelivered:
-        return 1
-    return 0
+
+async def run(config: AppConfig, store: StateStore, notifiers: Notifiers, *, list_matches: bool = False, **kwargs: Any) -> int:
+    """run_pass(), or print_matches() with list_matches, returning an exit code."""
+    if list_matches:
+        companies = [c for c in config.companies if c.enabled and (not kwargs.get("only") or c.name.lower() in kwargs["only"])]
+        return await print_matches(companies, config.settings)
+    return (await run_pass(config, store, notifiers, **kwargs)).exit_code
 
 
 async def print_matches(companies: list[CompanyConfig], settings: Settings) -> int:
     """Print every job matching right now. Reads no state, sends nothing, saves nothing."""
+    if not companies:
+        log.error("No companies to check")
+        return EXIT_NOTHING
 
     async def one(company: CompanyConfig) -> CompanyOutcome:
         try:
@@ -321,7 +402,7 @@ async def print_matches(companies: list[CompanyConfig], settings: Settings) -> i
     for o in outcomes:
         for job in o.matched:
             print(f"{o.company} | {job.title} | {job.location or '-'} | {job.url}")
-    return 0
+    return EXIT_OK if any(o.ok for o in outcomes) else EXIT_FAILED
 
 
 def write_step_summary(outcomes: list[CompanyOutcome], alerted: int) -> None:
@@ -331,72 +412,10 @@ def write_step_summary(outcomes: list[CompanyOutcome], alerted: int) -> None:
         return
     rows = ["| Company | Status | Listed | Matched | New alerts | Removed |", "|---|---|---|---|---|---|"]
     for o in outcomes:
+        if o.skipped:
+            continue
         status = "ok" if o.ok else f"error: {(o.error or '')[:80]}"
         d = o.diff
         rows.append(f"| {o.company} | {status} | {o.listed} | {len(o.matched)} | {o.alerted} | {len(d.removed) if d else 0} |")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(f"### Role Radar: {alerted} alert(s) sent\n\n" + "\n".join(rows) + "\n")
-
-
-def setup_logging(verbose: bool) -> None:
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
-    # httpx logs every request URL at INFO, which would include webhook URLs.
-    for noisy in ("httpx", "httpcore"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
-
-
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--config", default="config/companies.yaml", help="companies YAML/JSON file (its runtime: section picks the backends)")
-    p.add_argument("--state", help="use this JSON state file (overrides runtime.storage)")
-    p.add_argument("--company", action="append", default=[], help="only check this company, due or not (repeatable)")
-    p.add_argument("--all", action="store_true", help="check every company, not just the ones that are due")
-    p.add_argument("--dry-run", action="store_true", help="print alerts to stdout and don't save state")
-    p.add_argument("--baseline", action="store_true", help="record every company's current jobs as seen without alerting")
-    p.add_argument("--list-matches", action="store_true", help="print every currently matching job and exit")
-    p.add_argument("-v", "--verbose", action="store_true", help="debug logging (shows why each job matched or not)")
-    return p.parse_args(argv)
-
-
-def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
-    setup_logging(args.verbose)
-    try:
-        runtime = resolve_runtime(args.config)
-        if args.state:
-            runtime = replace(runtime, storage="json", state_file=args.state)
-        config = ConfigSource(runtime, args.config).load()
-    except (OSError, ValueError, RuntimeError) as exc:
-        log.error("Invalid config: %s", exc)
-        return 2
-    backend = open_backend(runtime, f"cli:{socket.gethostname()}")
-    needs_lease = not (args.dry_run or args.list_matches)
-    if needs_lease and not backend.lease.acquire(ttl=15 * 60):
-        info = backend.lease.read()
-        log.error("%s holds the lease; not running (it expires at %s)", info.holder if info else "?", info and time.ctime(info.expires_at))
-        return 4
-    try:
-        return asyncio.run(
-            run(
-                config,
-                backend.store,
-                NotifierSource(runtime),
-                lease=backend.lease if needs_lease else None,
-                dry_run=args.dry_run,
-                baseline=args.baseline,
-                only={c.lower() for c in args.company} or None,
-                list_matches=args.list_matches,
-                check_all=args.all,
-            )
-        )
-    finally:
-        if needs_lease:
-            backend.lease.release()
-
-
-if __name__ == "__main__":
-    sys.exit(main())

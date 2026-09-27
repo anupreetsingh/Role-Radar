@@ -50,7 +50,8 @@ def _key(pk: str, sk: str) -> dict[str, Any]:
 
 
 def _item(pk: str, sk: str, attrs: dict[str, Any]) -> dict[str, Any]:
-    return {**_key(pk, sk), **{k: _serialize(v) for k, v in attrs.items()}}
+    # DynamoDB numbers must be Decimals, not floats.
+    return {**_key(pk, sk), **{k: _serialize(Decimal(str(v)) if isinstance(v, float) else v) for k, v in attrs.items()}}
 
 
 def _plain(item: dict[str, Any]) -> dict[str, Any]:
@@ -273,7 +274,10 @@ class DynamoStateStore(StateStore):
         )
 
     def recent_alerts(self, limit: int = 10) -> list[dict[str, Any]]:
-        return list(self._query(ALERTS, ScanIndexForward=False, Limit=limit))
+        alerts = list(self._query(ALERTS, ScanIndexForward=False, Limit=limit))
+        for alert in alerts:
+            alert["notified_at"] = alert["sk"].split("#", 1)[0]
+        return alerts
 
     def last_runs(self) -> dict[str, dict[str, Any]]:
         return {item["sk"]: item for item in self._query(RUNS)}

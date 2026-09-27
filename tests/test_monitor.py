@@ -54,7 +54,7 @@ def run_monitor(monkeypatch, store, notifier, list_body=None, requested=None, co
         return httpx.Response(404)
 
     transport = httpx.MockTransport(handler or default_handler)
-    monkeypatch.setattr(monitor, "HttpClient", lambda s: HttpClient(s, transport=transport))
+    monkeypatch.setattr(monitor, "HttpClient", lambda s, **kw: HttpClient(s, transport=transport, **kw))
     kwargs.setdefault("clock", lambda: T0)
     return asyncio.run(monitor.run(config or build_config(), store, [notifier], **kwargs))
 

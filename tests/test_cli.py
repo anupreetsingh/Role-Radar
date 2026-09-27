@@ -1,0 +1,177 @@
+"""The role-radar command line, end to end with mocked HTTP (and moto for AWS)."""
+
+import os
+import plistlib
+import sys
+
+import httpx
+import pytest
+
+from role_radar import cli, launchd, monitor
+from role_radar.http_client import HttpClient
+from role_radar.instance import InstanceLock
+from role_radar.storage import JsonStateStore
+from tests.conftest import fixture_json
+
+CONFIG = """
+runtime:
+  storage: json
+  state_file: {state}
+settings:
+  http: {{per_domain_delay: 0, respect_robots: false, max_retries: 0}}
+companies:
+  - name: Continental Finance
+    url: https://contfinco.bamboohr.com/careers
+    filters:
+      include_keywords: [software developer, data engineer]
+"""
+
+
+@pytest.fixture
+def config(tmp_path, monkeypatch):
+    """A local config with JSON state in tmp_path, and every HTTP request answered from fixtures."""
+    path = tmp_path / "companies.yaml"
+    path.write_text(CONFIG.format(state=tmp_path / "state.json"))
+
+    def handler(request):
+        return httpx.Response(200, json=fixture_json("bamboohr_list.json"))
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(monitor, "HttpClient", lambda s, **kw: HttpClient(s, transport=transport, **kw))
+    for name in ("DISCORD_WEBHOOK_URL", "SMTP_HOST", "EMAIL_TO"):
+        monkeypatch.delenv(name, raising=False)  # alerts go to the console
+    return path
+
+
+def test_run_once_alerts_then_finds_nothing_due(config, capsys):
+    assert cli.main(["run", "--once", "--config", str(config)]) == 0
+    out = capsys.readouterr().out
+    assert "Mid/Senior Software Developer" in out and "Data Engineer" in out
+    state = JsonStateStore(config.parent / "state.json").load()
+    assert len(state.companies["Continental Finance"]) == 4 and "Continental Finance" in state.meta
+
+    assert cli.main(["run", "--once", "--config", str(config)]) == 0
+    assert "NEW JOB" not in capsys.readouterr().out  # checked minutes ago: not due
+
+
+def test_run_needs_once(config):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["run", "--config", str(config)])
+    assert exc.value.code == 2
+
+
+def test_dry_run_saves_nothing(config, capsys):
+    assert cli.main(["run", "--once", "--dry-run", "--config", str(config)]) == 0
+    assert "NEW JOB" in capsys.readouterr().out
+    assert not (config.parent / "state.json").exists()
+
+
+def test_status_after_a_run(config, capsys):
+    cli.main(["run", "--once", "--config", str(config)])
+    capsys.readouterr()
+    assert cli.main(["status", "--config", str(config)]) == 0
+    out = capsys.readouterr().out
+    assert "State:          JSON file" in out
+    assert "Lease:          not needed" in out
+    assert "role-radar start is not running" in out
+    assert "Companies:      1 enabled, 0 due now, next due" in out
+    assert "Continental Finance: Data Engineer" in out  # recent alerts
+    assert "Last pass:      cli:" in out and "1 checked, 2 alert(s)" in out
+
+
+def test_list_matches(config, capsys):
+    assert cli.main(["list-matches", "--config", str(config)]) == 0
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert len(lines) == 2 and all(line.startswith("Continental Finance | ") for line in lines)
+
+
+def test_missing_config_is_a_usage_error(tmp_path):
+    assert cli.main(["status", "--config", str(tmp_path / "nope.yaml")]) == cli.EXIT_USAGE
+
+
+def test_config_push_validates_then_uploads(config, fake_aws):
+    import boto3
+
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket="role-radar-config")
+    text = config.read_text().replace("  storage: json\n", "  storage: json\n  config_url: s3://role-radar-config/companies.yaml\n")
+    config.write_text(text)
+    assert cli.main(["config", "push", "--config", str(config)]) == 0
+    assert s3.get_object(Bucket="role-radar-config", Key="companies.yaml")["Body"].read().decode() == text
+
+    broken = config.parent / "broken.yaml"
+    broken.write_text(text.replace("include_keywords", "match_on: [description]\n      include_keywords"))
+    assert cli.main(["config", "push", "--config", str(config), "--file", str(broken)]) == cli.EXIT_USAGE
+    assert s3.get_object(Bucket="role-radar-config", Key="companies.yaml")["Body"].read().decode() == text
+
+
+def test_config_push_needs_a_destination(config):
+    assert cli.main(["config", "push", "--config", str(config)]) == cli.EXIT_USAGE
+
+
+def test_migrate_json_to_dynamodb(config, table, capsys):
+    cli.main(["run", "--once", "--config", str(config)])  # fill the JSON state
+    source = f"json:{config.parent / 'state.json'}"
+    target = f"dynamodb:{table[1]}"
+    assert cli.main(["migrate", "--from", source, "--to", target, "--config", str(config)]) == 0
+    assert "Copied 1 companies (4 jobs, 1 schedules)" in capsys.readouterr().out
+
+    from role_radar.dynamo import DynamoStateStore
+
+    migrated = DynamoStateStore(table[0], table[1]).load()
+    assert migrated.to_dict()["companies"] == JsonStateStore(config.parent / "state.json").load().to_dict()["companies"]
+    assert cli.main(["migrate", "--from", source, "--to", target, "--config", str(config)]) == 1  # already has state
+    assert cli.main(["migrate", "--from", source, "--to", target, "--config", str(config), "--force"]) == 0
+
+
+def test_migrate_waits_for_the_lease(config, table):
+    from role_radar.dynamo import DynamoLease
+
+    DynamoLease(table[0], table[1], "lambda").acquire(900)
+    source = f"json:{config.parent / 'state.json'}"
+    assert cli.main(["migrate", "--from", source, "--to", f"dynamodb:{table[1]}", "--config", str(config)]) == 4
+
+
+def test_login_item_writes_a_run_at_load_agent_without_keepalive(config, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(launchd.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(launchd, "_launchctl", lambda *args, check=True: calls.append(args))
+    monkeypatch.setattr(cli.sys, "platform", "darwin")
+    monkeypatch.setenv("AWS_PROFILE", "role-radar")
+
+    assert cli.main(["login-item", "on", "--config", str(config)]) == 0
+    path = tmp_path / "Library" / "LaunchAgents" / "com.roleradar.start.plist"
+    agent = plistlib.loads(path.read_bytes())
+    assert agent["ProgramArguments"][:4] == [sys.executable, "-m", "role_radar", "start"]
+    assert agent["ProgramArguments"][4:6] == ["--config", str(config.resolve())]
+    assert agent["RunAtLoad"] is True and "KeepAlive" not in agent
+    assert agent["EnvironmentVariables"]["AWS_PROFILE"] == "role-radar"
+    assert [c[0] for c in calls] == ["bootout", "bootstrap"]
+
+    assert cli.main(["login-item", "off"]) == 0
+    assert not path.exists() and calls[-1][0] == "bootout"
+
+
+def test_instance_lock_allows_one_start_and_finds_it(tmp_path):
+    first, second = InstanceLock(tmp_path / "start.pid"), InstanceLock(tmp_path / "start.pid")
+    assert first.acquire()
+    assert not second.acquire()
+    assert second.running_pid() == os.getpid()
+    first.release()
+    assert second.running_pid() is None and second.acquire()
+    second.release()
+
+
+def test_stop_when_nothing_runs(capsys):
+    assert cli.main(["stop"]) == 0
+    assert "isn't running" in capsys.readouterr().out
+
+
+def test_default_config_path_prefers_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROLE_RADAR_CONFIG_FILE", str(tmp_path / "mine.yaml"))
+    assert cli.default_config_path() == tmp_path / "mine.yaml"
+
+
+@pytest.mark.parametrize("seconds, text", [(5, "5s"), (125, "2m 05s"), (3 * 3600 + 60, "3h 01m"), (2 * 86400 + 7200, "2d 2h")])
+def test_duration(seconds, text):
+    assert cli.duration(seconds) == text
