@@ -52,13 +52,35 @@ def test_regex_keyword():
     assert not f.evaluate(job("Software Engineer III"))
 
 
-def test_description_matching():
-    title_only = JobFilter(include_keywords=["kubernetes"])
-    both = JobFilter(include_keywords=["kubernetes"], match_on=["title", "description"])
-    j = job("Infrastructure Engineer", description="You will run Kubernetes clusters.")
-    assert not title_only.evaluate(j)
-    assert both.evaluate(j)
-    assert both.needs_description
+def test_description_filters_are_rejected():
+    with pytest.raises(ValueError, match="no longer downloads job descriptions"):
+        JobFilter(include_keywords=["kubernetes"], match_on=["title", "description"])
+    with pytest.raises(ValueError, match="no longer downloads job descriptions"):
+        JobFilter(exclude_keywords=["clearance"], exclude_on=["description"])
+
+
+def test_config_with_description_filter_fails_clearly(tmp_path):
+    from config import load_config
+
+    path = tmp_path / "companies.yaml"
+    path.write_text(
+        "companies:\n"
+        "  - name: Ashby\n"
+        "    url: https://jobs.ashbyhq.com/ashby\n"
+        "    enabled: false\n"  # disabled companies are validated too
+        "    filters:\n"
+        "      match_on: [title, description]\n"
+    )
+    with pytest.raises(ValueError, match=r"companies\[0\] \(Ashby\): .*descriptions"):
+        load_config(path)
+
+
+def test_fields_used():
+    assert JobFilter().fields_used() == set()
+    assert JobFilter(include_keywords=["engineer"]).fields_used() == {"title"}
+    both = JobFilter(include_keywords=["engineer"], locations=["Remote"], employment_types=["full-time"])
+    assert both.fields_used() == {"title", "location", "employment_type"}
+    assert JobFilter(exclude_keywords=["intern"], exclude_on=["title", "department"]).fields_used() == {"title", "department"}
 
 
 def test_location_and_employment_type_filters():
@@ -79,8 +101,12 @@ def test_could_match_prefilter(default_filter):
     assert default_filter.could_match(job("Software Engineer"))
     assert not default_filter.could_match(job("Senior Software Engineer"))
     assert not default_filter.could_match(job("Recruiter"))
-    desc = JobFilter(include_keywords=["python"], match_on=["title", "description"])
-    assert desc.could_match(job("Recruiter"))  # description unknown yet
+    located = JobFilter(include_keywords=["engineer"], locations=["New York"])
+    multi = job("Data Engineer", location="2 Locations")
+    assert not located.could_match(multi)  # "2 Locations" taken at face value
+    assert located.could_match(multi, unknown={"location"})  # the detail page may say New York
+    assert located.could_match(job("Data Engineer", location=None))  # empty fields count as unknown
+    assert not located.could_match(job("Recruiter", location="2 Locations"), unknown={"location"})
 
 
 def test_unknown_field_rejected():

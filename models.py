@@ -38,7 +38,7 @@ def normalize_url(url: str | None) -> str:
 
 
 def html_to_text(value: str | None) -> str:
-    """Cheap HTML → plain text, good enough for keyword matching and previews."""
+    """Cheap HTML → plain text, good enough for titles scraped from markup."""
     if not value:
         return ""
     text = html.unescape(value)
@@ -62,7 +62,7 @@ class JobPosting:
     employment_type: str | None = None
     department: str | None = None
     date_posted: date | None = None
-    description: str | None = None
+    # Job descriptions are deliberately not modelled: they're never downloaded or stored.
     # Scraper-specific data needed to fetch details later (never persisted).
     extra: dict = field(default_factory=dict, repr=False, compare=False)
     _uid: str | None = field(default=None, init=False, repr=False, compare=False)
@@ -106,7 +106,3 @@ class JobPosting:
             return self._fingerprint
         raw = "|".join((normalize_text(self.company), normalize_text(self.title), normalize_text(self.location)))
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-    def summary(self, length: int = 280) -> str:
-        text = _WS.sub(" ", self.description or "").strip()
-        return text if len(text) <= length else text[: length - 1].rsplit(" ", 1)[0] + "…"

@@ -30,8 +30,6 @@ class BaseScraper(ABC):
     name: ClassVar[str]
     # Hostname suffixes used to auto-detect this ATS from a careers URL.
     domains: ClassVar[tuple[str, ...]] = ()
-    # Whether fetch_details() adds information (description, exact date...).
-    supports_details: ClassVar[bool] = False
 
     def __init__(self, company: CompanyConfig, http: HttpClient) -> None:
         self.company = company
@@ -46,6 +44,14 @@ class BaseScraper(ABC):
     @abstractmethod
     async def fetch_jobs(self) -> ScrapeResult:
         """Return every currently listed job for the company."""
+
+    def missing_fields(self, job: JobPosting) -> set[str]:
+        """Filter fields the listing lacks for `job` that fetch_details() would fill in. Default: none."""
+        return set()
+
+    def wants_details(self, job: JobPosting) -> bool:
+        """True when the company's filter depends on a field only the job's own page has."""
+        return bool(self.missing_fields(job) & self.company.filter.fields_used())
 
     async def fetch_details(self, job: JobPosting) -> JobPosting:
         """Fill in fields only available from the job's own page. Default: no-op."""

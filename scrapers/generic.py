@@ -8,6 +8,10 @@
 Only the server-rendered HTML is read. Pages that need JavaScript to render
 their jobs usually load them from an API; point the config at that API's ATS
 instead.
+
+Every listed job already has a title and URL, so a job's own page is skipped
+unless the company's filter needs a location or employment type the listing
+didn't give; then its JSON-LD is read for those (never the description).
 """
 
 from __future__ import annotations
@@ -113,7 +117,6 @@ def _ld_location(posting: dict[str, Any]) -> str | None:
 
 class GenericScraper(BaseScraper):
     name = "generic"
-    supports_details = True
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -144,6 +147,11 @@ class GenericScraper(BaseScraper):
         # unless the config explicitly says the pattern is reliable.
         return ScrapeResult(jobs, complete=bool(self.options.get("link_pattern")))
 
+    def missing_fields(self, job: JobPosting) -> set[str]:
+        if self._delegate:
+            return self._delegate.missing_fields(job)
+        return {name for name, value in (("location", job.location), ("employment_type", job.employment_type)) if not value}
+
     async def fetch_details(self, job: JobPosting) -> JobPosting:
         if self._delegate:
             return await self._delegate.fetch_details(job)
@@ -151,7 +159,6 @@ class GenericScraper(BaseScraper):
         parser = _PageParser()
         parser.feed(page)
         for posting in self._postings(parser.json_ld):
-            job.description = html_to_text(posting.get("description")) or job.description
             job.date_posted = parse_date(posting.get("datePosted")) or job.date_posted
             job.employment_type = job.employment_type or _employment_type(posting)
             job.location = job.location or _ld_location(posting)
@@ -196,7 +203,6 @@ class GenericScraper(BaseScraper):
                     location=_ld_location(p),
                     employment_type=_employment_type(p),
                     date_posted=parse_date(p.get("datePosted")),
-                    description=html_to_text(p.get("description")),
                 )
             )
         return jobs

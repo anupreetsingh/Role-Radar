@@ -3,8 +3,9 @@
 
 Flow of one run:
   load config + state
-  → for each company (concurrently, bounded): scrape listing → pre-filter
-    → fetch details for promising unseen jobs → filter → diff against state
+  → for each company (concurrently, bounded): scrape listing
+    → fetch details only for unseen jobs whose filter needs a field the listing
+      lacks (and that could still match) → filter → diff against state
   → send one batched notification for all new matches
   → mark delivered jobs as notified → save state
 """
@@ -69,11 +70,18 @@ async def check_company(
     jobs = dedupe([j.freeze_identity() for j in result.jobs if j.title])
     log.info("[%s] %d job(s) listed via %s", company.name, len(jobs), scraper.name)
 
-    # Only fetch detail pages for jobs that could still match and haven't been handled.
+    # Only fetch detail pages when the filter needs a field the listing lacks, for
+    # jobs that could still match and haven't been handled.
     records = state.companies.get(company.name, {})
+    todo = [
+        j
+        for j in jobs
+        if scraper.wants_details(j)
+        and _needs_details(records.get(j.uid))
+        and company.filter.could_match(j, scraper.missing_fields(j))
+    ]
     fetched: set[str] = set()
-    if scraper.supports_details:
-        todo = [j for j in jobs if _needs_details(records.get(j.uid)) and company.filter.could_match(j)]
+    if todo:
         if len(todo) > settings.max_detail_requests:
             log.info("[%s] %d jobs need details; fetching %d this run", company.name, len(todo), settings.max_detail_requests)
             todo = todo[: settings.max_detail_requests]

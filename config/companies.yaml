@@ -13,7 +13,8 @@
 # Filter keys:
 #   include_keywords   any one must appear in the `match_on` fields
 #   exclude_keywords   none may appear in the `exclude_on` fields
-#   match_on / exclude_on   any of: title, description, location, employment_type, department
+#   match_on / exclude_on   any of: title, location, employment_type, department
+#                      (job descriptions are never downloaded, so they can't be matched)
 #   locations          optional allow-list matched against location ("remote" works too)
 #   employment_types   optional allow-list, e.g. ["full-time", "full time"]
 # Matching is case-insensitive, on word boundaries ("AI" won't match "maintain").
@@ -110,8 +111,6 @@ companies:
   - name: Ashby
     url: https://jobs.ashbyhq.com/ashby
     enabled: false
-    filters:
-      match_on: [title, description]  # description is available without extra requests
 
   - name: NVIDIA
     url: https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite

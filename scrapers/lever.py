@@ -2,6 +2,9 @@
 
   GET https://api.lever.co/v0/postings/{company}?mode=json&skip=N&limit=N
   (EU-hosted boards use api.eu.lever.co)
+
+The API always includes descriptions and has no option to leave them out;
+they're ignored.
 """
 
 from __future__ import annotations
@@ -9,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import urlsplit
 
-from models import JobPosting, html_to_text
+from models import JobPosting
 from scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
 
 PAGE_SIZE = 100
@@ -40,16 +43,6 @@ class LeverScraper(BaseScraper):
     def parse_job(self, item: dict[str, Any]) -> JobPosting:
         cats = item.get("categories") or {}
         locations = cats.get("allLocations") or ([cats["location"]] if cats.get("location") else [])
-        # lists[].content is HTML; html_to_text normalizes the whole thing.
-        description = "\n\n".join(
-            p
-            for p in (
-                item.get("descriptionPlain"),
-                *(f"{lst.get('text', '')}\n{lst.get('content', '')}" for lst in item.get("lists") or []),
-                item.get("additionalPlain"),
-            )
-            if p
-        )
         return self.make_job(
             job_id=str(item["id"]),
             title=(item.get("text") or "").strip(),
@@ -58,5 +51,4 @@ class LeverScraper(BaseScraper):
             employment_type=cats.get("commitment"),
             department=cats.get("department") or cats.get("team"),
             date_posted=parse_date(item.get("createdAt")),
-            description=html_to_text(description),
         )

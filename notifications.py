@@ -59,7 +59,7 @@ def group_jobs(jobs: list[JobPosting]) -> list[JobGroup]:
     return list(groups.values())
 
 
-def format_group(group: JobGroup, include_summary: bool = False) -> str:
+def format_group(group: JobGroup) -> str:
     lines = ["NEW JOB", "", f"Company: {group.company}", f"Title: {group.title}"]
     locations = group.locations
     lines.append(f"Location{'s' if len(locations) > 1 else ''}: {' | '.join(locations)}")
@@ -68,8 +68,6 @@ def format_group(group: JobGroup, include_summary: bool = False) -> str:
         lines.append(f"Type: {first.employment_type}")
     if group.posted:
         lines.append(f"Posted: {group.posted}")
-    if include_summary and first.description:
-        lines += ["", first.summary()]
     lines += ["", "Apply:"]
     urls = list(dict.fromkeys(j.url for j in group.jobs))
     if len(urls) == 1:
@@ -101,7 +99,7 @@ class ConsoleNotifier(Notifier):
 
     async def send(self, jobs: list[JobPosting]) -> None:
         sep = "\n" + "-" * 60 + "\n"
-        print(sep.join([headline(jobs), *(format_group(g, include_summary=True) for g in group_jobs(jobs))]), flush=True)
+        print(sep.join([headline(jobs), *(format_group(g) for g in group_jobs(jobs))]), flush=True)
 
 
 class DiscordNotifier(Notifier):
@@ -168,7 +166,7 @@ class EmailNotifier(Notifier):
         msg["Subject"] = f"[Role Radar] {headline(jobs)}"
         msg["From"] = self.sender
         msg["To"] = ", ".join(self.recipients)
-        msg.set_content(("\n\n" + "=" * 50 + "\n\n").join(format_group(g, include_summary=True) for g in group_jobs(jobs)))
+        msg.set_content(("\n\n" + "=" * 50 + "\n\n").join(format_group(g) for g in group_jobs(jobs)))
         return msg
 
     def _send_sync(self, msg: EmailMessage) -> None:

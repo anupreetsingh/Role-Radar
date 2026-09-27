@@ -10,9 +10,9 @@ seen_jobs.json ────────┤
                        ▼
   monitor.py ── for each company (concurrent, bounded) ─────────────────────┐
      │   scraper (auto-picked from URL) → public JSON API, or HTML fallback  │
-     │   → pre-filter on title/location (cheap)                              │
-     │   → fetch detail pages only for promising, unseen jobs                │
-     │   → full filter (filters.py)                                          │
+     │   → detail page only if the filter needs a field the listing lacks    │
+     │     (Workday, custom sites) and the job could still match             │
+     │   → filter (filters.py)                                               │
      │   → diff vs. stored state (tracker.py): new / removed / repost / dup  │
      └───────────────────────────────────────────────────────────────────────┘
                        ▼
@@ -43,12 +43,16 @@ failure is logged and the other companies still run.
 
 | ATS | Endpoint used | Detail request? |
 |---|---|---|
-| BambooHR | `{sub}.bamboohr.com/careers/list` + `/careers/{id}/detail` | yes (for description and date) |
-| Greenhouse | `boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true` | no |
+| BambooHR | `{sub}.bamboohr.com/careers/list` | no |
+| Greenhouse | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | no |
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
-| Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | yes |
-| Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | JSON-LD on job page |
+| Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
+| Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
+
+**Job descriptions are never downloaded or stored.** A job's title, location, ID and URL
+are enough to alert on. Lever and Ashby put descriptions in their API responses anyway,
+with no way to turn them off, so they're dropped while parsing.
 
 The ATS is detected from the URL, or you can set it with `ats:`. Nothing tries to get
 past CAPTCHAs, logins or robots.txt. Pages that only render with JavaScript aren't
@@ -87,7 +91,7 @@ to every company, and a company's own `filters` replace them **one key at a time
   filters:
     include_keywords: [software engineer, developer, machine learning, AI, data engineer]
     exclude_keywords: [manager, director, vice president, chief]
-    match_on: [title]            # title | description | location | employment_type | department
+    match_on: [title]            # title | location | employment_type | department
     locations: [Remote, Wilmington]   # optional
     employment_types: [full-time]     # optional
 ```
@@ -95,7 +99,8 @@ to every company, and a company's own `filters` replace them **one key at a time
 Matching is case-insensitive and respects word boundaries, so `AI` does not match
 "Maintain". A space in a keyword also matches `-`, `/` and `_`, and `re:` lets you use a
 regex. To change the logic itself, edit `JobFilter.evaluate` in `filters.py`. To make a
-new field matchable, add it to `FIELD_GETTERS`.
+new field matchable, add it to `FIELD_GETTERS`. Descriptions can't be matched, and a
+config that puts `description` in `match_on` or `exclude_on` is rejected at load time.
 
 For Continental Finance, `senior` is deliberately **not** excluded, because its current
 tech opening is titled "Mid/Senior Software Developer". The filter excludes only
@@ -104,8 +109,10 @@ management and executive titles.
 ### Adding an ATS
 
 1. Create `scrapers/myats.py` with `class MyATSScraper(BaseScraper)`, setting `name` and
-   `domains`, and implement `fetch_jobs()`. Implement `fetch_details()` too if the
-   listing is thin.
+   `domains`, and implement `fetch_jobs()`. If the listing lacks a field that filters
+   use (location, employment type), also implement `missing_fields()` and
+   `fetch_details()`. The detail page is then fetched only for companies whose filter
+   needs that field.
 2. Add the class to `SCRAPERS` in `scrapers/__init__.py`.
 
 ### Swapping the storage backend
@@ -201,8 +208,9 @@ Things to know about GitHub scheduling:
 
 - The defaults allow 8 concurrent requests overall and 1 request per second per host.
   Most boards take one request.
-- Detail requests are made only for unseen jobs that pass the pre-filter, capped at
-  `max_detail_requests` per company per run. Any left over are picked up next run.
+- Detail requests are made only when a filter needs a field the listing lacks, only for
+  unseen jobs that could still match, and at most `max_detail_requests` per company per
+  run. Any left over are picked up next run.
 - For very large Workday tenants, set `options.search_text` and `options.max_jobs`.
 - When adding many companies at once, set `notify_on_first_run: false`, or run once with
   `--baseline`.

@@ -1,19 +1,26 @@
 import asyncio
-import json
+from dataclasses import fields
 from datetime import date
 
 import httpx
 import pytest
 
+from models import JobPosting
 from scrapers import SCRAPERS, scraper_class_for
 from scrapers.base import ScraperError, parse_date
-from tests.conftest import company, fixture_json, fixture_text, make_client
+from storage import SeenJob
+from tests.conftest import company, fixture_json, fixture_text, job, make_client
 
 
-def scrape(ats, url, routes, *, details=(), **options):
-    """Run a scraper against canned responses keyed by URL path."""
+def scrape(ats, url, routes, *, details=(), seen=None, **options):
+    """Run a scraper against canned responses keyed by URL path.
+
+    Every requested URL is appended to `seen` when given.
+    """
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if seen is not None:
+            seen.append(str(request.url))
         body = routes.get(request.url.path)
         if body is None:
             return httpx.Response(404)
@@ -35,12 +42,16 @@ def scrape(ats, url, routes, *, details=(), **options):
     return asyncio.run(go())
 
 
-def test_bamboohr_listing_and_detail():
-    routes = {
-        "/careers/list": fixture_json("bamboohr_list.json"),
-        "/careers/303/detail": fixture_json("bamboohr_detail_303.json"),
-    }
-    result = scrape("bamboohr", "https://contfinco.bamboohr.com/careers", routes)
+def test_descriptions_are_never_kept():
+    # Lever and Ashby always send descriptions; there's nowhere to put them.
+    assert "description" not in {f.name for f in fields(JobPosting)}
+    assert "description" not in {f.name for f in fields(SeenJob)}
+
+
+def test_bamboohr_listing_only():
+    seen = []
+    routes = {"/careers/list": fixture_json("bamboohr_list.json")}
+    result = scrape("bamboohr", "https://contfinco.bamboohr.com/careers", routes, details={"303"}, seen=seen)
     jobs = {j.job_id: j for j in result.jobs}
     assert len(jobs) == 4 and result.complete
     dev = jobs["303"]
@@ -51,11 +62,12 @@ def test_bamboohr_listing_and_detail():
     assert dev.department == "Tech"
     assert dev.uid == "acme:bamboohr:303"
     assert jobs["350"].location == "United States (Remote)"
+    assert seen == ["https://contfinco.bamboohr.com/careers/list"]  # no /detail requests
 
-    detailed = scrape("bamboohr", "https://contfinco.bamboohr.com/careers", routes, details={"303"})
-    dev = next(j for j in detailed.jobs if j.job_id == "303")
-    assert dev.date_posted == date(2026, 3, 10)
-    assert ".NET Core, C#" in dev.description and "<" not in dev.description
+
+def test_bamboohr_never_wants_details():
+    cfg = company(url="https://contfinco.bamboohr.com/careers", locations=["Remote"], employment_types=["full-time"])
+    assert not SCRAPERS["bamboohr"](cfg, None).wants_details(job(location=None, employment_type=None))
 
 
 def test_bamboohr_malformed_response():
@@ -64,12 +76,15 @@ def test_bamboohr_malformed_response():
 
 
 def test_greenhouse():
-    result = scrape("greenhouse", "https://job-boards.greenhouse.io/acme", {"/v1/boards/acme/jobs": fixture_json("greenhouse_jobs.json")})
+    seen = []
+    routes = {"/v1/boards/acme/jobs": fixture_json("greenhouse_jobs.json")}
+    result = scrape("greenhouse", "https://job-boards.greenhouse.io/acme", routes, seen=seen)
+    assert seen == ["https://boards-api.greenhouse.io/v1/boards/acme/jobs"]  # no ?content=true
     be = result.jobs[0]
     assert (be.job_id, be.title, be.location) == ("111", "Backend Engineer", "Austin, TX")
-    assert be.employment_type == "Full-time" and be.department == "Engineering"
+    assert be.employment_type == "Full-time"
+    assert be.department is None  # only sent with content=true
     assert be.date_posted == date(2026, 9, 19)
-    assert be.description == "Build APIs in Go."
 
 
 def test_lever():
@@ -78,7 +93,7 @@ def test_lever():
     assert ml.title == "Machine Learning Engineer"
     assert ml.location == "New York, NY; Remote - US"
     assert ml.employment_type == "Full-time"
-    assert "Ship PyTorch models" in ml.description and "<b>" not in ml.description
+    assert ml.department == "ML"
 
 
 def test_ashby_skips_unlisted():
@@ -92,9 +107,38 @@ def test_ashby_skips_unlisted():
 def test_workday():
     url = "https://acme.wd5.myworkdayjobs.com/en-US/External"
     result = scrape("workday", url, {"/wday/cxs/acme/External/jobs": fixture_json("workday_jobs.json")})
-    assert [j.job_id for j in result.jobs] == ["JR2000001", "JR2000002"]
+    assert [j.job_id for j in result.jobs] == ["JR2000001", "JR2000002", "JR2000003"]
     assert result.jobs[0].url == "https://acme.wd5.myworkdayjobs.com/External/job/US-TX-Austin/Software-Engineer--New-Grad_JR2000001"
+    assert result.jobs[2].location == "2 Locations"
     assert result.complete
+
+
+def test_workday_detail_fills_locations_and_type_but_not_description():
+    url = "https://acme.wd5.myworkdayjobs.com/en-US/External"
+    routes = {
+        "/wday/cxs/acme/External/jobs": fixture_json("workday_jobs.json"),
+        "/wday/cxs/acme/External/job/US-TX-Austin/Data-Engineer_JR2000003": fixture_json("workday_detail.json"),
+    }
+    result = scrape("workday", url, routes, details={"JR2000003"})
+    de = result.jobs[2]
+    assert de.location == "US, TX, Austin; US, NY, New York"
+    assert de.employment_type == "Full time" and de.date_posted == date(2026, 9, 20)
+
+
+@pytest.mark.parametrize(
+    "filters, wanted",
+    [
+        ({}, set()),  # title-only filter: never
+        ({"locations": ["New York"]}, {"JR2000003"}),  # only the "2 Locations" job
+        ({"exclude_keywords": ["India"], "exclude_on": ["title", "location"]}, {"JR2000003"}),
+        ({"employment_types": ["full time"]}, {"JR2000001", "JR2000002", "JR2000003"}),
+    ],
+)
+def test_workday_wants_details_only_when_filter_needs_them(filters, wanted):
+    url = "https://acme.wd5.myworkdayjobs.com/en-US/External"
+    listing = scrape("workday", url, {"/wday/cxs/acme/External/jobs": fixture_json("workday_jobs.json")})
+    scraper = SCRAPERS["workday"](company(url=url, include_keywords=["engineer"], **filters), None)
+    assert {j.job_id for j in listing.jobs if scraper.wants_details(j)} == wanted
 
 
 def test_generic_json_ld():
@@ -103,13 +147,23 @@ def test_generic_json_ld():
     assert (pe.job_id, pe.title) == ("PE-42", "Platform Engineer")
     assert pe.url == "https://acme.example/careers/platform-engineer"
     assert pe.location == "Denver, CO, US" and pe.employment_type == "Full Time"
-    assert pe.description == "Kubernetes & Terraform"
+    assert pe.date_posted == date(2026, 9, 22)
 
 
 def test_generic_link_heuristic():
     result = scrape("generic", "https://acme.example/careers", {"/careers": fixture_text("generic_links.html")})
     assert sorted(j.title for j in result.jobs) == ["Data Engineer", "Software Engineer I"]
     assert not result.complete  # heuristic results never imply removals
+
+
+def test_generic_skips_job_page_unless_filter_needs_a_missing_field():
+    listed = job("Data Engineer", job_id=None, location=None, url="https://acme.example/careers/jobs/102")
+    plain = SCRAPERS["generic"](company(include_keywords=["engineer"]), None)
+    assert not plain.wants_details(listed)  # title and URL are enough
+    located = SCRAPERS["generic"](company(include_keywords=["engineer"], locations=["Remote"]), None)
+    assert located.wants_details(listed)
+    listed.location = "Remote"
+    assert not located.wants_details(listed)
 
 
 def test_generic_delegates_to_embedded_greenhouse():

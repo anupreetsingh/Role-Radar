@@ -1,6 +1,9 @@
 """Ashby public Job Posting API.
 
   GET https://api.ashbyhq.com/posting-api/job-board/{board}
+
+The API always includes descriptions and has no option to leave them out;
+they're ignored.
 """
 
 from __future__ import annotations
@@ -43,5 +46,4 @@ class AshbyScraper(BaseScraper):
             employment_type=_humanize(item.get("employmentType")),
             department=item.get("department") or item.get("team"),
             date_posted=parse_date(item.get("publishedAt")),
-            description=item.get("descriptionPlain"),
         )

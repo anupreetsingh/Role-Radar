@@ -4,6 +4,11 @@ Careers URL:  https://{tenant}.wd5.myworkdayjobs.com/[en-US/]{site}
   POST https://{host}/wday/cxs/{tenant}/{site}/jobs      → paginated listing (max 20/page)
   GET  https://{host}/wday/cxs/{tenant}/{site}{path}     → job detail
 
+The listing has no employment type and shows "3 Locations" instead of the
+place names, so a job's detail is fetched only when the company's filter
+needs one of those: an employment-type rule, or a location rule for a job
+listed under "N Locations". The detail's description is ignored.
+
 Large employers list thousands of jobs, so use options.search_text (and
 optionally options.applied_facets) to narrow the query, and options.max_jobs
 to cap pages.
@@ -15,17 +20,17 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from models import JobPosting, html_to_text
+from models import JobPosting
 from scrapers.base import BaseScraper, ScrapeResult, ScraperError, parse_date
 
 PAGE_SIZE = 20
 _LOCALE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
+_MULTI_LOCATION = re.compile(r"^\d+\s+locations?$", re.I)
 
 
 class WorkdayScraper(BaseScraper):
     name = "workday"
     domains = ("myworkdayjobs.com", "myworkdaysite.com")
-    supports_details = True
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -76,16 +81,20 @@ class WorkdayScraper(BaseScraper):
             extra={"path": path},
         )
 
+    def missing_fields(self, job: JobPosting) -> set[str]:
+        missing = {"employment_type"}  # the listing never includes the time type
+        if not job.location or _MULTI_LOCATION.match(job.location.strip()):
+            missing.add("location")
+        return missing
+
     async def fetch_details(self, job: JobPosting) -> JobPosting:
         data = await self.http.get_json(f"{self.api}{job.extra['path']}")
         info = (data or {}).get("jobPostingInfo") or {}
-        job.description = html_to_text(info.get("jobDescription")) or job.description
         job.employment_type = info.get("timeType") or job.employment_type
         job.date_posted = parse_date(info.get("startDate")) or job.date_posted
-        extra_locations = info.get("additionalLocations") or []
-        if info.get("location") and extra_locations and job.location and "locations" in job.location.lower():
-            # Listing shows "3 Locations"; the detail has the real names.
-            job.location = "; ".join([info["location"], *extra_locations])
+        if info.get("location") and "location" in self.missing_fields(job):
+            # Listing shows "3 Locations" (or nothing); the detail has the real names.
+            job.location = "; ".join([info["location"], *(info.get("additionalLocations") or [])])
         return job
 
     @staticmethod

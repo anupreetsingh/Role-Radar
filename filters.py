@@ -11,27 +11,25 @@ Keywords are case-insensitive and match on word boundaries, so "AI" matches
 "AI Engineer" but not "Maintain". Spaces in a keyword also match hyphens,
 slashes and underscores ("back end" matches "Back-End"). A keyword prefixed
 with "re:" is used as a raw regular expression.
+
+Job descriptions are never downloaded, so they can't be matched on.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Collection
 
 from models import JobPosting
 
 # The fields a rule can be applied to. Add an entry here to make a new field matchable.
 FIELD_GETTERS: dict[str, Callable[[JobPosting], str | None]] = {
     "title": lambda j: j.title,
-    "description": lambda j: j.description,
     "location": lambda j: j.location,
     "employment_type": lambda j: j.employment_type,
     "department": lambda j: j.department,
 }
-
-# Fields known without fetching a job's detail page.
-LISTING_FIELDS = {"title", "location", "employment_type", "department"}
 
 
 def compile_keyword(keyword: str) -> re.Pattern[str]:
@@ -64,6 +62,11 @@ class JobFilter:
 
     def __post_init__(self) -> None:
         for name in (*self.match_on, *self.exclude_on):
+            if name == "description":
+                raise ValueError(
+                    "match_on/exclude_on can't use 'description': Role Radar no longer downloads job "
+                    "descriptions. Match on title (or location, employment_type, department) instead"
+                )
             if name not in FIELD_GETTERS:
                 raise ValueError(f"Unknown filter field {name!r}; choose from {sorted(FIELD_GETTERS)}")
         self._include = [(k, compile_keyword(k)) for k in self.include_keywords]
@@ -80,9 +83,16 @@ class JobFilter:
             raise ValueError(f"Unknown filter options: {sorted(unknown)}")
         return cls(**{k: list(v) for k, v in cfg.items() if v is not None})
 
-    @property
-    def needs_description(self) -> bool:
-        return "description" in self.match_on or "description" in self.exclude_on
+    def fields_used(self) -> set[str]:
+        """Job fields whose value can change this filter's verdict."""
+        used = set(self.match_on) if self._include else set()
+        if self._exclude:
+            used.update(self.exclude_on)
+        if self._locations:
+            used.add("location")
+        if self._types:
+            used.add("employment_type")
+        return used
 
     def evaluate(self, job: JobPosting) -> MatchResult:
         hit = self._search(self._exclude, job, self.exclude_on)
@@ -99,20 +109,22 @@ class JobFilter:
             return MatchResult(True, f"matched {hit!r}", hit)
         return MatchResult(False, "no include keyword matched")
 
-    def could_match(self, job: JobPosting) -> bool:
-        """Cheap pre-check using listing fields only, before fetching job details.
+    def could_match(self, job: JobPosting, unknown: Collection[str] = ()) -> bool:
+        """Cheap pre-check before fetching a job's detail page.
 
-        Returns False only when the job is guaranteed to fail regardless of its
-        description, so we can skip the detail request.
+        `unknown` names fields the listing doesn't really provide (empty fields
+        count too), which the detail page may fill in. Returns False only when
+        the job fails whatever those fields turn out to be, so the detail
+        request can be skipped.
         """
-        listing_exclude = [f for f in self.exclude_on if f in LISTING_FIELDS]
-        if self._search(self._exclude, job, listing_exclude):
+        unknown = {*unknown, *(name for name, get in FIELD_GETTERS.items() if not get(job))}
+        if self._search(self._exclude, job, [f for f in self.exclude_on if f not in unknown]):
             return False
-        if self._locations and job.location and not self._search(self._locations, job, ["location"]):
+        if self._locations and "location" not in unknown and not self._search(self._locations, job, ["location"]):
             return False
-        if self._types and job.employment_type and not self._search(self._types, job, ["employment_type"]):
+        if self._types and "employment_type" not in unknown and not self._search(self._types, job, ["employment_type"]):
             return False
-        if self._include and "description" not in self.match_on:
+        if self._include and not unknown.intersection(self.match_on):
             return bool(self._search(self._include, job, self.match_on))
         return True
 
