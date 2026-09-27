@@ -1,0 +1,6 @@
+{"meta":{"totalCount":4},"result":[
+{"id":"303","jobOpeningName":"Mid/Senior Software Developer (.NET Core / React / AWS)","departmentId":"18580","departmentLabel":"Tech","employmentStatusLabel":"Full-Time","employmentType":null,"location":{"city":"Wilmington","state":"Delaware"},"atsLocation":{"country":null,"state":null,"province":null,"city":null},"isRemote":null,"locationType":"2"},
+{"id":"325","jobOpeningName":"Grand Bank - Chief Compliance Officer","departmentId":"18575","departmentLabel":"Compliance","employmentStatusLabel":"Full-Time","employmentType":null,"location":{"city":"Hattiesburg","state":"Mississippi"},"atsLocation":{"country":null,"state":null,"province":null,"city":null},"isRemote":null,"locationType":"0"},
+{"id":"350","jobOpeningName":"Data Engineer","departmentId":"18580","departmentLabel":"Tech","employmentStatusLabel":"Full-Time","employmentType":null,"location":{"city":null,"state":null},"atsLocation":{"country":"United States","state":null,"province":null,"city":null},"isRemote":true,"locationType":"1"},
+{"id":"351","jobOpeningName":"Director of Engineering","departmentId":"18580","departmentLabel":"Tech","employmentStatusLabel":"Full-Time","employmentType":null,"location":{"city":"Wilmington","state":"Delaware"},"atsLocation":{"country":null,"state":null,"province":null,"city":null},"isRemote":null,"locationType":"0"}
+]}

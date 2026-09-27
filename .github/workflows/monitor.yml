@@ -1,0 +1,76 @@
+name: Job Monitor
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # UTC; GitHub may start scheduled runs a few minutes late
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: "Record current jobs as seen without sending alerts"
+        type: boolean
+        default: false
+
+# Needed to push the updated seen_jobs.json back to the repo.
+permissions:
+  contents: write
+
+# Never run two monitors at once: they would race on seen_jobs.json and double-alert.
+concurrency:
+  group: job-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Secrets are passed only to this step, as env vars. GitHub masks their
+      # values in logs, and the scraper never prints them.
+      - name: Run scraper
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_SECURITY: ${{ secrets.SMTP_SECURITY }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          BASELINE: ${{ inputs.baseline && '--baseline' || '' }}
+        run: python monitor.py $BASELINE
+
+      # Runs even if the scraper exited non-zero (e.g. one channel failed), so
+      # progress from successful companies is kept. Skipped if the run was cancelled.
+      - name: Commit state if changed
+        if: success() || failure()
+        run: |
+          if git diff --quiet -- seen_jobs.json; then
+            echo "seen_jobs.json unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seen_jobs.json
+          git commit -m "chore: update seen jobs [skip ci]"
+          # Retry in case someone pushed to the branch while we were running.
+          for attempt in 1 2 3; do
+            if git pull --rebase --quiet && git push --quiet; then
+              echo "State pushed."
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt); retrying..."
+            sleep $((attempt * 5))
+          done
+          echo "::error::Could not push seen_jobs.json"
+          exit 1

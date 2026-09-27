@@ -1,0 +1,131 @@
+# Role Radar company configuration.
+#
+# Per company:
+#   name      (required) display name; also the key in seen_jobs.json, so renaming
+#             a company re-baselines it
+#   url       (required) public careers page
+#   ats       optional: bamboohr | greenhouse | lever | ashby | workday | generic
+#             (auto-detected from the URL when omitted)
+#   filters   optional; each key REPLACES the same key from defaults.filters
+#   options   optional scraper-specific settings (see each scraper's docstring)
+#   enabled   optional, default true
+#
+# Filter keys:
+#   include_keywords   any one must appear in the `match_on` fields
+#   exclude_keywords   none may appear in the `exclude_on` fields
+#   match_on / exclude_on   any of: title, description, location, employment_type, department
+#   locations          optional allow-list matched against location ("remote" works too)
+#   employment_types   optional allow-list, e.g. ["full-time", "full time"]
+# Matching is case-insensitive, on word boundaries ("AI" won't match "maintain").
+# Prefix a keyword with "re:" to use a regular expression.
+
+settings:
+  state_file: seen_jobs.json
+  notify_on_first_run: true   # set false before adding many companies at once
+  repost_window_days: 30
+  retention_days: 90
+  max_detail_requests: 25
+  max_company_concurrency: 10
+  company_timeout: 300
+  http:
+    max_concurrency: 8
+    per_domain_delay: 1.0
+    connect_timeout: 10
+    read_timeout: 30
+    max_retries: 3
+    respect_robots: true
+
+defaults:
+  filters:
+    include_keywords:
+      - software engineer
+      - backend engineer
+      - platform engineer
+      - machine learning engineer
+      - AI engineer
+      - data engineer
+    exclude_keywords:
+      - senior
+      - sr
+      - staff
+      - principal
+      - lead
+      - manager
+      - director
+      - vice president
+      - vp
+      - head of
+      - chief
+    match_on: [title]
+    exclude_on: [title]
+
+companies:
+  - name: Continental Finance
+    url: https://contfinco.bamboohr.com/careers
+    ats: bamboohr
+    filters:
+      include_keywords:
+        - software engineer
+        - software engineering
+        - software developer
+        - developer
+        - backend
+        - back end
+        - platform engineer
+        - platform engineering
+        - machine learning
+        - ML
+        - MLOps
+        - AI
+        - artificial intelligence
+        - data engineer
+        - data engineering
+      # Management/executive roles only. "senior" is deliberately NOT excluded here:
+      # it would drop hybrid titles like "Mid/Senior Software Developer". Add it
+      # back if you want entry/mid-level roles only.
+      exclude_keywords:
+        - manager
+        - director
+        - vice president
+        - vp
+        - head of
+        - chief
+        - president
+        - officer
+      match_on: [title]
+      exclude_on: [title]
+
+  # --- More examples (disabled). Enable and adjust as needed. ---------------
+
+  - name: Discord
+    url: https://job-boards.greenhouse.io/discord
+    enabled: false
+
+  - name: Palantir
+    url: https://jobs.lever.co/palantir
+    enabled: false
+    filters:
+      locations: [New York, Remote]
+
+  - name: Ashby
+    url: https://jobs.ashbyhq.com/ashby
+    enabled: false
+    filters:
+      match_on: [title, description]  # description is available without extra requests
+
+  - name: NVIDIA
+    url: https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite
+    enabled: false
+    options:
+      search_text: software engineer new grad  # narrows thousands of jobs server-side
+      max_jobs: 200
+    filters:
+      include_keywords: [software engineer, new grad, new college grad]
+      locations: [US, United States]
+
+  - name: Example Custom Site
+    url: https://example.com/careers
+    ats: generic
+    enabled: false
+    options:
+      link_pattern: "/careers/jobs/\\d+"   # regex for job-detail links on the page

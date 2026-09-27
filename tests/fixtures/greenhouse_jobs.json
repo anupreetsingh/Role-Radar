@@ -1,0 +1,4 @@
+{"jobs":[
+{"absolute_url":"https://job-boards.greenhouse.io/acme/jobs/111","id":111,"internal_job_id":9,"title":"Backend Engineer","updated_at":"2026-09-20T10:00:00-04:00","first_published":"2026-09-19T09:00:00-04:00","location":{"name":"Austin, TX"},"metadata":[{"id":1,"name":"Employment Type","value":"Full-time","value_type":"single_select"}],"departments":[{"id":5,"name":"Engineering"}],"content":"&lt;p&gt;Build &lt;strong&gt;APIs&lt;/strong&gt; in Go.&lt;/p&gt;"},
+{"absolute_url":"https://job-boards.greenhouse.io/acme/jobs/112","id":112,"title":"Account Executive","updated_at":"2026-09-21T10:00:00Z","location":{"name":"Remote"},"metadata":[],"departments":[],"content":""}
+]}

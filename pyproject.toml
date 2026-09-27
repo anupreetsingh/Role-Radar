@@ -1,0 +1,9 @@
+[project]
+name = "role-radar"
+version = "1.0.0"
+description = "Monitor company careers pages and alert on newly posted matching jobs"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

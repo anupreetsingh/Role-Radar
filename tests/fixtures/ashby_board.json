@@ -1,0 +1,4 @@
+{"jobs":[
+{"id":"7458d4e9","title":"AI Engineer","department":"Engineering","team":"Applied AI","employmentType":"FullTime","location":"San Francisco","secondaryLocations":[{"location":"Remote - US"}],"publishedAt":"2026-09-24T14:29:08.532+00:00","isListed":true,"isRemote":true,"jobUrl":"https://jobs.ashbyhq.com/acme/7458d4e9","descriptionPlain":"Build LLM features."},
+{"id":"unlisted","title":"Hidden Role","isListed":false,"location":"X","jobUrl":"https://jobs.ashbyhq.com/acme/unlisted"}
+]}
