@@ -349,6 +349,11 @@ class DynamoStateStore(StateStore):
         record.loaded = current
         record.alerted = []
 
+    def save_meta(self, company: str, meta: CompanyMeta) -> None:
+        writes = [{"Put": {"TableName": self.table, "Item": _item(SCHEDULE, company, compact(meta))}}]
+        epoch = self.lease.epoch if self.lease else None
+        self._transact([self.lease.condition_check(epoch), *writes] if self.lease else writes, epoch)
+
     def _alert_row(self, record: CompanyRecord, uid: str) -> dict[str, Any]:
         job = record.jobs[uid]
         attrs = {

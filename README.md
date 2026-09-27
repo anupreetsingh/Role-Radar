@@ -189,7 +189,12 @@ completed alerts are not replayed when another channel is added.
 
 Companies aren't all checked at once. Each one is checked when it's **due**: when
 `check_interval_minutes` (20; Workday companies 240, via `check_interval_by_ats`) have
-passed since its last check, or straight away if it has never been checked. Each company's state is saved as soon as that company finishes,
+passed since its last check, or straight away if it has never been checked. Between full
+checks, `quick_check_by_ats` (Workday: every 10 minutes) reads only the listing's newest
+page, one request, and compares its jobs with the ones it showed at the last check. Only
+if some are new does it read the company's saved state, and further pages until one holds
+a job it already knows. A quick check never marks jobs removed and leaves the full check's
+schedule alone; boards that don't list newest first rely on the full check. Each company's state is saved as soon as that company finishes,
 so an interrupted pass loses at most the companies still in flight. Those companies are
 still due and get picked up next time.
 
@@ -611,6 +616,8 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   Workday companies at a time (`settings.company_concurrency_by_ats`), and checks
   them every four hours (`settings.check_interval_by_ats`). With ~150 Workday
   companies that is about 4,500 requests per round, under 0.5 requests/s on average.
+  Quick checks (`settings.quick_check_by_ats`) add about one request per company every
+  10 minutes, about 0.25 requests/s, and run before a pass's full checks.
 - Detail requests are made only when a filter needs a field the listing lacks, only for
   unseen jobs that could still match, and at most `max_detail_requests` per company per
   check. Any left over are fetched at the next check.

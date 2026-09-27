@@ -23,7 +23,7 @@ import inspect
 import logging
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, Union
 
@@ -33,7 +33,7 @@ from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
 from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
-from role_radar.schedule import after_check, due_companies, interval_for, next_due
+from role_radar.schedule import after_check, due_companies, interval_for, next_due, next_quick, quick_due
 from role_radar.scrapers import BaseScraper, ats_name, scraper_class_for
 from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
 from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile, settle_duplicates
@@ -92,6 +92,8 @@ class CompanyOutcome:
     meta: CompanyMeta | None = None  # the schedule saved after this check
     skipped: bool = False  # due, but not started (stopping, or out of time)
     queued: bool = False
+    quick: bool = False  # a quick check (settings.quick_check_by_ats), not a full one
+    top_uids: list[str] | None = None  # the listing's newest page, for the next quick check
 
     @property
     def ok(self) -> bool:
@@ -218,11 +220,18 @@ async def check_company(
     *,
     notify: bool,
     first_run: bool | None = None,
+    scraper: BaseScraper | None = None,
+    first_page: list[JobPosting] | None = None,
 ) -> CompanyOutcome:
-    """Scrape one company and reconcile the listing into `state` (in memory only)."""
-    scraper = scraper_class_for(company.url, company.ats)(company, http)
+    """Scrape one company and reconcile the listing into `state` (in memory only).
+
+    With `first_page` (a quick check that saw new jobs on it), only the newest
+    jobs are read, as a partial listing.
+    """
+    scraper = scraper or scraper_class_for(company.url, company.ats)(company, http)
     scraper.known = state.companies.get(company.name, {})
-    result = await scraper.fetch_jobs()
+    result = await (scraper.fetch_newest(first_page) if first_page is not None else scraper.fetch_jobs())
+    top_uids = [j.freeze_identity().uid for j in result.first_page] if result.first_page is not None else None
     jobs = dedupe([j.freeze_identity() for j in result.jobs if j.title])
     log.debug("[%s] %d job(s) listed via %s", company.name, len(jobs), scraper.name)
 
@@ -275,7 +284,7 @@ async def check_company(
     )  # fmt: skip
     for job, reason in diff.suppressed:
         log.info("[%s] not alerting %r (%s): %s", company.name, job.title, job.location, reason)
-    return CompanyOutcome(company.name, listed=len(jobs), matched=matched, diff=diff)
+    return CompanyOutcome(company.name, listed=len(jobs), matched=matched, diff=diff, top_uids=top_uids)
 
 
 async def process_company(
@@ -293,6 +302,8 @@ async def process_company(
     unsaved: Unsaved | None = None,
     save_lock: asyncio.Lock | None = None,
     deadline: float | None = None,
+    scraper: BaseScraper | None = None,
+    first_page: list[JobPosting] | None = None,
 ) -> CompanyOutcome:
     """Check one company, alert on its new matches, then save its state right away.
 
@@ -304,7 +315,8 @@ async def process_company(
     state = MonitorState({company.name: record.jobs})
     try:
         outcome = await asyncio.wait_for(
-            check_company(company, http, state, settings, notify=notify, first_run=record.is_new),
+            check_company(company, http, state, settings, notify=notify, first_run=record.is_new,
+                          scraper=scraper, first_page=first_page),
             timeout=timeout or settings.company_timeout,
         )
     except Exception as exc:  # one broken company must not stop the run
@@ -331,12 +343,67 @@ async def process_company(
     pruned = state.prune(settings.retention_days, now)
     if pruned:
         log.info("[%s] pruned %d long-removed job(s)", company.name, pruned)
-    record.meta = outcome.meta = after_check(
-        record.meta, now, settings.check_interval_for(ats_name(company.url, company.ats)), error=outcome.error
-    )
+    ats = ats_name(company.url, company.ats)
+    quick_interval = settings.quick_interval_for(ats)
+    if first_page is not None:  # a quick check leaves the full check's schedule as it was
+        outcome.quick = True
+    else:
+        previous = record.meta
+        record.meta = after_check(previous, now, settings.check_interval_for(ats), error=outcome.error)
+        record.meta.top_uids = previous.top_uids
+    if quick_interval:
+        record.meta.next_quick_at = to_iso(now + quick_interval)
+        if outcome.top_uids is not None:
+            record.meta.top_uids = outcome.top_uids
+    outcome.meta = record.meta
     if not dry_run:
         await _save(store, record, lease, save_lock, deadline, unsaved)
     return outcome
+
+
+async def quick_check(
+    company: CompanyConfig,
+    http: HttpClient,
+    store: StateStore,
+    notifiers: Callable[[], Sequence[Notifier]],
+    settings: Settings,
+    *,
+    meta: CompanyMeta,
+    now: datetime,
+    lease: Lease,
+    dry_run: bool = False,
+    timeout: float | None = None,
+    save_lock: asyncio.Lock | None = None,
+    **kwargs: Any,
+) -> CompanyOutcome:
+    """Between full checks: read the listing's newest page, and check further only if it changed.
+
+    Most quick checks are one request and a schedule-row write, without reading
+    the company's stored jobs: the page shows the same jobs as at the last check.
+    Otherwise the company is checked like process_company does, reading pages
+    from the top only until one holds a job already known. `meta` is the
+    company's schedule row as loaded at the start of this pass.
+    """
+    scraper = scraper_class_for(company.url, company.ats)(company, http)
+    try:
+        page = await asyncio.wait_for(scraper.fetch_first_page(), timeout=timeout or settings.company_timeout)
+    except Exception as exc:  # the next quick (or full) check tries again
+        error = str(exc) or type(exc).__name__
+        log.warning("[%s] quick check failed: %s", company.name, error)
+        page = None
+    else:
+        error = None
+        top = [job.freeze_identity().uid for job in page]
+        if not set(top) <= set(meta.top_uids or ()):
+            return await process_company(company, http, store, notifiers, settings, now=now, lease=lease, dry_run=dry_run,
+                                         timeout=timeout, save_lock=save_lock, scraper=scraper, first_page=page, **kwargs)
+    interval = settings.quick_interval_for(ats_name(company.url, company.ats)) or settings.check_interval
+    meta = replace(meta, next_quick_at=to_iso(now + interval))
+    if not dry_run:
+        lease.check()
+        async with save_lock or contextlib.nullcontext():
+            await asyncio.to_thread(store.save_meta, company.name, meta)
+    return CompanyOutcome(company.name, error=error, meta=meta, quick=True, listed=len(page or ()))
 
 
 def _skip_already_sent(diff: CompanyDiff, record: CompanyRecord, sent: dict[str, str]) -> None:
@@ -459,8 +526,10 @@ async def run_pass(
     started = time.monotonic()
     schedule = await asyncio.to_thread(store.load_schedule)
     due = companies if (check_all or baseline or only) else due_companies(companies, schedule, clock(), interval_for(settings))
-    if not due:
-        result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
+    # Quick checks go first: each is usually one request, and shouldn't wait behind full checks.
+    quick = [] if (check_all or baseline or only) else quick_due(companies, schedule, clock(), settings)
+    if not due and not quick:
+        result.next_due = _next_due(companies, schedule, clock(), settings)
         if not baseline and not dry_run:
             await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
         result.seconds = time.monotonic() - started
@@ -471,13 +540,19 @@ async def run_pass(
     channels = _channels(notifiers, dry_run)
     save_lock = asyncio.Lock()
 
-    async def guarded(company: CompanyConfig) -> CompanyOutcome:
+    async def guarded(company: CompanyConfig, quick_meta: CompanyMeta | None = None) -> CompanyOutcome:
         timeout = settings.company_timeout
         if deadline is not None:
             timeout = min(timeout, deadline - time.monotonic() - SAVE_MARGIN)
         if timeout <= 0 or (unsaved and unsaved.holding(company.name)) or await _stopping(should_stop):
             return CompanyOutcome(company.name, skipped=True)
         try:
+            if quick_meta is not None:
+                return await quick_check(
+                    company, http, store, channels, settings,
+                    meta=quick_meta, now=clock(), lease=lease, notify=not baseline, dry_run=dry_run, timeout=timeout,
+                    unsaved=unsaved, save_lock=save_lock, deadline=deadline,
+                )  # fmt: skip
             return await process_company(
                 company, http, store, channels, settings,
                 now=clock(), lease=lease, notify=not baseline, dry_run=dry_run, timeout=timeout,
@@ -490,25 +565,28 @@ async def run_pass(
             log.error("[%s] state could not be loaded or saved: %s", company.name, msg)
             return CompanyOutcome(company.name, error=msg)
 
-    gates = _ats_gates(due, settings)
+    work = [(c, schedule[c.name]) for c in quick] + [(c, None) for c in due]
+    gates = _ats_gates([c for c, _ in work], settings)
 
     async with HttpClient(settings.http, robots=robots) as http:
         try:
-            result.outcomes = await _bounded(settings.max_company_concurrency, [lambda c=c: guarded(c) for c in due], gates)
+            result.outcomes = await _bounded(
+                settings.max_company_concurrency, [lambda c=c, m=m: guarded(c, m) for c, m in work], gates
+            )
         except LeaseLost as exc:
             log.error("Stopped: %s. Unfinished companies are still due for whoever holds the lease.", exc)
             result.lease_lost = True
 
     result.requests, result.bytes = http.stats.requests, http.stats.bytes
     schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
-    result.next_due = next_due(companies, schedule, clock(), interval_for(settings))
+    result.next_due = _next_due(companies, schedule, clock(), settings)
     # Sent even once should_stop() is true: it stops new companies, not the digest. Otherwise a
     # Lambda with a backlog, which always works to the end of its window, would never send one.
     if not baseline and not dry_run and not result.lease_lost:
         await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
     result.seconds = time.monotonic() - started
     result.finished_at = clock()
-    _log_pass(result, len(due), http, dry_run)
+    _log_pass(result, len(work), http, dry_run)
     write_step_summary(result.outcomes, result.alerts)
     return result
 
@@ -566,11 +644,18 @@ def _channels(notifiers: Notifiers, dry_run: bool) -> Callable[[], Sequence[Noti
     return notifiers if callable(notifiers) else (lambda: notifiers)
 
 
+def _next_due(companies: list[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, settings: Settings) -> datetime | None:
+    """When the next full or quick check is due."""
+    times = [t for t in (next_due(companies, schedule, now, interval_for(settings)), next_quick(companies, schedule, settings)) if t]
+    return min(times, default=None)
+
+
 def _log_pass(result: PassResult, due: int, http: HttpClient, dry_run: bool) -> None:
     skipped = len(result.outcomes) - len(result.checked)
+    quick = sum(1 for o in result.checked if o.quick)
     log.info(
-        "Checked %d of %d due companies in %.1fs: %d failed, %d alert(s)%s%s; %s",
-        len(result.checked), due, result.seconds, len(result.failed), result.alerts,
+        "Checked %d of %d due companies%s in %.1fs: %d failed, %d alert(s)%s%s; %s",
+        len(result.checked), due, f" ({quick} quick)" if quick else "", result.seconds, len(result.failed), result.alerts,
         f", {skipped} left for later" if skipped else "",
         " (dry run: nothing saved)" if dry_run else "",
         http.stats.summary(top=5),

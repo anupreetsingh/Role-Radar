@@ -90,6 +90,10 @@ class CompanyMeta:
     # Matched jobs still waiting for the digest, so it reads only companies that have some.
     # None on rows saved before this was kept; set again at the company's next save.
     pending: int | None = None
+    # Quick checks (settings.quick_check_by_ats): when the next one is due, and the uids on
+    # the listing's newest page at the last check, to tell whether anything new appeared.
+    next_quick_at: str | None = None
+    top_uids: list[str] | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> CompanyMeta:
@@ -231,6 +235,10 @@ class StateStore(ABC):
     @abstractmethod
     def save_company(self, record: CompanyRecord) -> None: ...
 
+    def save_meta(self, company: str, meta: CompanyMeta) -> None:
+        """Save only a company's schedule row (a quick check that found nothing new), fenced like save_company."""
+        raise NotImplementedError("This store does not support quick checks")
+
     @abstractmethod
     def load(self) -> MonitorState: ...
 
@@ -302,6 +310,11 @@ class MemoryStateStore(StateStore):
                 )
             del state.alerts[:-ALERT_LOG_SIZE]
             record.alerted = []
+            self._persist()
+
+    def save_meta(self, company: str, meta: CompanyMeta) -> None:
+        with self._lock:
+            self._current().meta[company] = CompanyMeta.from_dict(asdict(meta))
             self._persist()
 
     def record_run(self, runner: str, summary: dict) -> None:

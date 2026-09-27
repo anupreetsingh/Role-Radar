@@ -24,6 +24,7 @@ from role_radar.models import JobPosting
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, parse_date
 
 PAGE_SIZE = 20
+QUICK_MAX_PAGES = 5  # a quick check reads at most this many pages; a full check gets the rest
 _LOCALE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
 _MULTI_LOCATION = re.compile(r"^\d+\s+locations?$", re.I)
 
@@ -31,6 +32,7 @@ _MULTI_LOCATION = re.compile(r"^\d+\s+locations?$", re.I)
 class WorkdayScraper(BaseScraper):
     name = "workday"
     domains = ("myworkdayjobs.com", "myworkdaysite.com")
+    supports_quick = True  # most boards list newest first; the full check covers those that don't
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -48,30 +50,50 @@ class WorkdayScraper(BaseScraper):
 
     async def fetch_jobs(self) -> ScrapeResult:
         max_jobs = int(self.options.get("max_jobs", 500))
-        payload: dict[str, Any] = {
-            "appliedFacets": self.options.get("applied_facets") or {},
-            "limit": PAGE_SIZE,
-            "offset": 0,
-            "searchText": self.options.get("search_text", ""),
-        }
         jobs: dict[str, JobPosting] = {}
+        first_page: list[JobPosting] | None = None
         total: int | None = None
-        while payload["offset"] < max_jobs:
-            data = await self.http.post_json(f"{self.api}/jobs", payload)
-            postings = (data or {}).get("jobPostings")
-            if not isinstance(postings, list):
-                raise ScraperError("unexpected Workday response shape")
+        offset = 0
+        while offset < max_jobs:
+            page, page_total = await self._page(offset)
             # Workday only reports a reliable total on the first page.
             if total is None:
-                total = int(data.get("total") or 0)
-            for item in postings:
-                if item.get("externalPath"):
-                    job = self.parse_listing(item)
-                    jobs.setdefault(job.uid, job)  # pages can overlap while jobs churn
-            payload["offset"] += PAGE_SIZE
-            if not postings or payload["offset"] >= total:
-                return ScrapeResult(list(jobs.values()))
-        return ScrapeResult(list(jobs.values()), complete=False)
+                first_page, total = page, page_total
+            for job in page:
+                jobs.setdefault(job.uid, job)  # pages can overlap while jobs churn
+            offset += PAGE_SIZE
+            if not page or offset >= total:
+                return ScrapeResult(list(jobs.values()), first_page=first_page)
+        return ScrapeResult(list(jobs.values()), complete=False, first_page=first_page)
+
+    async def fetch_first_page(self) -> list[JobPosting]:
+        return (await self._page(0))[0]
+
+    async def fetch_newest(self, first_page: list[JobPosting]) -> ScrapeResult:
+        """Pages from the top until one holds a job already known: on a newest-first board,
+        everything newer has then been read. Missed jobs are found by the next full check."""
+        jobs = {job.uid: job for job in first_page}
+        page, offset = first_page, PAGE_SIZE
+        while len(page) == PAGE_SIZE and not any(job.uid in self.known for job in page) and offset < QUICK_MAX_PAGES * PAGE_SIZE:
+            page = (await self._page(offset))[0]
+            for job in page:
+                jobs.setdefault(job.uid, job)
+            offset += PAGE_SIZE
+        return ScrapeResult(list(jobs.values()), complete=False, first_page=first_page)
+
+    async def _page(self, offset: int) -> tuple[list[JobPosting], int]:
+        """One page of the listing from `offset`, and the total Workday reports with it."""
+        payload = {
+            "appliedFacets": self.options.get("applied_facets") or {},
+            "limit": PAGE_SIZE,
+            "offset": offset,
+            "searchText": self.options.get("search_text", ""),
+        }
+        data = await self.http.post_json(f"{self.api}/jobs", payload)
+        postings = (data or {}).get("jobPostings")
+        if not isinstance(postings, list):
+            raise ScraperError("unexpected Workday response shape")
+        return [self.parse_listing(item) for item in postings if item.get("externalPath")], int(data.get("total") or 0)
 
     def parse_listing(self, item: dict[str, Any]) -> JobPosting:
         path = item["externalPath"]

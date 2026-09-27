@@ -21,6 +21,8 @@ class ScrapeResult:
     # False when the listing may be partial (page cap hit, heuristic parse),
     # in which case missing jobs must NOT be treated as removed.
     complete: bool = True
+    # The listing's newest page, from scrapers that support quick checks.
+    first_page: list[JobPosting] | None = None
 
 
 class ScraperError(Exception):
@@ -48,6 +50,17 @@ class BaseScraper(ABC):
     @abstractmethod
     async def fetch_jobs(self) -> ScrapeResult:
         """Return every currently listed job for the company."""
+
+    # Quick checks (settings.quick_check_by_ats), for listings that are newest first.
+    supports_quick = False
+
+    async def fetch_first_page(self) -> list[JobPosting]:
+        """The listing's newest page, for a quick check."""
+        raise NotImplementedError(f"{self.name} doesn't support quick checks")
+
+    async def fetch_newest(self, first_page: list[JobPosting]) -> ScrapeResult:
+        """The jobs newer than any in self.known, reading on from `first_page` (a partial listing)."""
+        raise NotImplementedError(f"{self.name} doesn't support quick checks")
 
     def missing_fields(self, job: JobPosting) -> set[str]:
         """Filter fields the listing lacks for `job` that fetch_details() would fill in. Default: none."""

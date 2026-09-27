@@ -126,7 +126,10 @@ board would still exceed the limit or carry mostly unrelated roles, an
 Parts). All Workday tenants share one request rate through the `myworkdayjobs.com`
 and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
 are checked every four hours, two at a time, so the list stays well under Workday's
-per-IP rate limit.
+per-IP rate limit. Between those, a quick check every 10 minutes reads each board's newest
+page. In a September 2026 sample, 9 of 10 boards listed newest first (NVIDIA, Bank of
+America, Capital One, Cisco, Boeing, Salesforce, Adobe, Visa, and Northrop Grumman nearly);
+Intel did not, so its new jobs are found by the full check.
 
 ## Big tech and more career platforms (September 2026)
 

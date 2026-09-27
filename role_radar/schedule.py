@@ -73,6 +73,39 @@ def next_due(
     return min(times, default=None)
 
 
+def quick_due(
+    companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], now: datetime, settings: Settings
+) -> list[CompanyConfig]:
+    """Companies due a quick check at `now`, the longest-waiting first.
+
+    Only companies on an ATS in settings.quick_check_by_ats that have had a full
+    check (it records the newest page a quick check compares with), and that
+    aren't due a full check anyway.
+    """
+    due = []
+    for company in companies:
+        meta = schedule.get(company.name)
+        at = _quick_at(company, meta, settings)
+        full_at = due_at(meta, settings.check_interval_for(ats_name(company.url, company.ats)))
+        if at is not None and at <= now and full_at is not None and full_at > now:
+            due.append((at, company))
+    due.sort(key=lambda d: d[0])
+    return [company for _, company in due]
+
+
+def next_quick(companies: Iterable[CompanyConfig], schedule: dict[str, CompanyMeta], settings: Settings) -> datetime | None:
+    """The earliest quick check due among `companies`, or None if none get them."""
+    times = [at for c in companies if (at := _quick_at(c, schedule.get(c.name), settings))]
+    return min(times, default=None)
+
+
+def _quick_at(company: CompanyConfig, meta: CompanyMeta | None, settings: Settings) -> datetime | None:
+    interval = settings.quick_interval_for(ats_name(company.url, company.ats))
+    if not interval or not meta or meta.top_uids is None or not meta.last_ok_at:
+        return None
+    return from_iso(meta.next_quick_at) if meta.next_quick_at else from_iso(meta.last_ok_at) + interval
+
+
 def after_check(
     meta: CompanyMeta,
     checked_at: datetime,
