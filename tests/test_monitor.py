@@ -230,7 +230,7 @@ def test_notification_groups_same_title_across_locations():
 
 def test_discord_messages_respect_length_limit():
     jobs = [job(f"Software Engineer {i}", str(i), url=f"https://acme.example/jobs/{i}") for i in range(60)]
-    (message,) = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
+    message = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
     text = "\n".join(e["description"] for e in message["embeds"])
     assert len(text) <= 6000 and all(f"({j.url})" in text for j in jobs)
 

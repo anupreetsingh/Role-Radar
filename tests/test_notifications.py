@@ -10,41 +10,50 @@ from role_radar.notifications import DiscordNotifier, EmailNotifier, Unconfigure
 from tests.conftest import job
 
 
-def within_discord_limits(payloads):
-    for payload in payloads:
-        embeds = payload["embeds"]
-        assert len(payload.get("content", "")) <= 2000 and 1 <= len(embeds) <= 10
-        assert all(len(e["description"]) <= 4096 for e in embeds)
-        assert sum(len(e["description"]) + len(e.get("footer", {}).get("text", "")) for e in embeds) <= 6000
+def within_discord_limits(payload):
+    embeds = payload["embeds"]
+    assert len(payload["content"]) <= 2000 and 1 <= len(embeds) <= 10
+    assert all(len(e["description"]) <= 4096 for e in embeds)
+    assert sum(len(e["description"]) for e in embeds) <= 6000
     return True
 
 
-def text_of(payloads):
-    return "\n".join(e["description"] for p in payloads for e in p["embeds"])
+def text_of(payload):
+    return "\n".join(e["description"] for e in payload["embeds"])
 
 
-def test_large_discord_digest_is_split_into_silent_follow_ups_with_every_link():
-    jobs = [job(f"Software Engineer {i}", str(i), location="L" * 300) for i in range(180)]
-    payloads = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert len(payloads) > 1 and within_discord_limits(payloads)
-    assert all(f"[Software Engineer {i}]({j.url})" in text_of(payloads) for i, j in enumerate(jobs))
-    assert payloads[0]["content"].startswith("**Role Radar** — 180 new matching jobs") and "flags" not in payloads[0]
-    assert all(p["flags"] == DiscordNotifier.SILENT and "content" not in p for p in payloads[1:])
-    assert payloads[-1]["embeds"][-1]["footer"]["text"] == f"Part {len(payloads)} of {len(payloads)}"
-    assert all(p["embeds"][0]["description"].startswith("__**Acme**__") for p in payloads)  # company repeated
+def test_small_discord_digest_links_every_job_in_one_message():
+    jobs = [job(f"Software Engineer {i}", str(i)) for i in range(20)] + [job("Data Engineer", "d", company="Beta")]
+    payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
+    assert within_discord_limits(payload)
+    assert payload["content"] == "**Role Radar** — 21 new matching jobs — Acme, Beta"
+    assert all(f"[{j.title}]({j.url}) — Austin, TX" in text_of(payload) for j in jobs)
+    assert "__**Acme**__" in text_of(payload) and "__**Beta**__" in text_of(payload) and "more" not in text_of(payload)
 
 
-def test_oversized_group_links_every_location():
+def test_large_discord_digest_fills_one_message_and_counts_the_rest():
+    jobs = [job(f"Software Engineer {i:03}", str(i), location="L" * 100) for i in range(180)]
+    payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
+    assert within_discord_limits(payload)
+    shown = [j for j in jobs if f"({j.url})" in text_of(payload)]
+    assert len(shown) > 20
+    assert f"**…and {len(jobs) - len(shown)} more.**" in text_of(payload)
+    assert "the email has every job" in text_of(payload)
+
+
+def test_a_role_in_many_places_links_the_first_few():
     jobs = [job("Software Engineer", str(i), location=f"City {i}") for i in range(180)]
-    payloads = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert within_discord_limits(payloads)
-    assert all(f"[City {i}]({j.url})" in text_of(payloads) for i, j in enumerate(jobs))
+    payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
+    assert within_discord_limits(payload)
+    assert "• **Software Engineer** — [City 0](https://acme.example/jobs/0) · [City 1](" in text_of(payload)
+    assert text_of(payload).count("](https://acme.example/jobs/") == 8
+    assert "+172 more (in the email)" in text_of(payload) and "…and" not in text_of(payload)
 
 
 def test_discord_escapes_markdown_and_keeps_links_intact():
     jobs = [job("C++ Engineer [Senior] *Remote*", "1", location="Austin_TX", url="https://x.example/a job (1)")]
-    (payload,) = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert "[C++ Engineer \\[Senior\\] \\*Remote\\*](https://x.example/a%20job%20%281%29) — Austin\\_TX" in text_of([payload])
+    payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
+    assert "[C++ Engineer \\[Senior\\] \\*Remote\\*](https://x.example/a%20job%20%281%29) — Austin\\_TX" in text_of(payload)
 
 
 def test_discord_waits_for_confirmation_and_retries_rate_limit(monkeypatch):
@@ -67,27 +76,20 @@ def test_discord_waits_for_confirmation_and_retries_rate_limit(monkeypatch):
     assert json.loads(requests[-1].content)["allowed_mentions"] == {"parse": []}
 
 
-def test_large_discord_digest_sends_every_part_as_json(monkeypatch):
-    requests, waits = [], []
+def test_large_discord_digest_is_one_json_message(monkeypatch):
+    requests = []
 
     def handle(request):
         requests.append(request)
-        headers = {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset-After": "0.5"} if len(requests) == 1 else {}
-        return httpx.Response(200, json={"id": "123"}, headers=headers)
-
-    async def sleep(seconds):
-        waits.append(seconds)
+        return httpx.Response(200, json={"id": "123"})
 
     real = httpx.AsyncClient
     monkeypatch.setattr(notifications.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handle), **kw))
-    monkeypatch.setattr(notifications.asyncio, "sleep", sleep)
     jobs = [job(f"Software Engineer {i}", str(i), location="L" * 100) for i in range(80)]
     asyncio.run(DiscordNotifier("https://discord.invalid/hook").send(jobs))
-    assert len(requests) > 1 and waits == [0.5]  # paced by Discord's rate-limit headers
-    assert all(r.headers["content-type"] == "application/json" for r in requests)
-    sent = [json.loads(r.content) for r in requests]
-    assert all(j.url in text_of(sent) for j in jobs)
-    assert all(p["allowed_mentions"] == {"parse": []} for p in sent)
+    assert len(requests) == 1 and requests[0].headers["content-type"] == "application/json"
+    sent = json.loads(requests[0].content)
+    assert sent["allowed_mentions"] == {"parse": []} and "more.**" in text_of(sent)
 
 
 def test_email_digest_lists_jobs_from_every_company():

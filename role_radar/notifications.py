@@ -125,81 +125,72 @@ class ConsoleNotifier(Notifier):
 
 
 class DiscordNotifier(Notifier):
-    """The digest as Discord embeds: every job a clickable link, grouped by company.
+    """The digest as one Discord message: every job a clickable link, grouped by company.
 
-    A long digest is split across as many messages as it needs. Only the first
-    one notifies; the rest are silent, so a digest is still one ping.
+    A message holds about 6,000 characters of embeds (roughly 40-60 jobs). A digest
+    that doesn't fit shows what does and says how many more are in the email.
     """
 
     name = "discord"
     CONTENT_LIMIT = 2000  # a message's own text
     EMBED_TEXT = 4000  # an embed description holds 4,096 characters
-    MESSAGE_TEXT = 5800  # all of a message's embeds together hold 6,000 (footer included), so 2 embeds at most
-    SILENT = 1 << 12  # SUPPRESS_NOTIFICATIONS
+    MESSAGE_TEXT = 5850  # all of a message's embeds together hold 6,000, so it's 2 embeds at most
     COLOR = 0x5865F2
 
     def __init__(self, webhook_url: str) -> None:
         self._url = webhook_url  # never logged
 
-    def build_messages(self, jobs: list[JobPosting]) -> list[dict]:
-        """The webhook payloads for one digest, in order."""
-        pages: list[list[str]] = []  # each message's lines
-        size, company = 0, None
-        for group_company, line in _discord_lines(jobs):
-            header = f"__**{_md(group_company)}**__"
-            lines = [line] if group_company == company else ["", header, line]
-            if not pages or size + sum(len(text) + 1 for text in lines) > self.MESSAGE_TEXT:
-                pages.append([])
-                lines, size = [header, line], 0  # a new message repeats the company's name
-            pages[-1] += lines
-            size += sum(len(text) + 1 for text in lines)
-            company = group_company
-        payloads = []
-        for number, page in enumerate(pages, 1):
-            embeds = [{"description": text, "color": self.COLOR} for text in _chunks(page, self.EMBED_TEXT)]
-            if len(pages) > 1:
-                embeds[-1]["footer"] = {"text": f"Part {number} of {len(pages)}"}
-            payload: dict = {"embeds": embeds, "allowed_mentions": {"parse": []}}
-            if number == 1:
-                payload["content"] = f"**Role Radar** — {_md(headline(jobs))}"[: self.CONTENT_LIMIT]
-            else:
-                payload["flags"] = self.SILENT
-            payloads.append(payload)
-        return payloads
+    def build_message(self, jobs: list[JobPosting]) -> dict:
+        """The webhook payload for one digest."""
+        lines: list[str] = []
+        size, company, shown = 0, None, 0
+        for group_company, group_lines, count in _discord_groups(jobs):
+            block = group_lines if group_company == company else ["", f"__**{_md(group_company)}**__", *group_lines]
+            cost = sum(len(text) + 1 for text in block)
+            if size + cost > self.MESSAGE_TEXT - 100:  # room for the "more" line; smaller groups may still fit
+                continue
+            lines += block
+            size += cost
+            company, shown = group_company, shown + count
+        if shown < len(jobs):
+            lines += ["", f"**…and {len(jobs) - shown} more.** That's all one Discord message holds; the email has every job."]
+        embeds = [{"description": text, "color": self.COLOR} for text in _chunks(lines, self.EMBED_TEXT)]
+        return {"content": f"**Role Radar** — {_md(headline(jobs))}"[: self.CONTENT_LIMIT],
+                "embeds": embeds, "allowed_mentions": {"parse": []}}
 
     async def send(self, jobs: list[JobPosting]) -> None:
+        payload = self.build_message(jobs)
         url = httpx.URL(self._url).copy_merge_params({"wait": "true"})
         async with httpx.AsyncClient(timeout=20) as client:
-            for payload in self.build_messages(jobs):
-                await self._post(client, url, payload)
-
-    @staticmethod
-    async def _post(client: httpx.AsyncClient, url: httpx.URL, payload: dict) -> None:
-        for attempt in range(4):
-            resp = await client.post(url, json=payload)
-            if resp.status_code == 429 and attempt < 3:
-                await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
-                continue
-            if not resp.is_success:
-                raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
-            if resp.headers.get("X-RateLimit-Remaining") == "0":  # pace the next message instead of hitting a 429
-                await asyncio.sleep(min(float(resp.headers.get("X-RateLimit-Reset-After") or 1), 30))
-            return
+            for attempt in range(4):
+                resp = await client.post(url, json=payload)
+                if resp.status_code == 429 and attempt < 3:
+                    await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
+                    continue
+                if not resp.is_success:
+                    raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
+                break
 
 
-def _discord_lines(jobs: list[JobPosting]):
-    """(company, line) for each job group: the title linking to the job, then its locations."""
+MAX_PLACES = 8  # location links shown for one role posted in many places
+
+
+def _discord_groups(jobs: list[JobPosting]):
+    """(company, lines, job count) for each job group: its title linking to the job, then
+    its locations; a group whose locations have their own links links each location."""
     for group in group_jobs(jobs):
         urls = list(dict.fromkeys(j.url for j in group.jobs))
         if len(urls) == 1:
-            yield group.company, f"• {_link(group.title, urls[0])} — {_md(_clip(' | '.join(group.locations), 200))}"
+            line = f"• {_link(group.title, urls[0])} — {_md(_clip(' | '.join(group.locations), 120))}"
+            yield group.company, [line], len(group.jobs)
             continue
-        yield group.company, f"• **{_md(_clip(group.title, 150))}**"
-        seen = set()
+        links: dict[str, str] = {}
         for job in group.jobs:
-            if job.url not in seen:
-                seen.add(job.url)
-                yield group.company, f"  ◦ {_link(job.location or 'Apply', job.url)}"
+            links.setdefault(job.url, job.location or "Apply")
+        places = [_link(place, url) for url, place in list(links.items())[:MAX_PLACES]]
+        if len(links) > MAX_PLACES:
+            places.append(f"+{len(links) - MAX_PLACES} more (in the email)")
+        yield group.company, [f"• **{_md(_clip(group.title, 150))}** — {' · '.join(places)}"], len(group.jobs)
 
 
 def _chunks(lines: list[str], limit: int) -> list[str]:
