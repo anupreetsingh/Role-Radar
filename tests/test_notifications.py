@@ -10,21 +10,41 @@ from role_radar.notifications import DiscordNotifier, EmailNotifier, Unconfigure
 from tests.conftest import job
 
 
-def test_large_discord_digest_uses_one_message():
+def within_discord_limits(payloads):
+    for payload in payloads:
+        embeds = payload["embeds"]
+        assert len(payload.get("content", "")) <= 2000 and 1 <= len(embeds) <= 10
+        assert all(len(e["description"]) <= 4096 for e in embeds)
+        assert sum(len(e["description"]) + len(e.get("footer", {}).get("text", "")) for e in embeds) <= 6000
+    return True
+
+
+def text_of(payloads):
+    return "\n".join(e["description"] for p in payloads for e in p["embeds"])
+
+
+def test_large_discord_digest_is_split_into_silent_follow_ups_with_every_link():
     jobs = [job(f"Software Engineer {i}", str(i), location="L" * 300) for i in range(180)]
-    messages = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert len(messages) == 1
-    assert all(len(message) <= 2000 for message in messages)
-    assert "attached" in messages[0]
-    assert all(j.url in format_digest(jobs) for j in jobs)
+    payloads = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
+    assert len(payloads) > 1 and within_discord_limits(payloads)
+    assert all(f"[Software Engineer {i}]({j.url})" in text_of(payloads) for i, j in enumerate(jobs))
+    assert payloads[0]["content"].startswith("**Role Radar** — 180 new matching jobs") and "flags" not in payloads[0]
+    assert all(p["flags"] == DiscordNotifier.SILENT and "content" not in p for p in payloads[1:])
+    assert payloads[-1]["embeds"][-1]["footer"]["text"] == f"Part {len(payloads)} of {len(payloads)}"
+    assert all(p["embeds"][0]["description"].startswith("__**Acme**__") for p in payloads)  # company repeated
 
 
-def test_oversized_group_keeps_all_locations_and_links():
+def test_oversized_group_links_every_location():
     jobs = [job("Software Engineer", str(i), location=f"City {i}") for i in range(180)]
-    messages = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert all(len(message) <= 2000 for message in messages)
-    assert len(messages) == 1
-    assert all(j.url in format_digest(jobs) for j in jobs)
+    payloads = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
+    assert within_discord_limits(payloads)
+    assert all(f"[City {i}]({j.url})" in text_of(payloads) for i, j in enumerate(jobs))
+
+
+def test_discord_escapes_markdown_and_keeps_links_intact():
+    jobs = [job("C++ Engineer [Senior] *Remote*", "1", location="Austin_TX", url="https://x.example/a job (1)")]
+    (payload,) = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
+    assert "[C++ Engineer \\[Senior\\] \\*Remote\\*](https://x.example/a%20job%20%281%29) — Austin\\_TX" in text_of([payload])
 
 
 def test_discord_waits_for_confirmation_and_retries_rate_limit(monkeypatch):
@@ -47,23 +67,27 @@ def test_discord_waits_for_confirmation_and_retries_rate_limit(monkeypatch):
     assert json.loads(requests[-1].content)["allowed_mentions"] == {"parse": []}
 
 
-def test_large_discord_digest_uploads_all_links_in_one_request(monkeypatch):
-    requests = []
+def test_large_discord_digest_sends_every_part_as_json(monkeypatch):
+    requests, waits = [], []
 
     def handle(request):
         requests.append(request)
-        return httpx.Response(200, json={"id": "123"})
+        headers = {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset-After": "0.5"} if len(requests) == 1 else {}
+        return httpx.Response(200, json={"id": "123"}, headers=headers)
+
+    async def sleep(seconds):
+        waits.append(seconds)
 
     real = httpx.AsyncClient
     monkeypatch.setattr(notifications.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handle), **kw))
+    monkeypatch.setattr(notifications.asyncio, "sleep", sleep)
     jobs = [job(f"Software Engineer {i}", str(i), location="L" * 100) for i in range(80)]
     asyncio.run(DiscordNotifier("https://discord.invalid/hook").send(jobs))
-    assert len(requests) == 1
-    body = requests[0].content.decode()
-    assert "multipart/form-data" in requests[0].headers["content-type"]
-    assert 'name="files[0]"' in body and 'filename="role-radar-new-jobs.txt"' in body
-    assert all(j.url in body for j in jobs)
-    assert '"allowed_mentions": {"parse": []}' in body
+    assert len(requests) > 1 and waits == [0.5]  # paced by Discord's rate-limit headers
+    assert all(r.headers["content-type"] == "application/json" for r in requests)
+    sent = [json.loads(r.content) for r in requests]
+    assert all(j.url in text_of(sent) for j in jobs)
+    assert all(p["allowed_mentions"] == {"parse": []} for p in sent)
 
 
 def test_email_digest_lists_jobs_from_every_company():

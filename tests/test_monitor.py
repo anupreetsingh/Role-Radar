@@ -230,9 +230,9 @@ def test_notification_groups_same_title_across_locations():
 
 def test_discord_messages_respect_length_limit():
     jobs = [job(f"Software Engineer {i}", str(i), url=f"https://acme.example/jobs/{i}") for i in range(60)]
-    messages = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
-    assert all(len(m) <= 2000 for m in messages)
-    assert len(messages) == 1 and all(j.url in format_digest(jobs) for j in jobs)
+    (message,) = DiscordNotifier("https://discord.invalid/webhook").build_messages(jobs)
+    text = "\n".join(e["description"] for e in message["embeds"])
+    assert len(text) <= 6000 and all(f"({j.url})" in text for j in jobs)
 
 
 class FlakyStore(MemoryStateStore):

@@ -211,9 +211,9 @@ still due and get picked up next time.
 #### Notification digests
 
 `settings.digest_interval_minutes: 10` collects all new matching jobs across enabled
-companies into one email and one Discord message, grouped by company with application
-links. If the list exceeds Discord's message limit, the single message includes the
-complete list as a text attachment. Empty intervals send nothing.
+companies into one email and one Discord notification, grouped by company. In Discord
+each job's title is a link to apply. A list too long for one message continues in more
+messages, which are silent, so a digest pings once. Empty intervals send nothing.
 
 The schedule targets `:00` and `:30`. Lambda sends on its first run after the boundary,
 after any checks in that run finish; its five-minute trigger can add a short delay.

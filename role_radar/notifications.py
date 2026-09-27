@@ -19,6 +19,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import smtplib
 import ssl
 from abc import ABC, abstractmethod
@@ -124,37 +125,109 @@ class ConsoleNotifier(Notifier):
 
 
 class DiscordNotifier(Notifier):
+    """The digest as Discord embeds: every job a clickable link, grouped by company.
+
+    A long digest is split across as many messages as it needs. Only the first
+    one notifies; the rest are silent, so a digest is still one ping.
+    """
+
     name = "discord"
-    LIMIT = 2000  # Discord message character limit
+    CONTENT_LIMIT = 2000  # a message's own text
+    EMBED_TEXT = 4000  # an embed description holds 4,096 characters
+    MESSAGE_TEXT = 5800  # all of a message's embeds together hold 6,000 (footer included), so 2 embeds at most
+    SILENT = 1 << 12  # SUPPRESS_NOTIFICATIONS
+    COLOR = 0x5865F2
 
     def __init__(self, webhook_url: str) -> None:
         self._url = webhook_url  # never logged
 
-    def build_messages(self, jobs: list[JobPosting]) -> list[str]:
-        digest = format_digest(jobs)
-        if len(digest) <= self.LIMIT:
-            return [digest]
-        # One notification even for a large digest. All links go in the attachment.
-        return [f"Role Radar — {len(jobs)} new matching jobs\nThe complete list of jobs and application links is attached."]
+    def build_messages(self, jobs: list[JobPosting]) -> list[dict]:
+        """The webhook payloads for one digest, in order."""
+        pages: list[list[str]] = []  # each message's lines
+        size, company = 0, None
+        for group_company, line in _discord_lines(jobs):
+            header = f"__**{_md(group_company)}**__"
+            lines = [line] if group_company == company else ["", header, line]
+            if not pages or size + sum(len(text) + 1 for text in lines) > self.MESSAGE_TEXT:
+                pages.append([])
+                lines, size = [header, line], 0  # a new message repeats the company's name
+            pages[-1] += lines
+            size += sum(len(text) + 1 for text in lines)
+            company = group_company
+        payloads = []
+        for number, page in enumerate(pages, 1):
+            embeds = [{"description": text, "color": self.COLOR} for text in _chunks(page, self.EMBED_TEXT)]
+            if len(pages) > 1:
+                embeds[-1]["footer"] = {"text": f"Part {number} of {len(pages)}"}
+            payload: dict = {"embeds": embeds, "allowed_mentions": {"parse": []}}
+            if number == 1:
+                payload["content"] = f"**Role Radar** — {_md(headline(jobs))}"[: self.CONTENT_LIMIT]
+            else:
+                payload["flags"] = self.SILENT
+            payloads.append(payload)
+        return payloads
 
     async def send(self, jobs: list[JobPosting]) -> None:
-        digest = format_digest(jobs)
-        content = self.build_messages(jobs)[0]
-        payload = {"content": content, "allowed_mentions": {"parse": []}, "flags": 4}
         url = httpx.URL(self._url).copy_merge_params({"wait": "true"})
         async with httpx.AsyncClient(timeout=20) as client:
-            for attempt in range(4):
-                if len(digest) > self.LIMIT:
-                    resp = await client.post(url, data={"payload_json": json.dumps(payload)},
-                                             files={"files[0]": ("role-radar-new-jobs.txt", digest.encode("utf-8"), "text/plain")})
-                else:
-                    resp = await client.post(url, json=payload)
-                if resp.status_code == 429 and attempt < 3:
-                    await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
-                    continue
-                if not resp.is_success:
-                    raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
-                break
+            for payload in self.build_messages(jobs):
+                await self._post(client, url, payload)
+
+    @staticmethod
+    async def _post(client: httpx.AsyncClient, url: httpx.URL, payload: dict) -> None:
+        for attempt in range(4):
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 429 and attempt < 3:
+                await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
+                continue
+            if not resp.is_success:
+                raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
+            if resp.headers.get("X-RateLimit-Remaining") == "0":  # pace the next message instead of hitting a 429
+                await asyncio.sleep(min(float(resp.headers.get("X-RateLimit-Reset-After") or 1), 30))
+            return
+
+
+def _discord_lines(jobs: list[JobPosting]):
+    """(company, line) for each job group: the title linking to the job, then its locations."""
+    for group in group_jobs(jobs):
+        urls = list(dict.fromkeys(j.url for j in group.jobs))
+        if len(urls) == 1:
+            yield group.company, f"• {_link(group.title, urls[0])} — {_md(_clip(' | '.join(group.locations), 200))}"
+            continue
+        yield group.company, f"• **{_md(_clip(group.title, 150))}**"
+        seen = set()
+        for job in group.jobs:
+            if job.url not in seen:
+                seen.add(job.url)
+                yield group.company, f"  ◦ {_link(job.location or 'Apply', job.url)}"
+
+
+def _chunks(lines: list[str], limit: int) -> list[str]:
+    """Lines joined into texts of at most `limit` characters, never splitting a line."""
+    chunks: list[list[str]] = [[]]
+    size = 0
+    for line in lines:
+        if size + len(line) + 1 > limit and chunks[-1]:
+            chunks.append([])
+            size = 0
+        chunks[-1].append(line)
+        size += len(line) + 1
+    return ["\n".join(chunk).strip("\n") or "\u200b" for chunk in chunks]
+
+
+def _link(text: str, url: str) -> str:
+    # Masked-link targets can't hold spaces or unbalanced parentheses.
+    target = url.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+    return f"[{_md(_clip(text, 150))}]({target})"
+
+
+def _md(text: str) -> str:
+    """Text with Discord markdown characters escaped, so titles show as written."""
+    return re.sub(r"([\\*_~`|\[\]>])", r"\\\1", text)
+
+
+def _clip(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 class EmailNotifier(Notifier):
