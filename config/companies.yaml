@@ -66,6 +66,7 @@ settings:
       api.lever.co: 0.3
       api.eu.lever.co: 0.3
       api.ashbyhq.com: 0.3
+      ats.rippling.com: 0.5
       # Every company's Workday tenant is a subdomain of these. A parent-domain key
       # spaces all of its subdomains as one host, so ~150 tenants together make about
       # 2 requests/s to Workday at most. A 429 from any of them pauses all of them.
@@ -20085,3 +20086,1202 @@ companies:
     ats: greenhouse
 
   # --- End of employers found from job-board indexes ---
+
+  # --- Rippling boards found from job-board indexes ---
+  # ats.rippling.com boards from Common Crawl's index and Simplify's listings, kept if the
+  # board had a tech job in the target regions when checked on 2026-09-28. See
+  # docs/company-coverage.md.
+
+  - name: 4AG Robotics
+    url: https://ats.rippling.com/4ag/jobs
+    ats: rippling
+
+  - name: Abby Health
+    url: https://ats.rippling.com/abby-health/jobs
+    ats: rippling
+
+  - name: AbsenceSoft
+    url: https://ats.rippling.com/absencesoft/jobs
+    ats: rippling
+
+  - name: Accelerant
+    url: https://ats.rippling.com/accelerant/jobs
+    ats: rippling
+
+  - name: Accommodations Plus International
+    url: https://ats.rippling.com/accommodations-plus-international/jobs
+    ats: rippling
+
+  - name: Advanced Navigation
+    url: https://ats.rippling.com/advanced-navigation/jobs
+    ats: rippling
+
+  - name: Advocate Technologies Inc.
+    url: https://ats.rippling.com/advocate-technologies-inc/jobs
+    ats: rippling
+
+  - name: Aeris Communications
+    url: https://ats.rippling.com/aeris-communications-inc/jobs
+    ats: rippling
+
+  - name: AgentSync
+    url: https://ats.rippling.com/agentsync-careers/jobs
+    ats: rippling
+
+  - name: Agora
+    url: https://ats.rippling.com/agora/jobs
+    ats: rippling
+
+  - name: AI Technology Partners
+    url: https://ats.rippling.com/aitp/jobs
+    ats: rippling
+
+  - name: Albert Invent
+    url: https://ats.rippling.com/albert-invent-corp/jobs
+    ats: rippling
+
+  - name: Algo Communication Products
+    url: https://ats.rippling.com/algo-communication-products/jobs
+    ats: rippling
+
+  - name: AllVoices
+    url: https://ats.rippling.com/allvoices/jobs
+    ats: rippling
+
+  - name: American Rare Earths
+    url: https://ats.rippling.com/usare/jobs
+    ats: rippling
+
+  - name: Ampliwork, Inc
+    url: https://ats.rippling.com/ampliwork-inc/jobs
+    ats: rippling
+
+  - name: Anaconda
+    url: https://ats.rippling.com/anaconda/jobs
+    ats: rippling
+
+  - name: Analog Bits
+    url: https://ats.rippling.com/analog-bits-inc/jobs
+    ats: rippling
+
+  - name: Anza Mortgage Insurance Corporation
+    url: https://ats.rippling.com/anza-mortgage-insurance-company/jobs
+    ats: rippling
+
+  - name: Anza Renewables
+    url: https://ats.rippling.com/anza-re-llc/jobs
+    ats: rippling
+
+  - name: APEX Analytix
+    url: https://ats.rippling.com/apexanalytix-careers/jobs
+    ats: rippling
+
+  - name: Armilla AI
+    url: https://ats.rippling.com/armilla-ai/jobs
+    ats: rippling
+
+  - name: Ascentt
+    url: https://ats.rippling.com/ascentt/jobs
+    ats: rippling
+
+  - name: Athennian
+    url: https://ats.rippling.com/athennian/jobs
+    ats: rippling
+
+  - name: Athos Commerce
+    url: https://ats.rippling.com/athos-commerce-careers/jobs
+    ats: rippling
+
+  - name: Atlas Data Storage
+    url: https://ats.rippling.com/atlas-data-storage/jobs
+    ats: rippling
+
+  - name: Aubrant Digital
+    url: https://ats.rippling.com/epic-software/jobs
+    ats: rippling
+
+  - name: BayRock Labs
+    url: https://ats.rippling.com/bayrock-labs/jobs
+    ats: rippling
+
+  - name: Beam Benefits
+    url: https://ats.rippling.com/beam-benefits/jobs
+    ats: rippling
+
+  - name: Bedrock Data
+    url: https://ats.rippling.com/bedrock-data/jobs
+    ats: rippling
+
+  - name: Better Cotton
+    url: https://ats.rippling.com/better-cotton-careers/jobs
+    ats: rippling
+
+  - name: BizzyCar
+    url: https://ats.rippling.com/bizzycar/jobs
+    ats: rippling
+
+  - name: Black Kite
+    url: https://ats.rippling.com/black-kite/jobs
+    ats: rippling
+
+  - name: Bloom Growth
+    url: https://ats.rippling.com/bloomgrowth/jobs
+    ats: rippling
+
+  - name: BlueWave
+    url: https://ats.rippling.com/bluewave/jobs
+    ats: rippling
+
+  - name: Bonsai Robotics
+    url: https://ats.rippling.com/bonsairoboticsmain/jobs
+    ats: rippling
+
+  - name: Brightside Health
+    url: https://ats.rippling.com/brightside-health-jobs/jobs
+    ats: rippling
+
+  - name: Brillian
+    url: https://ats.rippling.com/brillian/jobs
+    ats: rippling
+
+  - name: Bronco AI
+    url: https://ats.rippling.com/bronco-ai/jobs
+    ats: rippling
+
+  - name: Button
+    url: https://ats.rippling.com/button/jobs
+    ats: rippling
+
+  - name: Caddy
+    url: https://ats.rippling.com/caddy/jobs
+    ats: rippling
+
+  - name: Campspot
+    url: https://ats.rippling.com/campspot/jobs
+    ats: rippling
+
+  - name: Capitalize Analytics
+    url: https://ats.rippling.com/capitalize-data-analytics-llc/jobs
+    ats: rippling
+
+  - name: CBTS
+    url: https://ats.rippling.com/cbtsindia/jobs
+    ats: rippling
+
+  - name: CData Software
+    url: https://ats.rippling.com/cdata-software/jobs
+    ats: rippling
+
+  - name: Cerby
+    url: https://ats.rippling.com/cerby/jobs
+    ats: rippling
+
+  - name: Chemistry
+    url: https://ats.rippling.com/chemistry-careers/jobs
+    ats: rippling
+
+  - name: Chess.com
+    url: https://ats.rippling.com/chess/jobs
+    ats: rippling
+
+  - name: Chrome Hearts
+    url: https://ats.rippling.com/chrome-hearts-careers/jobs
+    ats: rippling
+
+  - name: Cintal
+    url: https://ats.rippling.com/cintal/jobs
+    ats: rippling
+
+  - name: Citylogix Inc.
+    url: https://ats.rippling.com/citylogix/jobs
+    ats: rippling
+
+  - name: Clara Analytics
+    url: https://ats.rippling.com/clara-analytics/jobs
+    ats: rippling
+
+  - name: Clearsulting
+    url: https://ats.rippling.com/clearsultingcareers/jobs
+    ats: rippling
+
+  - name: Clicklease
+    url: https://ats.rippling.com/clicklease/jobs
+    ats: rippling
+
+  - name: Closinglock
+    url: https://ats.rippling.com/closinglock/jobs
+    ats: rippling
+
+  - name: Cloud SynApps
+    url: https://ats.rippling.com/cloud-synapps-inc/jobs
+    ats: rippling
+
+  - name: Clubessential
+    url: https://ats.rippling.com/clubessential/jobs
+    ats: rippling
+
+  - name: ComboCurve
+    url: https://ats.rippling.com/combocurve/jobs
+    ats: rippling
+
+  - name: CommandLink
+    url: https://ats.rippling.com/commandlink/jobs
+    ats: rippling
+
+  - name: Community Phone Company
+    url: https://ats.rippling.com/community-phone-careers/jobs
+    ats: rippling
+
+  - name: Concord Technologies
+    url: https://ats.rippling.com/concord-technologies/jobs
+    ats: rippling
+
+  - name: Consensus Sales
+    url: https://ats.rippling.com/consensus/jobs
+    ats: rippling
+
+  - name: Contour Education
+    url: https://ats.rippling.com/contour-education/jobs
+    ats: rippling
+
+  - name: Copado
+    url: https://ats.rippling.com/copado/jobs
+    ats: rippling
+
+  - name: Corva
+    url: https://ats.rippling.com/corva/jobs
+    ats: rippling
+
+  - name: CoVet
+    url: https://ats.rippling.com/covetcareers/jobs
+    ats: rippling
+
+  - name: Cozey
+    url: https://ats.rippling.com/cozey/jobs
+    ats: rippling
+
+  - name: Cozey (internships)
+    url: https://ats.rippling.com/cozey-internships/jobs
+    ats: rippling
+
+  - name: Create Music Group
+    url: https://ats.rippling.com/createmusicgroup/jobs
+    ats: rippling
+
+  - name: Crio
+    url: https://ats.rippling.com/crio/jobs
+    ats: rippling
+
+  - name: Cullen Jewellery
+    url: https://ats.rippling.com/cullen-jewellery/jobs
+    ats: rippling
+
+  - name: D-Wave Quantum
+    url: https://ats.rippling.com/d-wave-quantum/jobs
+    ats: rippling
+
+  - name: Daloopa
+    url: https://ats.rippling.com/daloopa/jobs
+    ats: rippling
+
+  - name: Darksaber Labs
+    url: https://ats.rippling.com/darksaber-labs/jobs
+    ats: rippling
+
+  - name: DataSpring
+    url: https://ats.rippling.com/dataspring/jobs
+    ats: rippling
+
+  - name: DealerOn
+    url: https://ats.rippling.com/dealeron/jobs
+    ats: rippling
+
+  - name: Decisions
+    url: https://ats.rippling.com/decisions/jobs
+    ats: rippling
+
+  - name: Del Mar Vacations
+    url: https://ats.rippling.com/del-mar-vacations/jobs
+    ats: rippling
+
+  - name: Delos Insurance Solutions
+    url: https://ats.rippling.com/delos-careers/jobs
+    ats: rippling
+
+  - name: Demand Chain
+    url: https://ats.rippling.com/demand-chain/jobs
+    ats: rippling
+
+  - name: DemandPDX
+    url: https://ats.rippling.com/demandpdx/jobs
+    ats: rippling
+
+  - name: Denari
+    url: https://ats.rippling.com/denari/jobs
+    ats: rippling
+
+  - name: Dental Intelligence
+    url: https://ats.rippling.com/dental-intelligence-careers/jobs
+    ats: rippling
+
+  - name: DESRI
+    url: https://ats.rippling.com/desri-careers/jobs
+    ats: rippling
+
+  - name: Dext Capital
+    url: https://ats.rippling.com/dext-capital-llc/jobs
+    ats: rippling
+
+  - name: Dialogue
+    url: https://ats.rippling.com/dialogue-en/jobs
+    ats: rippling
+
+  - name: Disco Technology
+    url: https://ats.rippling.com/careers-at-disco/jobs
+    ats: rippling
+
+  - name: Divcon
+    url: https://ats.rippling.com/divcon-controls/jobs
+    ats: rippling
+
+  - name: DLB Associates
+    url: https://ats.rippling.com/dlb-associates/jobs
+    ats: rippling
+
+  - name: Dockwa
+    url: https://ats.rippling.com/dockwa/jobs
+    ats: rippling
+
+  - name: Domaine
+    url: https://ats.rippling.com/domaine-careers/jobs
+    ats: rippling
+
+  - name: DroneUp
+    url: https://ats.rippling.com/droneup/jobs
+    ats: rippling
+
+  - name: Dub
+    url: https://ats.rippling.com/dub/jobs
+    ats: rippling
+
+  - name: DuploCloud
+    url: https://ats.rippling.com/duplocloud/jobs
+    ats: rippling
+
+  - name: Dynamo AI
+    url: https://ats.rippling.com/dynamo-ai/jobs
+    ats: rippling
+
+  - name: Edge Delta
+    url: https://ats.rippling.com/edgedelta/jobs
+    ats: rippling
+
+  - name: Edgehog Trading
+    url: https://ats.rippling.com/edgehog-trading/jobs
+    ats: rippling
+
+  - name: Enertiv
+    url: https://ats.rippling.com/enertiv-jobs/jobs
+    ats: rippling
+
+  - name: Enzo Health
+    url: https://ats.rippling.com/enzo-health/jobs
+    ats: rippling
+
+  - name: Epic IT
+    url: https://ats.rippling.com/epic-it/jobs
+    ats: rippling
+
+  - name: Eridu AI
+    url: https://ats.rippling.com/eridu-ai/jobs
+    ats: rippling
+
+  - name: eternal.ag
+    url: https://ats.rippling.com/eternal/jobs
+    ats: rippling
+
+  - name: ETL Systems
+    url: https://ats.rippling.com/etl-systems/jobs
+    ats: rippling
+
+  - name: EVgo
+    url: https://ats.rippling.com/evgo-careers/jobs
+    ats: rippling
+
+  - name: exacare ai
+    url: https://ats.rippling.com/exacare-inc/jobs
+    ats: rippling
+
+  - name: Expo
+    url: https://ats.rippling.com/expo/jobs
+    ats: rippling
+
+  - name: fabric
+    url: https://ats.rippling.com/fabric-inc/jobs
+    ats: rippling
+
+  - name: Fello
+    url: https://ats.rippling.com/fello-careers/jobs
+    ats: rippling
+
+  - name: Ferric
+    url: https://ats.rippling.com/ferric-recruiting/jobs
+    ats: rippling
+
+  - name: FieldPulse
+    url: https://ats.rippling.com/fieldpulse/jobs
+    ats: rippling
+
+  - name: Findhelp
+    url: https://ats.rippling.com/findhelp/jobs
+    ats: rippling
+
+  - name: Fiveonefour Labs
+    url: https://ats.rippling.com/514-careers/jobs
+    ats: rippling
+
+  - name: FlexAI
+    url: https://ats.rippling.com/flexai/jobs
+    ats: rippling
+
+  - name: FlexGen
+    url: https://ats.rippling.com/external-job-board/jobs
+    ats: rippling
+
+  - name: FluidAI Medical
+    url: https://ats.rippling.com/fluidai-medical-careers/jobs
+    ats: rippling
+
+  - name: Forbes Advisor
+    url: https://ats.rippling.com/forbes-advisor/jobs
+    ats: rippling
+
+  - name: Foundant Technologies + SmartSimple Software
+    url: https://ats.rippling.com/foundant-careers/jobs
+    ats: rippling
+
+  - name: Foundation Robotics
+    url: https://ats.rippling.com/foundation-robotics/jobs
+    ats: rippling
+
+  - name: Franki
+    url: https://ats.rippling.com/franki/jobs
+    ats: rippling
+
+  - name: Free Market Health
+    url: https://ats.rippling.com/free-market-health/jobs
+    ats: rippling
+
+  - name: FreshAhead
+    url: https://ats.rippling.com/freshahead/jobs
+    ats: rippling
+
+  - name: Fusion Health
+    url: https://ats.rippling.com/fusion-health/jobs
+    ats: rippling
+
+  - name: Gaiia
+    url: https://ats.rippling.com/gaiias-open-positions/jobs
+    ats: rippling
+
+  - name: Galtra Solutions
+    url: https://ats.rippling.com/galtrasolutions/jobs
+    ats: rippling
+
+  - name: GenLogs
+    url: https://ats.rippling.com/genlogs-corporation/jobs
+    ats: rippling
+
+  - name: Get Covered
+    url: https://ats.rippling.com/get-covered-insurance/jobs
+    ats: rippling
+
+  - name: Gigawatt AI
+    url: https://ats.rippling.com/gigawatt-ai/jobs
+    ats: rippling
+
+  - name: Gitar, Inc.
+    url: https://ats.rippling.com/gitar-careers/jobs
+    ats: rippling
+
+  - name: GoBolt
+    url: https://ats.rippling.com/gobolt/jobs
+    ats: rippling
+
+  - name: Goddard Technologies
+    url: https://ats.rippling.com/goddard-technologies/jobs
+    ats: rippling
+
+  - name: grifin
+    url: https://ats.rippling.com/grifin/jobs
+    ats: rippling
+
+  - name: Growth Signals
+    url: https://ats.rippling.com/growth-signals/jobs
+    ats: rippling
+
+  - name: Halborn
+    url: https://ats.rippling.com/halborn/jobs
+    ats: rippling
+
+  - name: Hammerspace
+    url: https://ats.rippling.com/hammerspace/jobs
+    ats: rippling
+
+  - name: Harbor Compliance
+    url: https://ats.rippling.com/harborcompliance/jobs
+    ats: rippling
+
+  - name: Havenly
+    url: https://ats.rippling.com/havenlybrands/jobs
+    ats: rippling
+
+  - name: Highlight Insights
+    url: https://ats.rippling.com/highlight-careers/jobs
+    ats: rippling
+
+  - name: Holly
+    url: https://ats.rippling.com/holly/jobs
+    ats: rippling
+
+  - name: Hypervolt
+    url: https://ats.rippling.com/hypervolt/jobs
+    ats: rippling
+
+  - name: ICP
+    url: https://ats.rippling.com/icp-globalcareers/jobs
+    ats: rippling
+
+  - name: In Time Tec
+    url: https://ats.rippling.com/in-time-tec/jobs
+    ats: rippling
+
+  - name: Incredible Health
+    url: https://ats.rippling.com/incredible-health/jobs
+    ats: rippling
+
+  - name: Intelliguard
+    url: https://ats.rippling.com/intelliguard/jobs
+    ats: rippling
+
+  - name: Invita Healthcare Technologies
+    url: https://ats.rippling.com/invita-healthcare-technologies/jobs
+    ats: rippling
+
+  - name: Just Appraised
+    url: https://ats.rippling.com/just-appraised-jobs/jobs
+    ats: rippling
+
+  - name: Kajabi
+    url: https://ats.rippling.com/kajabi/jobs
+    ats: rippling
+
+  - name: Keystone AI
+    url: https://ats.rippling.com/keystone-ai/jobs
+    ats: rippling
+
+  - name: Kick
+    url: https://ats.rippling.com/kick/jobs
+    ats: rippling
+
+  - name: Kimber Labs
+    url: https://ats.rippling.com/plume-network/jobs
+    ats: rippling
+
+  - name: Kinetic Automation
+    url: https://ats.rippling.com/kinetic/jobs
+    ats: rippling
+
+  - name: Klir
+    url: https://ats.rippling.com/klir/jobs
+    ats: rippling
+
+  - name: Knotch
+    url: https://ats.rippling.com/knotch-inc/jobs
+    ats: rippling
+
+  - name: Kore.ai
+    url: https://ats.rippling.com/koreai-india-careers/jobs
+    ats: rippling
+
+  - name: L2L
+    url: https://ats.rippling.com/l2l-openings/jobs
+    ats: rippling
+
+  - name: Labric
+    url: https://ats.rippling.com/labric/jobs
+    ats: rippling
+
+  - name: Latitude.sh
+    url: https://ats.rippling.com/latitudesh-jobs/jobs
+    ats: rippling
+
+  - name: Lawfare Institute
+    url: https://ats.rippling.com/lawfare-institute/jobs
+    ats: rippling
+
+  - name: Lead Surge
+    url: https://ats.rippling.com/leadsurge/jobs
+    ats: rippling
+
+  - name: Legit Script
+    url: https://ats.rippling.com/legitscript-careers/jobs
+    ats: rippling
+
+  - name: LightGuide, Inc.
+    url: https://ats.rippling.com/lightguide/jobs
+    ats: rippling
+
+  - name: LighthouseAI
+    url: https://ats.rippling.com/lighthouseai-careers/jobs
+    ats: rippling
+
+  - name: LineLeap
+    url: https://ats.rippling.com/lineleap/jobs
+    ats: rippling
+
+  - name: Linus Health
+    url: https://ats.rippling.com/linus-health/jobs
+    ats: rippling
+
+  - name: Logicbroker, Inc.
+    url: https://ats.rippling.com/logicbroker-inc/jobs
+    ats: rippling
+
+  - name: Luminary
+    url: https://ats.rippling.com/luminarycloud/jobs
+    ats: rippling
+
+  - name: Lyte AI
+    url: https://ats.rippling.com/lyte/jobs
+    ats: rippling
+
+  - name: Malwarebytes
+    url: https://ats.rippling.com/malwarebytes/jobs
+    ats: rippling
+
+  - name: Manta Health
+    url: https://ats.rippling.com/manta-health/jobs
+    ats: rippling
+
+  - name: Marcus Thomas
+    url: https://ats.rippling.com/marcus-thomas-careers/jobs
+    ats: rippling
+
+  - name: Mastery Logistics Systems
+    url: https://ats.rippling.com/mastery-logistics-systems/jobs
+    ats: rippling
+
+  - name: Matic (clinical AI)
+    url: https://ats.rippling.com/matic/jobs
+    ats: rippling
+
+  - name: MCCi
+    url: https://ats.rippling.com/mccicareers/jobs
+    ats: rippling
+
+  - name: "Meroka & Practice Partners"
+    url: https://ats.rippling.com/meroka/jobs
+    ats: rippling
+
+  - name: Miebach
+    url: https://ats.rippling.com/miebach-northamerica-career-page/jobs
+    ats: rippling
+
+  - name: Minlopro Partners
+    url: https://ats.rippling.com/minlopro/jobs
+    ats: rippling
+
+  - name: Modern Campus
+    url: https://ats.rippling.com/moderncampus/jobs
+    ats: rippling
+
+  - name: Moon
+    url: https://ats.rippling.com/moon/jobs
+    ats: rippling
+
+  - name: Moov
+    url: https://ats.rippling.com/moov/jobs
+    ats: rippling
+
+  - name: Motivo
+    url: https://ats.rippling.com/motivo/jobs
+    ats: rippling
+
+  - name: myDNA
+    url: https://ats.rippling.com/mydnainc/jobs
+    ats: rippling
+
+  - name: myKaarma
+    url: https://ats.rippling.com/mykaarma/jobs
+    ats: rippling
+
+  - name: Mytra
+    url: https://ats.rippling.com/mytra/jobs
+    ats: rippling
+
+  - name: NeoSigma
+    url: https://ats.rippling.com/neosigma/jobs
+    ats: rippling
+
+  - name: Nerdio
+    url: https://ats.rippling.com/nerdio-careers/jobs
+    ats: rippling
+
+  - name: nesto
+    url: https://ats.rippling.com/nesto/jobs
+    ats: rippling
+
+  - name: Net at Work
+    url: https://ats.rippling.com/netatwork/jobs
+    ats: rippling
+
+  - name: Netwrix
+    url: https://ats.rippling.com/netwrix-corporation/jobs
+    ats: rippling
+
+  - name: Nexigen Digital
+    url: https://ats.rippling.com/nexigendigital/jobs
+    ats: rippling
+
+  - name: Ninety
+    url: https://ats.rippling.com/ninety/jobs
+    ats: rippling
+
+  - name: NOCD
+    url: https://ats.rippling.com/nocd/jobs
+    ats: rippling
+
+  - name: North Cloud
+    url: https://ats.rippling.com/north-cloud/jobs
+    ats: rippling
+
+  - name: Novella
+    url: https://ats.rippling.com/novella/jobs
+    ats: rippling
+
+  - name: Nutrient
+    url: https://ats.rippling.com/nutrient/jobs
+    ats: rippling
+
+  - name: Obie
+    url: https://ats.rippling.com/obie/jobs
+    ats: rippling
+
+  - name: Omnis
+    url: https://ats.rippling.com/omnis-corporation/jobs
+    ats: rippling
+
+  - name: Opendoor
+    url: https://ats.rippling.com/opendoor/jobs
+    ats: rippling
+
+  - name: Opiniion
+    url: https://ats.rippling.com/opiniion/jobs
+    ats: rippling
+
+  - name: Order.co
+    url: https://ats.rippling.com/orderco/jobs
+    ats: rippling
+
+  - name: Origin Financial
+    url: https://ats.rippling.com/useorigin/jobs
+    ats: rippling
+
+  - name: OrthoFi
+    url: https://ats.rippling.com/orthofi-open-roles/jobs
+    ats: rippling
+
+  - name: Oxbridge Health
+    url: https://ats.rippling.com/oxbridge-health/jobs
+    ats: rippling
+
+  - name: Ozmo
+    url: https://ats.rippling.com/ozmocareers/jobs
+    ats: rippling
+
+  - name: Palomar Holdings
+    url: https://ats.rippling.com/plmrcareers/jobs
+    ats: rippling
+
+  - name: Paper Education America
+    url: https://ats.rippling.com/paper-careers/jobs
+    ats: rippling
+
+  - name: ParentSquare
+    url: https://ats.rippling.com/parentsquare/jobs
+    ats: rippling
+
+  - name: Pathos
+    url: https://ats.rippling.com/pathos/jobs
+    ats: rippling
+
+  - name: PatientNow
+    url: https://ats.rippling.com/patientnow/jobs
+    ats: rippling
+
+  - name: PCMI
+    url: https://ats.rippling.com/pcmi/jobs
+    ats: rippling
+
+  - name: Peach Finance
+    url: https://ats.rippling.com/peach-finance/jobs
+    ats: rippling
+
+  - name: Peakhealth AI Inc
+    url: https://ats.rippling.com/peakhealth-ai/jobs
+    ats: rippling
+
+  - name: Pearl (home performance)
+    url: https://ats.rippling.com/careers-at-pearl/jobs
+    ats: rippling
+
+  - name: Pendulum Intelligence
+    url: https://ats.rippling.com/pendulum-intelligence-jobs/jobs
+    ats: rippling
+
+  - name: PhoenixAI
+    url: https://ats.rippling.com/celerdataopenroles/jobs
+    ats: rippling
+
+  - name: Pinnacle Investment Management
+    url: https://ats.rippling.com/pinnacle-investment-management/jobs
+    ats: rippling
+
+  - name: Portside
+    url: https://ats.rippling.com/portside/jobs
+    ats: rippling
+
+  - name: Positron AI
+    url: https://ats.rippling.com/positron/jobs
+    ats: rippling
+
+  - name: Potomac
+    url: https://ats.rippling.com/potomac/jobs
+    ats: rippling
+
+  - name: Praia Health
+    url: https://ats.rippling.com/praia-health/jobs
+    ats: rippling
+
+  - name: Priorities USA
+    url: https://ats.rippling.com/priorities/jobs
+    ats: rippling
+
+  - name: Proper Voltage
+    url: https://ats.rippling.com/proper-voltage/jobs
+    ats: rippling
+
+  - name: PureFacts Financial Solutions
+    url: https://ats.rippling.com/purefacts_jobs/jobs
+    ats: rippling
+
+  - name: Pythian
+    url: https://ats.rippling.com/pythian/jobs
+    ats: rippling
+
+  - name: Qu Pos
+    url: https://ats.rippling.com/qu-careers/jobs
+    ats: rippling
+
+  - name: Quavo
+    url: https://ats.rippling.com/quavo-inc/jobs
+    ats: rippling
+
+  - name: Radian Generation
+    url: https://ats.rippling.com/radian-generation/jobs
+    ats: rippling
+
+  - name: RE Partners Consulting
+    url: https://ats.rippling.com/jobboard/jobs
+    ats: rippling
+
+  - name: RentSpree
+    url: https://ats.rippling.com/rentspree/jobs
+    ats: rippling
+
+  - name: Rentvine
+    url: https://ats.rippling.com/rentvine/jobs
+    ats: rippling
+
+  - name: Reserv
+    url: https://ats.rippling.com/reserv/jobs
+    ats: rippling
+
+  - name: REV Robotics
+    url: https://ats.rippling.com/rev-robotics/jobs
+    ats: rippling
+
+  - name: RevHealth
+    url: https://ats.rippling.com/revhealth/jobs
+    ats: rippling
+
+  - name: RheoSense
+    url: https://ats.rippling.com/rheosense-inc/jobs
+    ats: rippling
+
+  - name: Riot Platforms
+    url: https://ats.rippling.com/riot-platforms-careers/jobs
+    ats: rippling
+
+  - name: Rippling
+    url: https://ats.rippling.com/rippling/jobs
+    ats: rippling
+
+  - name: Root Insurance
+    url: https://ats.rippling.com/joinroot/jobs
+    ats: rippling
+
+  - name: Routeware
+    url: https://ats.rippling.com/routeware-careers/jobs
+    ats: rippling
+
+  - name: RSA Security
+    url: https://ats.rippling.com/rsa-security/jobs
+    ats: rippling
+
+  - name: RTS
+    url: https://ats.rippling.com/rts/jobs
+    ats: rippling
+
+  - name: RugsUSA
+    url: https://ats.rippling.com/rugsusa/jobs
+    ats: rippling
+
+  - name: Safety Radar
+    url: https://ats.rippling.com/safety-radar-careers/jobs
+    ats: rippling
+
+  - name: Sanas
+    url: https://ats.rippling.com/sanas/jobs
+    ats: rippling
+
+  - name: Scope3
+    url: https://ats.rippling.com/scope3pbc/jobs
+    ats: rippling
+
+  - name: Scratch
+    url: https://ats.rippling.com/scratch-financial/jobs
+    ats: rippling
+
+  - name: Season
+    url: https://ats.rippling.com/seasoncareers/jobs
+    ats: rippling
+
+  - name: Sibros
+    url: https://ats.rippling.com/sibros-technologies/jobs
+    ats: rippling
+
+  - name: Sight Machine
+    url: https://ats.rippling.com/sightmachine/jobs
+    ats: rippling
+
+  - name: Signal Advisors
+    url: https://ats.rippling.com/signaladvisors/jobs
+    ats: rippling
+
+  - name: Skillable
+    url: https://ats.rippling.com/skillable-careers/jobs
+    ats: rippling
+
+  - name: Sleuth Insights
+    url: https://ats.rippling.com/sleuth/jobs
+    ats: rippling
+
+  - name: Smarty
+    url: https://ats.rippling.com/smarty/jobs
+    ats: rippling
+
+  - name: Solv Health
+    url: https://ats.rippling.com/solv-health/jobs
+    ats: rippling
+
+  - name: SpangleAI
+    url: https://ats.rippling.com/spangleai/jobs
+    ats: rippling
+
+  - name: Sparq Holdings
+    url: https://ats.rippling.com/sparq/jobs
+    ats: rippling
+
+  - name: SpreeAI
+    url: https://ats.rippling.com/spreeai/jobs
+    ats: rippling
+
+  - name: Stellaromics
+    url: https://ats.rippling.com/stellaromics-inc/jobs
+    ats: rippling
+
+  - name: Steno
+    url: https://ats.rippling.com/steno-careers-page/jobs
+    ats: rippling
+
+  - name: Sterling Capital Brokers Ltd. o/a Sterling Brokers
+    url: https://ats.rippling.com/sterling-careers/jobs
+    ats: rippling
+
+  - name: Studycast
+    url: https://ats.rippling.com/core-sound-imaging/jobs
+    ats: rippling
+
+  - name: StudyFetch
+    url: https://ats.rippling.com/studyfetch/jobs
+    ats: rippling
+
+  - name: SumerSports
+    url: https://ats.rippling.com/sumersports/jobs
+    ats: rippling
+
+  - name: Sunco Lighting
+    url: https://ats.rippling.com/sunco-lighting/jobs
+    ats: rippling
+
+  - name: Supernova Technology
+    url: https://ats.rippling.com/supernova-technology/jobs
+    ats: rippling
+
+  - name: Supplier.io
+    url: https://ats.rippling.com/supplierio/jobs
+    ats: rippling
+
+  - name: Swimlane
+    url: https://ats.rippling.com/swimlane/jobs
+    ats: rippling
+
+  - name: Swoop.com
+    url: https://ats.rippling.com/swoopishiring/jobs
+    ats: rippling
+
+  - name: Taivo
+    url: https://ats.rippling.com/mergeco/jobs
+    ats: rippling
+
+  - name: Tavern Research
+    url: https://ats.rippling.com/tavernresearch/jobs
+    ats: rippling
+
+  - name: The Redesign Group
+    url: https://ats.rippling.com/redesigncareers/jobs
+    ats: rippling
+
+  - name: TheGuarantors
+    url: https://ats.rippling.com/theguarantors-open-positions/jobs
+    ats: rippling
+
+  - name: Ting Labs
+    url: https://ats.rippling.com/whisker-labs-careers/jobs
+    ats: rippling
+
+  - name: Tive
+    url: https://ats.rippling.com/tive-careers/jobs
+    ats: rippling
+
+  - name: TopDog Law
+    url: https://ats.rippling.com/topdoglaw/jobs
+    ats: rippling
+
+  - name: Trustible
+    url: https://ats.rippling.com/trustible/jobs
+    ats: rippling
+
+  - name: Unily
+    url: https://ats.rippling.com/unily/jobs
+    ats: rippling
+
+  - name: Urban SDK
+    url: https://ats.rippling.com/urban-sdk/jobs
+    ats: rippling
+
+  - name: Ursa Health
+    url: https://ats.rippling.com/ursahealth/jobs
+    ats: rippling
+
+  - name: UTILITY
+    url: https://ats.rippling.com/utility/jobs
+    ats: rippling
+
+  - name: Valor
+    url: https://ats.rippling.com/onevalor/jobs
+    ats: rippling
+
+  - name: Vaya Adventures
+    url: https://ats.rippling.com/vaya-adventures/jobs
+    ats: rippling
+
+  - name: Vertical Insure
+    url: https://ats.rippling.com/vertical-insure/jobs
+    ats: rippling
+
+  - name: Veryable
+    url: https://ats.rippling.com/veryable-careers/jobs
+    ats: rippling
+
+  - name: Visio Lending
+    url: https://ats.rippling.com/visio-lending-careers/jobs
+    ats: rippling
+
+  - name: Vividly
+    url: https://ats.rippling.com/vividly/jobs
+    ats: rippling
+
+  - name: Voltaiq
+    url: https://ats.rippling.com/voltaiq-careers/jobs
+    ats: rippling
+
+  - name: Vouch
+    url: https://ats.rippling.com/vouch-inc/jobs
+    ats: rippling
+
+  - name: VulcanForms
+    url: https://ats.rippling.com/vulcanforms/jobs
+    ats: rippling
+
+  - name: Webull Financial
+    url: https://ats.rippling.com/webull/jobs
+    ats: rippling
+
+  - name: Wellinks
+    url: https://ats.rippling.com/wellinkscareers/jobs
+    ats: rippling
+
+  - name: WellRight
+    url: https://ats.rippling.com/wellright/jobs
+    ats: rippling
+
+  - name: Wenrix
+    url: https://ats.rippling.com/wenrix/jobs
+    ats: rippling
+
+  - name: Whc
+    url: https://ats.rippling.com/whc/jobs
+    ats: rippling
+
+  - name: Willow Wealth
+    url: https://ats.rippling.com/yieldstreet/jobs
+    ats: rippling
+
+  - name: Winston Artory Group
+    url: https://ats.rippling.com/winston-artory-group/jobs
+    ats: rippling
+
+  - name: Workstreet
+    url: https://ats.rippling.com/workstreet/jobs
+    ats: rippling
+
+  - name: Youlify
+    url: https://ats.rippling.com/youlify-inc/jobs
+    ats: rippling
+
+  - name: Zapata Quantum
+    url: https://ats.rippling.com/zapata-quantum/jobs
+    ats: rippling
+
+  - name: Zededa
+    url: https://ats.rippling.com/zededa/jobs
+    ats: rippling
+
+  - name: Zymeworks
+    url: https://ats.rippling.com/zymeworks-careers/jobs
+    ats: rippling
+
+  # --- End of Rippling boards ---

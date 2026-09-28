@@ -14,8 +14,9 @@ in the target regions; see [Job-board index discovery](#job-board-index-discover
 
 ## Enabled employers
 
-4,516 employers are enabled in [the configuration](../config/companies.yaml): the 337
-grouped below, and 4,179 found through job-board indexes.
+4,814 employers are enabled in [the configuration](../config/companies.yaml): the 337
+grouped below, 4,179 found through job-board indexes, and 298 on Rippling boards found the
+same way (see [Rippling boards](#rippling-boards-september-2026)).
 The latest source check is in [the validation report](company-validation.json).
 Counts in that report are a dated observation, not a promise that a position remains
 open or that its requirements fit the candidate. The report predates the US tech
@@ -245,8 +246,10 @@ were posting only senior roles); they stay because they hire for the profile.
 
 Not added: Cloudflare's Greenhouse board gives "Hybrid" or "Distributed" as each job's
 location instead of a city, so the location filter can't tell US jobs apart without a
-scraper change. No readable board was found for dbt Labs, Weights & Biases, Rippling,
+scraper change. No readable board was found for dbt Labs, Weights & Biases,
 Retool, Hugging Face, Mistral AI, Unity, Atlassian, Grammarly, Hebbia or Fannie Mae.
+(Rippling was on this list until its own board became readable; see
+[Rippling boards](#rippling-boards-september-2026).)
 
 ## Job-board index discovery (September 2026)
 
@@ -303,9 +306,43 @@ Steady-state reads should stay under the table's 25 RCU (each full check reads t
 company's saved jobs); if `ReadThrottleEvents` persist, see the README's
 [throttling](../README.md#throttling-and-on-demand-capacity) section.
 
-**Not covered by these sources:** SmartRecruiters, Workable, Rippling, iCIMS, Oracle and
+**Not covered by these sources:** SmartRecruiters, Workable, iCIMS, Oracle and
 custom career sites (about 1,850 of Simplify's employers), Workday tenants that Simplify
-hasn't seen post a matching role, and European Greenhouse and Lever boards.
+hasn't seen post a matching role, and European Greenhouse and Lever boards. Rippling
+boards were added the next day; see below.
+
+## Rippling boards (September 2026)
+
+About 1,000 companies post jobs on Rippling Recruiting boards (`ats.rippling.com/{board}/jobs`),
+Rippling itself among them. On 2026-09-28 a Rippling reader was added and 298 of those
+employers were added, in the config's "Rippling boards" section.
+
+Where the boards came from: Common Crawl's URL index for `ats.rippling.com` (the
+CC-MAIN-2026-39, -34, -30, -25, -21 and -17 crawls) gave 1,503 board names once language
+prefixes such as `en-GB/` were removed, and Simplify's new-grad and internship listings
+linked to 49 more.
+
+How they were checked, from the laptop with the tracker's runner switched off:
+
+- Each of the 1,552 boards was read once, one request at a time about 0.6 s apart, with
+  no rate limiting. 1,400 answered; 152 no longer exist.
+- 327 listed at least one tech-titled job (the default keywords, any seniority) in the
+  target regions. For each, up to four of those jobs' details were read (702 requests)
+  for the company's name and the job description.
+- Left out: 17 boards where at least half the descriptions read need a security
+  clearance or US citizenship (Aalyria, Forterra, Overland AI, Lynx Software, Concept
+  Plus and others); defense, aerospace and space names (Collier Aerospace, RADICL,
+  Singularity Defense, Astra's rocket business and Boom Supersonic); Pace, already
+  tracked through its Ashby board; a demo board; and five extra boards that repeat
+  another board's jobs (Nesto has three, Dialogue has French and English boards,
+  Halborn and Clubessential have two).
+- Matic (clinical AI), Pearl (home performance ratings), Disco Technology and
+  Foundation Robotics share a name with a tracked company but are different
+  employers, so they're added under those longer names.
+
+At the check, the 298 boards listed 3,869 jobs, and 381 titles matched the default
+filters before the experience filter. Each board takes one request per check. A new
+match's description, for the experience filter, takes one more.
 
 ## How the less conventional sources are covered
 
