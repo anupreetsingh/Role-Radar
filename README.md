@@ -375,7 +375,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | Command | What it does |
 |---|---|
 | `role-radar start` | Runs until you quit (Ctrl+C). Takes the lease and checks companies as they come due. If Lambda holds the lease, it asks Lambda to hand over and takes over once it has. |
-| `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. |
+| `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. While the menu bar app is open, it starts the checker again within a minute, on the current code: that's a restart. |
 | `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, how many haven't had their first successful check yet (after adding companies, it reaches zero once every baseline is saved), the latest alerts, and whether the pushed config matches your local file. |
 | `role-radar doctor` | Checks setup without sending alerts or changing job state. Add `--stack role-radar --profile admin --region us-east-1` to inspect the deployed Lambda and EventBridge schedule. |
 | `role-radar notifications test` | Sends a labeled test through the configured channels without changing job state. Add `--channel email` or `--channel discord` to test one. |
@@ -383,11 +383,11 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar list-matches` | Prints every job matching right now. Reads no state, sends nothing. |
 | `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
 | `role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE` | Copies state between stores (either direction). |
-| `role-radar login-item on\|off` | Starts `role-radar start` whenever you log in to your Mac. It's a launchd agent with RunAtLoad and no KeepAlive, so quitting it stays quit until your next login. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a login item can't see your shell's environment variables. |
+| `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a launchd agent can't see your shell's environment variables. |
 | `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, and Discord and email alert switches. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. Switching the Mac on also starts `role-radar start` through the login item (installing it if needed). Needs Xcode or the Command Line Tools. |
+| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, and Discord and email alert switches. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
 file is `$ROLE_RADAR_CONFIG_FILE`, else `./config/companies.yaml`, else
@@ -536,7 +536,7 @@ commands hold the lease while they work.
 ```bash
 role-radar config push         # Lambda starts checking from its next run
 role-radar start               # in a terminal; Ctrl+C to quit (Lambda takes over)
-role-radar login-item on       # or: start it at every login (needs secrets in SSM, step 2)
+role-radar login-item on       # or: in the background, run by the menu bar app (needs secrets in SSM, step 2)
 role-radar status              # who has the lease, last passes, due companies, alerts
 ```
 
@@ -626,7 +626,7 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
 ### Routine maintenance
 
 - **Logs.** The laptop logs to the terminal, or to `~/Library/Logs/role-radar.log` for
-  the login item (rotated at 5 MB). Lambda logs to CloudWatch:
+  the login item the menu bar app runs (rotated at 5 MB). Lambda logs to CloudWatch:
   `aws logs tail /aws/lambda/role-radar-monitor --follow --profile admin`.
 - **Error alarm.** It emails you when a Lambda run fails: alerts that couldn't be
   delivered, every company failing, a bad config, or missing permissions, and also

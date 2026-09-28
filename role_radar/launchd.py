@@ -1,9 +1,13 @@
-"""`role-radar login-item on|off`: start the monitor when you log in to your Mac.
+"""`role-radar login-item on|off`: the Mac's checker, run in the background by launchd.
 
-A launchd LaunchAgent with RunAtLoad and no KeepAlive: launchd starts
-`role-radar start` at login (and when the item is turned on), but never
-restarts it, so quitting it (`role-radar stop`) stays quit until the next
-login.
+The menu bar app owns it: opening the app starts it (and restarts it within a
+minute if it stops), quitting the app stops it. So the checker runs exactly
+while the app does, and quitting and reopening the app restarts it on the
+current code. At login it starts with the app (the app's Open at Login).
+
+A launchd LaunchAgent without RunAtLoad or KeepAlive: launchd never starts it
+by itself, it only runs it with its own log and background priority when
+asked, so it outlives an app crash rather than dying with it.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ def build_plist(program: list[str], env: dict[str, str], working_dir: Path) -> d
     return {
         "Label": LABEL,
         "ProgramArguments": program,
-        "RunAtLoad": True,  # at login; there's deliberately no KeepAlive
+        "RunAtLoad": False,  # the menu bar app starts it; deliberately no KeepAlive either
         "ExitTimeOut": 60,  # after SIGTERM, time to finish the companies in flight before launchd kills it
         "ProcessType": "Background",
         "WorkingDirectory": str(working_dir),
@@ -48,7 +52,7 @@ def passed_env(environ: dict[str, str] | None = None) -> dict[str, str]:
 
 
 def install(program: list[str], env: dict[str, str], working_dir: Path) -> Path:
-    """Write the LaunchAgent and load it, which also starts it now."""
+    """Write the LaunchAgent, load it and start it now."""
     path = plist_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     log_dir().mkdir(parents=True, exist_ok=True)
@@ -56,6 +60,7 @@ def install(program: list[str], env: dict[str, str], working_dir: Path) -> Path:
         plistlib.dump(build_plist(program, env, working_dir), fh)
     _launchctl("bootout", f"{_domain()}/{LABEL}", check=False)  # reload if it was already on
     _launchctl("bootstrap", _domain(), str(path))
+    _launchctl("kickstart", f"{_domain()}/{LABEL}")
     return path
 
 
@@ -65,7 +70,8 @@ def start() -> bool:
     if not path.exists():
         return False
     if _launchctl("kickstart", f"{_domain()}/{LABEL}", check=False).returncode != 0:
-        _launchctl("bootstrap", _domain(), str(path), check=False)  # not loaded: loading starts it (RunAtLoad)
+        _launchctl("bootstrap", _domain(), str(path), check=False)  # not loaded (e.g. after logging in): load it
+        _launchctl("kickstart", f"{_domain()}/{LABEL}", check=False)
     return True
 
 

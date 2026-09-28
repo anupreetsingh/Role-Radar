@@ -181,7 +181,7 @@ def test_migrate_waits_for_the_lease(config, table):
     assert cli.main(["migrate", "--from", source, "--to", f"dynamodb:{table[1]}", "--config", str(config)]) == 4
 
 
-def test_login_item_writes_a_run_at_load_agent_without_keepalive(config, tmp_path, monkeypatch):
+def test_login_item_writes_an_agent_the_app_starts_without_keepalive(config, tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(launchd.Path, "home", lambda: tmp_path)
     monkeypatch.setattr(launchd, "_launchctl", lambda *args, check=True: calls.append(args))
@@ -194,12 +194,24 @@ def test_login_item_writes_a_run_at_load_agent_without_keepalive(config, tmp_pat
     agent = plistlib.loads(path.read_bytes())
     assert agent["ProgramArguments"][:4] == [sys.executable, "-m", "role_radar", "start"]
     assert agent["ProgramArguments"][4:6] == ["--config", str(config.resolve())]
-    assert agent["RunAtLoad"] is True and "KeepAlive" not in agent
+    assert agent["RunAtLoad"] is False and "KeepAlive" not in agent  # the menu bar app starts it
     assert agent["EnvironmentVariables"]["AWS_PROFILE"] == "role-radar"
-    assert [c[0] for c in calls] == ["bootout", "bootstrap"]
+    assert [c[0] for c in calls] == ["bootout", "bootstrap", "kickstart"]
 
     assert cli.main(["login-item", "off"]) == 0
     assert not path.exists() and calls[-1][0] == "bootout"
+
+
+def test_switch_start_starts_the_checker_only_while_the_laptop_is_switched_on(config, monkeypatch, capsys):
+    started = []
+    monkeypatch.setattr(cli.sys, "platform", "darwin")
+    monkeypatch.setattr(launchd, "start", lambda: started.append(1) or True)
+    monkeypatch.setattr(cli, "_wait_for_start", lambda: None)
+    assert cli.main(["switch", "--start", "--json", "--config", str(config)]) == 0
+    assert started == [1]
+    assert cli.main(["switch", "laptop", "off", "--start", "--json", "--config", str(config)]) == 0
+    assert cli.main(["switch", "--start", "--json", "--config", str(config)]) == 0
+    assert started == [1]
 
 
 def test_instance_lock_allows_one_start_and_finds_it(tmp_path):

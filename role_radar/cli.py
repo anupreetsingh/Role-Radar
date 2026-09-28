@@ -2,7 +2,8 @@
 
   role-radar start               run until you quit (Ctrl+C): take the lease and check
                                  companies as they come due; Lambda covers while it's off
-  role-radar stop                ask a running `start` (e.g. the login item) to quit
+  role-radar stop                ask a running `start` to quit (while the menu bar app is
+                                 open, it starts it again within a minute, on the current code)
   role-radar status              lease holder, last passes, companies due, recent alerts
   role-radar doctor              check config, secrets and AWS deployment without sending alerts
   role-radar notifications test  send a test to configured notification channels
@@ -14,7 +15,8 @@
   role-radar ui                  a local page with on/off switches for the laptop and Lambda
   role-radar config push         upload the local companies file to runtime.config_url
   role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE
-  role-radar login-item on|off   run `role-radar start` whenever you log in (macOS)
+  role-radar login-item on|off   set up the Mac's background checker (`role-radar start` under
+                                 launchd), which the menu bar app starts and stops (macOS)
 
 The local companies file is --config, else $ROLE_RADAR_CONFIG_FILE, else
 ./config/companies.yaml, else ~/.config/role-radar/companies.yaml. Its
@@ -240,11 +242,12 @@ def cmd_switch(args: argparse.Namespace) -> int:
         if args.state is None:
             raise ValueError("say on or off, e.g. role-radar switch lambda off")
         store.save_switch(args.name, args.state == "on")
-        if args.start and args.name == "laptop" and args.state == "on" and not InstanceLock().running_pid():
-            if sys.platform != "darwin":
-                raise ValueError("--start uses the macOS login item")
-            if not launchd.start():
-                _install_login_item(ctx)
+    if args.start and switch_on(store.load_switches(), "laptop") and not InstanceLock().running_pid():
+        if sys.platform != "darwin":
+            raise ValueError("--start uses the macOS login item")
+        if not launchd.start():
+            _install_login_item(ctx)
+        _wait_for_start()
     if args.json:
         state = ui.snapshot(backend, InstanceLock().running_pid)
         state["login_item"] = sys.platform == "darwin" and launchd.plist_path().exists()
@@ -264,6 +267,13 @@ def cmd_switch(args: argparse.Namespace) -> int:
     if alerts_off(switches):
         print("Both alert channels are off: new matches are saved and sent once one is back on.")
     return 0
+
+
+def _wait_for_start(timeout: float = 10.0) -> None:
+    """Give a just-started `role-radar start` a moment to take its lock, so the state shown includes it."""
+    deadline = time.monotonic() + timeout
+    while not InstanceLock().running_pid() and time.monotonic() < deadline:
+        time.sleep(0.25)
 
 
 def cmd_ui(args: argparse.Namespace) -> int:
@@ -386,14 +396,14 @@ def cmd_login_item(args: argparse.Namespace) -> int:
     path = _install_login_item(context(args))
     log_file = launchd.log_dir() / "role-radar.log"
     print(
-        f"Login item on ({path}). role-radar start is running now and will start whenever you log in.\n"
-        f"Log: {log_file}. `role-radar stop` quits it until your next login; `role-radar login-item off` removes it."
+        f"Login item on ({path}). role-radar start is running now. The menu bar app starts it when it opens "
+        f"and stops it when it quits.\nLog: {log_file}. `role-radar login-item off` removes it."
     )
     return 0
 
 
 def _install_login_item(ctx: Context) -> Path:
-    """Install and load the LaunchAgent, which starts `role-radar start` now and at every login."""
+    """Install and load the LaunchAgent, and start `role-radar start` now."""
     if not ctx.config_path:
         raise ValueError("the login item needs your config file: pass --config PATH")
     if not ctx.runtime.ssm_path:
@@ -523,7 +533,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("switch", parents=[common], help="turn a runner (laptop, Lambda) or alert channel (Discord, email) on or off")
     p.add_argument("name", nargs="?", choices=SWITCHES)
     p.add_argument("state", nargs="?", choices=["on", "off"])
-    p.add_argument("--start", action="store_true", help="switching the laptop on: also start role-radar start (via the login item)")
+    p.add_argument("--start", action="store_true",
+                   help="if the laptop is switched on, make sure role-radar start is running (via the login item)")
     p.add_argument("--json", action="store_true", help="print the switches, who's checking and last passes as JSON")
     p.set_defaults(func=cmd_switch)
 

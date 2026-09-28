@@ -1,8 +1,11 @@
 // Role Radar menu bar app: on/off switches for the Mac and Lambda runners,
 // and for the Discord and email alerts.
 //
-// Runners. Both on: the Mac checks while its app runs; Lambda covers when it
-// doesn't. One on: only that runner checks. Both off: nothing checks.
+// Runners. Both on: the Mac checks while this app is open; Lambda covers when
+// it isn't. One on: only that runner checks. Both off: nothing checks.
+// The Mac's checker (`role-radar start`, run by launchd) lives with this app:
+// the app starts it, restarts it within a minute if it stops, and stops it on
+// quit. Quitting and reopening the app restarts it on the current code.
 // Alerts. Each goes out only to the channels switched on. Both off: sites are
 // still checked and new matches saved, then sent once one is back on.
 // Every read and write goes through the role-radar CLI (`switch --json`), so
@@ -66,14 +69,19 @@ final class Model: ObservableObject {
     @Published var busy: Set<String> = []
     @Published var error: String?
 
-    private let python: String
-    private let projectDir: String
+    nonisolated static let python: String = {
+        let info = Bundle.main.infoDictionary ?? [:]
+        return info["RRPython"] as? String ?? ProcessInfo.processInfo.environment["RR_PYTHON"] ?? "python3"
+    }()
+    nonisolated static let projectDir: String = {
+        let info = Bundle.main.infoDictionary ?? [:]
+        return info["RRProjectDir"] as? String ?? ProcessInfo.processInfo.environment["RR_PROJECT_DIR"]
+            ?? FileManager.default.currentDirectoryPath
+    }()
+    private let python = Model.python
+    private let projectDir = Model.projectDir
 
     init() {
-        let info = Bundle.main.infoDictionary ?? [:]
-        let env = ProcessInfo.processInfo.environment
-        python = info["RRPython"] as? String ?? env["RR_PYTHON"] ?? "python3"
-        projectDir = info["RRProjectDir"] as? String ?? env["RR_PROJECT_DIR"] ?? FileManager.default.currentDirectoryPath
         Task { [weak self] in
             while let self {
                 await self.refresh()
@@ -100,16 +108,29 @@ final class Model: ObservableObject {
         }
     }
 
+    /// Re-read the state, starting the Mac's checker first if it's switched on and not running.
     func refresh() async {
-        await run(["switch", "--json"])
+        await run(["switch", "--json", "--start"])
+    }
+
+    /// Ask the Mac's checker to finish the companies in flight and quit. Doesn't wait: the
+    /// `role-radar stop` it launches outlives this app, and Lambda takes over once it's done.
+    nonisolated static func stopChecker() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "role_radar", "stop"]
+        process.currentDirectoryURL = URL(fileURLWithPath: projectDir)
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
     }
 
     /// Flip a switch: "laptop" or "lambda" (runners), "discord" or "email" (alerts).
     func set(_ name: String, on: Bool) async {
         busy.insert(name)
         state?.switches[name] = on
-        // Switching the Mac on also starts `role-radar start` (via the login item) if it isn't running.
-        await run(["switch", name, on ? "on" : "off", "--json"] + (name == "laptop" && on ? ["--start"] : []))
+        // --start: switching the Mac on also starts its checker if it isn't running.
+        await run(["switch", name, on ? "on" : "off", "--json", "--start"])
         busy.remove(name)
     }
 
@@ -304,7 +325,7 @@ struct Panel: View {
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
             .disabled(model.state == nil)
 
-            Text("Both on: the Mac checks while it's running, Lambda covers when it isn't.")
+            Text("Both on: the Mac checks while this app is open, Lambda covers when it isn't.")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -340,6 +361,7 @@ struct Panel: View {
                     NSWorkspace.shared.open(log)
                 }
                 Button("Quit") { NSApp.terminate(nil) }
+                    .help("Also stops the Mac's checker; Lambda takes over")
             }
             .controlSize(.small)
         }
@@ -368,8 +390,16 @@ struct DotLabel: LabelStyle {
 }
 
 #if !PANEL_SNAPSHOT
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Quit (or logging out) stops the Mac's checker with the app.
+    func applicationWillTerminate(_ notification: Notification) {
+        Model.stopChecker()
+    }
+}
+
 @main
 struct RoleRadarMenuApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = Model()
 
     var body: some Scene {

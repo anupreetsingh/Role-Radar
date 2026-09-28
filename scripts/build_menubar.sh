@@ -1,5 +1,6 @@
 #!/bin/sh
-# Build the Role Radar menu bar app into ~/Applications/Role Radar.app and open it.
+# Build the Role Radar menu bar app into ~/Applications/Role Radar.app and open it,
+# restarting the Mac's checker on the current code.
 # Needs Xcode or the Command Line Tools (swiftc) and this project's .venv.
 set -eu
 
@@ -14,6 +15,8 @@ trap 'rm -rf "$build"' EXIT
 swiftc -parse-as-library -swift-version 5 -O -target "$(uname -m)-apple-macos14.0" \
     "$project/macos/RoleRadarMenu.swift" -o "$build/RoleRadarMenu"
 
+# Stop the Mac's checker (it finishes the companies in flight) so the new app starts it on the current code.
+"$python" -m role_radar stop >/dev/null 2>&1 || true
 pkill -x RoleRadarMenu 2>/dev/null || true
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS"
