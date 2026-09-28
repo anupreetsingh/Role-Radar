@@ -1,16 +1,16 @@
 """New-job detection: compares one company's current listing to stored state.
 
 A job is alerted exactly once: when it matches the filters and has never been
-notified. The cases:
+notified. Identity is the job's uid alone, so the cases are:
 
   new job                  → recorded; alerted if it matches
   existing job unchanged   → nothing happens
   job removed              → marked removed_at (only if the listing was complete)
   removed job returns      → same uid reappears: removed_at cleared, no new alert
-  reposted with a new ID   → new uid, same fingerprint as a job notified before and
-                             removed within `repost_window_days`: recorded, not alerted
-  same title, many places  → different fingerprints (location is part of it), so
-                             each is its own job; notifications group them together
+  reposted with a new ID   → a new job: alerted if it matches, even with the same
+                             title and location as an open or recently removed one
+                             (it may be another vacancy, or a reopened search)
+  same title, many places  → each is its own job; notifications group them together
 """
 
 from __future__ import annotations
@@ -31,10 +31,6 @@ class CompanyDiff:
     removed: list[str] = field(default_factory=list)
     suppressed: list[tuple[JobPosting, str]] = field(default_factory=list)  # (job, reason)
     unchanged: int = 0
-    # uid → uid of a posting it duplicates that is being alerted in this same check.
-    # Recorded as duplicate_of only once that alert has gone out (record_delivery):
-    # if it fails and the other posting closes, this one must still alert.
-    pending_duplicates: dict[str, str] = field(default_factory=dict)
 
 
 def dedupe(jobs: list[JobPosting]) -> list[JobPosting]:
@@ -51,7 +47,6 @@ def reconcile(
     complete: bool = True,
     detail_fetched: set[str] | None = None,
     notify: bool = True,
-    repost_window_days: int = 30,
     max_alert_age_days: int | None = None,
     now: datetime | None = None,
 ) -> CompanyDiff:
@@ -95,25 +90,8 @@ def reconcile(
                 rec.removed_at = stamp
                 diff.removed.append(uid)
 
-    window = timedelta(days=repost_window_days)
-    # fingerprint → uid of the posting that "owns" it (already notified, or claimed this run)
-    owners = {
-        rec.fingerprint: uid
-        for uid, rec in records.items()
-        if rec.notified_at and (rec.active or (repost_window_days > 0 and now - from_iso(rec.removed_at) <= window))
-    }
     for job in candidates:
         rec = records[job.uid]
-        owner = owners.get(job.fingerprint)
-        if owner and owner != job.uid:
-            if records[owner].notified_at:
-                rec.duplicate_of = owner
-            else:  # claimed earlier in this check; final once its alert is delivered
-                diff.pending_duplicates[job.uid] = owner
-            kind = "repost of removed job" if records[owner].removed_at else "duplicate of open job"
-            diff.suppressed.append((job, f"{kind} {owner}"))
-            continue
-        owners[job.fingerprint] = job.uid
         age = (now.date() - job.date_posted).days if job.date_posted else None
         if not notify:
             rec.notified_at = stamp
@@ -132,17 +110,3 @@ def mark_notified(state: MonitorState, jobs: list[JobPosting], now: datetime | N
         rec = state.jobs_for(job.company).get(job.uid)
         if rec:
             rec.notified_at = stamp
-
-
-def record_delivery(state: MonitorState, diff: CompanyDiff, now: datetime | None = None) -> None:
-    """After the alerts in `diff` went out: mark them notified, and settle the duplicates they own."""
-    mark_notified(state, diff.to_notify, now)
-    settle_duplicates(state, diff)
-
-
-def settle_duplicates(state: MonitorState, diff: CompanyDiff) -> None:
-    """Record duplicate_of for the check's duplicates whose original has now been alerted."""
-    records = state.jobs_for(diff.company)
-    for uid, owner in diff.pending_duplicates.items():
-        if uid in records and owner in records and records[owner].notified_at:
-            records[uid].duplicate_of = owner

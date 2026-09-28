@@ -169,7 +169,7 @@ def test_digest_skips_baselines_and_dry_runs(monkeypatch, store_factory):
     assert notifier.batches == []
 
 
-def test_digest_deduplicates_matching_fingerprints(monkeypatch, store_factory):
+def test_digest_sends_each_posting_with_the_same_title_and_location(monkeypatch, store_factory):
     from dataclasses import replace
 
     cfg = config("Continental Finance")
@@ -177,12 +177,13 @@ def test_digest_deduplicates_matching_fingerprints(monkeypatch, store_factory):
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg)
     store = store_factory()
     record = store.load_company("Continental Finance")
-    original = next(j for j in record.jobs.values() if j.matched)
+    original_uid, original = next((uid, j) for uid, j in record.jobs.items() if j.matched)
     record.jobs["a-new-id"] = replace(original, notified_channels={})
     store.save_company(record)
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=30))
-    assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
-    assert sum(j.duplicate_of is not None for j in store_factory().load_company("Continental Finance").jobs.values()) == 1
+    assert len(notifier.batches) == 1 and {original_uid, "a-new-id"} <= {j.uid for j in notifier.batches[0]}
+    jobs = store_factory().load_company("Continental Finance").jobs
+    assert jobs["a-new-id"].notified_at and jobs[original_uid].notified_at
 
 
 def test_digest_receipts_survive_failed_save_in_warm_runner(monkeypatch):

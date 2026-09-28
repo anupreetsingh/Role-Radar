@@ -38,7 +38,7 @@ from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
 from role_radar.schedule import after_check, due_companies, interval_for, next_due, next_quick, quick_due
 from role_radar.scrapers import BaseScraper, ats_name, scraper_class_for
 from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
-from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile, settle_duplicates
+from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile
 
 log = logging.getLogger("monitor")
 
@@ -315,7 +315,6 @@ async def check_company(
         complete=result.complete,
         detail_fetched=fetched,
         notify=notify and (settings.notify_on_first_run or not first_run),
-        repost_window_days=settings.repost_window_days,
         max_alert_age_days=company.max_alert_age_days,
     )
     if company.filter.max_experience_years is not None and diff.to_notify:
@@ -383,7 +382,6 @@ async def process_company(
                 log.info("[%s] %d match(es) pending the next digest", company.name, len(diff.to_notify))
             else:
                 outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run)
-        settle_duplicates(state, diff)
 
     pruned = state.prune(settings.retention_days, now)
     if pruned:

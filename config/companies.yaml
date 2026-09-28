@@ -42,7 +42,6 @@ settings:
   check_interval_minutes: 20  # each company is checked when due, so load spreads across the interval
   digest_interval_minutes: 10 # combine all new matching jobs into one notification every 10 minutes
   notify_on_first_run: false  # new companies record a baseline first; set true to alert on their open jobs
-  repost_window_days: 30
   retention_days: 90
   max_detail_requests: 25
   max_company_concurrency: 40   # companies in flight; requests are limited separately below

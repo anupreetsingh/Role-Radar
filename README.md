@@ -40,7 +40,7 @@ load config + every company's schedule → the companies that are due (schedule.
     scraper (auto-picked from URL) → public JSON API, or HTML fallback
     → detail page only if the filter needs a field the listing lacks (Workday, custom sites)
     → filter (filters.py)
-    → diff vs. stored state (tracker.py): new / removed / repost / duplicate
+    → diff vs. stored state (tracker.py): new / removed / returned
     → queue the new matches for the next digest
     → save its jobs and next check time, in one transaction fenced on the lease
   if the digest is due (even when no company was due):
@@ -78,7 +78,7 @@ why each job matched or not.
 | `role_radar/models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
 | `role_radar/scrapers/` | One class per ATS plus `generic.py`; registry in `scrapers/__init__.py` |
 | `role_radar/filters.py` | Keyword, location and employment-type rules |
-| `role_radar/tracker.py` | New-job, removal, repost and duplicate detection |
+| `role_radar/tracker.py` | New-job and removal detection |
 | `role_radar/notifications.py` | `Notifier` interface + Discord, email and console |
 | `role_radar/instance.py`, `launchd.py` | One `start` per machine; the macOS login item |
 | `lambda_handler.py` | The Lambda entry point |
@@ -162,9 +162,10 @@ the enabled employers, source limitations and expansion queue.
 
 - **uid** = `company:ats:job_id`. If the ATS gives no job ID, it's a hash of the
   normalized company, title, location and URL (tracking query parameters are removed).
-- **fingerprint** = hash of company, title and location. It's used to catch the same
-  role showing up again under a different ID.
-- A job alerts **only when it matches the filters and has never been notified**.
+- A job alerts **only when it matches the filters and its uid has never been notified**
+  (a company's first check records its open jobs as notified, so they never alert).
+  A new uid is a new job, even with the same title and location as another posting:
+  it may be another vacancy, or a search reopened after earlier applications were dropped.
 
 | Case | Behaviour |
 |---|---|
@@ -172,8 +173,8 @@ the enabled employers, source limitations and expansion queue.
 | Existing job unchanged | Nothing |
 | Job removed | `removed_at` set, but only if the listing was complete (a hit page cap or a heuristic parse never counts as removal) |
 | Removed job comes back with the same ID | Reactivated, no new alert |
-| Reposted with a new ID within `repost_window_days` | Recorded as `duplicate_of`, no alert |
-| Two open postings with the same title and location | Second one suppressed as a duplicate |
+| Reposted with a new ID | A new job: alerted if it matches |
+| Two open postings with the same title and location | Each alerts; the notification lists both links |
 | Same title in several locations | Separate jobs, grouped into **one** entry in the notification |
 | Notification failed | Failed channels retry at the next digest (or company check if digests are disabled); successful channels are remembered and skipped |
 | Filters broadened | Jobs that already exist and now match alert once |

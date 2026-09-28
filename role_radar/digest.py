@@ -74,9 +74,8 @@ async def flush_digest(
     if deadline is not None and time.monotonic() + 120 >= deadline:
         return result  # leave this slot due for the next runner
     dirty: set[str] = set()
-    groups: list[tuple[CompanyRecord, JobPosting, list[tuple[str, SeenJob]]]] = []
+    queued: list[tuple[CompanyRecord, JobPosting, SeenJob]] = []
     for record in records:
-        pending: dict[str, list[tuple[str, SeenJob]]] = {}
         for uid, job in sorted(record.jobs.items(), key=lambda item: (item[1].first_seen, item[0])):
             remembered = (receipts or {}).get(record.name, {}).get(uid, {})
             if remembered:
@@ -88,19 +87,10 @@ async def flush_digest(
                 record.alerted.append(uid)
                 dirty.add(record.name)
             if job.matched and not job.notified_at and not job.duplicate_of:
-                pending.setdefault(job.fingerprint, []).append((uid, job))
-        for aliases in pending.values():
-            uid, job = aliases[0]
-            posting = JobPosting(company=record.name, title=job.title, location=job.location,
-                                 url=job.url, source="digest")
-            posting._uid = uid
-            # A repost/duplicate that shares a fingerprint also shares receipts.
-            delivered = {channel: stamp for _, alias in aliases for channel, stamp in alias.notified_channels.items()}
-            for _, alias in aliases:
-                if delivered != alias.notified_channels:
-                    alias.notified_channels.update(delivered)
-                    dirty.add(record.name)
-            groups.append((record, posting, aliases))
+                posting = JobPosting(company=record.name, title=job.title, location=job.location,
+                                     url=job.url, source="digest")
+                posting._uid = uid
+                queued.append((record, posting, job))
 
     # Claim the interval before sending. An interrupted invocation must not send
     # a second digest in this interval; pending jobs are retried next interval.
@@ -110,7 +100,7 @@ async def flush_digest(
     schedule.last_attempt_at = to_iso(now)
     await asyncio.to_thread(store.save_digest, schedule)
     result.next_due = from_iso(schedule.next_send_at)
-    result.jobs = len(groups)
+    result.jobs = len(queued)
 
     async def persist() -> None:
         for record in records:
@@ -119,7 +109,7 @@ async def flush_digest(
                 await save(record)
                 dirty.remove(record.name)
 
-    if not groups:
+    if not queued:
         await persist()
         return result
     result.attempted = True
@@ -130,30 +120,26 @@ async def flush_digest(
         channels = []
     if not channels:
         result.failed = True
-        log.error("No digest channel configured; %d job(s) remain pending", len(groups))
+        log.error("No digest channel configured; %d job(s) remain pending", len(queued))
 
     for channel in channels:
-        pending = [group for group in groups if channel.name not in group[2][0][1].notified_channels]
+        pending = [item for item in queued if channel.name not in item[2].notified_channels]
         if not pending:
             continue
         await asyncio.to_thread(lease.verify)
-        if await notify_all([channel], [group[1] for group in pending], check=lease.check):
-            for record, _, aliases in pending:
-                for _, alias in aliases:
-                    alias.notified_channels[channel.name] = to_iso(now)
+        if await notify_all([channel], [posting for _, posting, _ in pending], check=lease.check):
+            for record, _, job in pending:
+                job.notified_channels[channel.name] = to_iso(now)
                 dirty.add(record.name)
             # Save a channel's success before attempting another channel.
             await persist()
         else:
             result.failed = True
 
-    for record, _, aliases in groups:
-        uid, job = aliases[0]
+    for record, posting, job in queued:
         if channels and all(channel.name in job.notified_channels for channel in channels):
             job.notified_at = to_iso(now)
-            record.alerted.append(uid)
-            for _, duplicate in aliases[1:]:
-                duplicate.duplicate_of = uid
+            record.alerted.append(posting.uid)
             dirty.add(record.name)
             result.completed += 1
     await persist()

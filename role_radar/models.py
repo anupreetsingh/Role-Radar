@@ -99,9 +99,10 @@ class JobPosting:
 
     @property
     def fingerprint(self) -> str:
-        """Content identity ignoring IDs/URLs, used to spot reposts and duplicates.
+        """Content identity ignoring IDs/URLs: a hash of company, title and location.
 
-        Location is included on purpose: the same title in two cities is two jobs.
+        Stored with each seen job (runners before uid-only detection read it to
+        spot reposts); new-job detection itself uses only the uid.
         """
         if self._fingerprint:
             return self._fingerprint

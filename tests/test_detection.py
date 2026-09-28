@@ -1,20 +1,20 @@
 from datetime import datetime, timedelta, timezone
 
 from role_radar.storage import CompanyMeta, JsonStateStore, MonitorState, to_iso
-from role_radar.tracker import dedupe, mark_notified, reconcile, record_delivery
+from role_radar.tracker import dedupe, mark_notified, reconcile
 from tests.conftest import job
 
 T0 = datetime(2026, 9, 1, tzinfo=timezone.utc)
 
 
-def run(state, jobs, *, matching=None, now=T0, complete=True, notify=True, window=30):
+def run(state, jobs, *, matching=None, now=T0, complete=True, notify=True):
     """Reconcile, then pretend notifications succeeded (as monitor.run does)."""
     matching = matching if matching is not None else {j.uid for j in jobs}
     diff = reconcile(
         state, "Acme", jobs, {j.uid: j.uid in matching for j in jobs},
-        complete=complete, notify=notify, repost_window_days=window, now=now,
+        complete=complete, notify=notify, now=now,
     )  # fmt: skip
-    record_delivery(state, diff, now)
+    mark_notified(state, diff.to_notify, now)
     return diff
 
 
@@ -70,46 +70,46 @@ def test_incomplete_listing_does_not_mark_removed():
     assert diff.removed == [] and state.jobs_for("Acme")[a.uid].active
 
 
-def test_repost_with_new_id_within_window_is_suppressed():
+def test_repost_with_new_id_alerts():
+    # It may be another vacancy, or a search reopened after earlier applications were dropped.
     state = MonitorState()
     old = job("Backend Engineer", "100", location="Austin, TX")
     run(state, [old])
     run(state, [], now=T0 + timedelta(days=1))  # removed
     repost = job("Backend Engineer", "200", location="Austin, TX")
     diff = run(state, [repost], now=T0 + timedelta(days=5))
-    assert diff.to_notify == []
-    assert "repost" in diff.suppressed[0][1]
-    assert state.jobs_for("Acme")[repost.uid].duplicate_of == old.uid
+    assert [j.uid for j in diff.to_notify] == [repost.uid]
 
 
-def test_id_swap_in_same_run_is_suppressed():
+def test_id_swap_in_same_run_alerts():
     state = MonitorState()
     run(state, [job("Backend Engineer", "100")])
     diff = run(state, [job("Backend Engineer", "200")], now=T0 + timedelta(hours=1))
-    assert diff.to_notify == [] and len(diff.removed) == 1
+    assert len(diff.to_notify) == 1 and len(diff.removed) == 1
 
 
-def test_repost_after_window_alerts_again():
-    state = MonitorState()
-    run(state, [job("Backend Engineer", "100")])
-    run(state, [], now=T0 + timedelta(days=1))
-    diff = run(state, [job("Backend Engineer", "200")], now=T0 + timedelta(days=60))
-    assert len(diff.to_notify) == 1
-
-
-def test_duplicate_open_posting_is_suppressed():
+def test_second_open_posting_with_same_title_and_location_alerts():
     state = MonitorState()
     a = job("Data Engineer", "1", location="Remote")
     run(state, [a])
-    dup = job("Data Engineer", "2", location="Remote")
-    diff = run(state, [a, dup], now=T0 + timedelta(hours=1))
-    assert diff.to_notify == [] and "duplicate" in diff.suppressed[0][1]
+    second = job("Data Engineer", "2", location="Remote")
+    diff = run(state, [a, second], now=T0 + timedelta(hours=1))
+    assert [j.uid for j in diff.to_notify] == [second.uid]
 
 
-def test_duplicates_within_one_run_alert_once():
+def test_same_title_and_location_in_one_run_each_alert():
     state = MonitorState()
     diff = run(state, [job("Data Engineer", "1", location="Remote"), job("Data Engineer", "2", location="Remote")])
-    assert len(diff.to_notify) == 1
+    assert len(diff.to_notify) == 2
+
+
+def test_posting_marked_duplicate_by_an_earlier_version_stays_quiet():
+    state = MonitorState()
+    first, twin = job("Software Engineer", "101", location="Austin"), job("Software Engineer", "102", location="Austin")
+    run(state, [first, twin], notify=False)
+    state.jobs_for("Acme")[twin.uid].notified_at = None  # how earlier versions recorded a baseline duplicate
+    state.jobs_for("Acme")[twin.uid].duplicate_of = first.uid
+    assert run(state, [first, twin], now=T0 + timedelta(hours=1)).to_notify == []
 
 
 def test_same_title_multiple_locations_are_separate_jobs():
@@ -202,21 +202,3 @@ def test_version_1_state_file_still_loads(tmp_path):
     record = store.load_company("Acme")
     assert record.jobs["acme:test:1"].notified_at and store.load_schedule() == {}
     assert not record.is_new  # has history, so notify_on_first_run doesn't apply
-
-
-def test_same_check_duplicate_still_alerts_if_the_first_posting_never_did():
-    state = MonitorState()
-    first, twin = job("Software Engineer", "101", location="Austin"), job("Software Engineer", "102", location="Austin")
-    diff = reconcile(state, "Acme", [first, twin], {first.uid: True, twin.uid: True}, now=T0)
-    assert [j.uid for j in diff.to_notify] == [first.uid] and diff.pending_duplicates == {twin.uid: first.uid}
-    assert state.jobs_for("Acme")[twin.uid].duplicate_of is None  # every channel failed: nothing settled
-    diff = run(state, [twin], now=T0 + timedelta(minutes=30))  # the first posting has closed
-    assert [j.uid for j in diff.to_notify] == [twin.uid]
-
-
-def test_same_check_duplicate_is_settled_once_the_alert_goes_out():
-    state = MonitorState()
-    first, twin = job("Software Engineer", "101", location="Austin"), job("Software Engineer", "102", location="Austin")
-    run(state, [first, twin])
-    assert state.jobs_for("Acme")[twin.uid].duplicate_of == first.uid
-    assert run(state, [twin], now=T0 + timedelta(minutes=30)).to_notify == []

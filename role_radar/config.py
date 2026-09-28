@@ -46,8 +46,6 @@ class Settings:
     # Alert on matches already open the first time a company is checked.
     # Set false to silently record a baseline when adding many companies at once.
     notify_on_first_run: bool = True
-    # A job reposted under a new ID within this many days of removal is not re-alerted.
-    repost_window_days: int = 30
     # Removed jobs are forgotten after this many days to keep the state small.
     retention_days: int = 90
     # Cap on per-job detail requests per company per run (remaining ones are fetched next run).

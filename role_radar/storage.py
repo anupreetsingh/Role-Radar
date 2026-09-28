@@ -63,7 +63,9 @@ class SeenJob:
     notified_at: str | None = None
     removed_at: str | None = None
     detail_fetched: bool = False
-    duplicate_of: str | None = None  # uid of an earlier posting this one repeats
+    # Set by earlier versions, which didn't alert a posting that repeated another's title and
+    # location: such a posting stays unalerted. Every new uid now alerts on its own.
+    duplicate_of: str | None = None
     # The experience filter (filters.max_experience_years) read this match's description:
     # once checked it isn't read again, and a dropped match is recorded as notified.
     experience_checked: bool = False
