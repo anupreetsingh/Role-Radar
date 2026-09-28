@@ -2,7 +2,8 @@
 
 Serves on 127.0.0.1 only. The page reads and writes the same switches as
 `role-radar switch`, in the shared state store, so a change reaches a running
-laptop app within a minute and Lambda at its next run.
+laptop app within a minute and Lambda at its next run. `snapshot()` is also
+what the menu bar app reads (`role-radar switch --json`), alert switches included.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 
 from role_radar.backends import Backend
-from role_radar.storage import RUNNERS, runner_on
+from role_radar.storage import RUNNERS, SWITCHES, switch_on
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ WRITE_HEADER = "X-Role-Radar"
 
 
 def snapshot(backend: Backend, laptop_pid: Callable[[], int | None]) -> dict[str, Any]:
-    switches = {runner: runner_on(backend.store.load_switches(), runner) for runner in RUNNERS}
+    stored = backend.store.load_switches()
+    switches = {name: switch_on(stored, name) for name in SWITCHES}
     lease = backend.lease.read()
     holder = lease.holder if lease and lease.holder and lease.held(time.time()) else None
     pid = laptop_pid()

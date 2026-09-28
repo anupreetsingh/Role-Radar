@@ -7,7 +7,8 @@ Flow of a pass:
       filter needs a field the listing lacks (and that could still match)
       → filter → diff against state → read each new match's description once and
       drop those asking for too much experience (filter.max_experience_years)
-      → queue its new matches (or alert immediately if digests are disabled)
+      → queue its new matches (or alert immediately if digests are disabled), to
+        the alert channels switched on; with all of them off they stay queued
       → save its state and next check time straight away (fenced on the lease)
   → if the shared digest is due, confirm the lease and send the queued matches
 
@@ -34,10 +35,10 @@ from role_radar.experience import assess
 from role_radar.http_client import HttpClient, RobotsCache, format_bytes
 from role_radar.lease import Lease, LeaseLost, LocalLease
 from role_radar.models import JobPosting
-from role_radar.notifications import ConsoleNotifier, Notifier, notify_all
+from role_radar.notifications import ConsoleNotifier, Notifier, notify_all, switched_on
 from role_radar.schedule import after_check, due_companies, interval_for, next_due, next_quick, quick_due
 from role_radar.scrapers import BaseScraper, ats_name, scraper_class_for
-from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, to_iso, utcnow
+from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, alerts_off, to_iso, utcnow
 from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile
 
 log = logging.getLogger("monitor")
@@ -93,7 +94,7 @@ class CompanyOutcome:
     delivered: bool = True  # False when any configured channel still needs the alerts
     meta: CompanyMeta | None = None  # the schedule saved after this check
     skipped: bool = False  # due, but not started (stopping, or out of time)
-    queued: bool = False
+    queued: bool = False  # matches left pending: for the digest, or while alerts are switched off
     quick: bool = False  # a quick check (settings.quick_check_by_ats), not a full one
     top_uids: list[str] | None = None  # the listing's newest page, for the next quick check
 
@@ -381,7 +382,13 @@ async def process_company(
                 outcome.queued = True
                 log.info("[%s] %d match(es) pending the next digest", company.name, len(diff.to_notify))
             else:
-                outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run)
+                switches = {} if dry_run else await asyncio.to_thread(store.load_switches)
+                if alerts_off(switches):
+                    outcome.queued = True
+                    log.info("[%s] alerts are switched off; %d match(es) wait until one is back on",
+                             company.name, len(diff.to_notify))
+                else:
+                    outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run, switches)
 
     pruned = state.prune(settings.retention_days, now)
     if pruned:
@@ -468,11 +475,12 @@ async def _alert(
     notifiers: Callable[[], Sequence[Notifier]],
     lease: Lease,
     dry_run: bool,
+    switches: dict[str, bool],
 ) -> bool:
-    """Send one company's matches; keep partial successes for the next check."""
+    """Send one company's matches to the channels switched on; keep partial successes for the next check."""
     # Fetch the channels (secrets) first, so nothing slow sits between the lease check and sending.
     try:
-        channels = list(await asyncio.to_thread(notifiers))
+        channels = switched_on(await asyncio.to_thread(notifiers), switches)
     except Exception as exc:
         log.error("[%s] couldn't load notification settings (%s); alerts stay pending", diff.company, type(exc).__name__)
         invalidate = getattr(notifiers, "invalidate", None)

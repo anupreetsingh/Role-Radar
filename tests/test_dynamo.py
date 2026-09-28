@@ -305,5 +305,6 @@ def test_runner_switches_round_trip_and_survive_migration(table):
     store.save_switch("lambda", False)
     store.save_switch("laptop", False)
     store.save_switch("laptop", True)
-    assert store.load_switches() == {"lambda": False, "laptop": True}
-    assert store.load().switches == {"lambda": False, "laptop": True}
+    store.save_switch("email", False)
+    assert store.load_switches() == {"lambda": False, "laptop": True, "email": False}
+    assert store.load().switches == {"lambda": False, "laptop": True, "email": False}

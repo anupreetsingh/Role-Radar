@@ -39,13 +39,14 @@ def test_page_and_state(served):
     with urllib.request.urlopen(base + "/") as resp:
         assert b"Role Radar runners" in resp.read()
     status, state = call(base + "/api/state")
-    assert status == 200 and state["switches"] == {"laptop": True, "lambda": True} and state["laptop_app_pid"] == 4242
+    assert state["switches"] == {"laptop": True, "lambda": True, "discord": True, "email": True}
+    assert status == 200 and state["laptop_app_pid"] == 4242
 
 
 def test_switching_a_runner(served):
     base, store = served
     status, state = call(base + "/api/switch", {"runner": "lambda", "on": False})
-    assert status == 200 and state["switches"] == {"laptop": True, "lambda": False}
+    assert status == 200 and state["switches"] == {"laptop": True, "lambda": False, "discord": True, "email": True}
     assert store.load_switches() == {"lambda": False}
 
 

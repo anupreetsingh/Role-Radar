@@ -1,7 +1,9 @@
 """Send one shared digest per interval, using unnotified matching jobs as the queue.
 
 The cadence and delivery receipts live in the state store, so a cold Lambda or
-laptop handoff cannot reset the interval. Empty intervals send nothing.
+laptop handoff cannot reset the interval. Empty intervals send nothing, and so
+do intervals while every alert channel is switched off: the matches stay
+queued for the first digest after one is switched back on.
 """
 
 from __future__ import annotations
@@ -15,8 +17,8 @@ from typing import Awaitable, Callable, Sequence
 
 from role_radar.lease import Lease
 from role_radar.models import JobPosting
-from role_radar.notifications import Notifier, notify_all
-from role_radar.storage import CompanyRecord, DigestSchedule, SeenJob, StateStore, from_iso, to_iso
+from role_radar.notifications import Notifier, notify_all, switched_on
+from role_radar.storage import CompanyRecord, DigestSchedule, SeenJob, StateStore, alerts_off, from_iso, to_iso
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +57,14 @@ async def flush_digest(
         await asyncio.to_thread(store.save_digest, schedule)
     result = DigestResult(next_due=from_iso(schedule.next_send_at))
     if now < result.next_due:
+        return result
+    switches = await asyncio.to_thread(store.load_switches)
+    if alerts_off(switches):
+        lease.check()
+        schedule.next_send_at = to_iso(next_boundary(now, minutes))
+        await asyncio.to_thread(store.save_digest, schedule)
+        result.next_due = from_iso(schedule.next_send_at)
+        log.info("Alerts are switched off; matches wait for the first digest after one is switched on")
         return result
 
     # Read only the configured companies with matches still to send (or receipts from a
@@ -114,13 +124,13 @@ async def flush_digest(
         return result
     result.attempted = True
     try:
-        channels = list(await asyncio.to_thread(notifiers))
+        channels = switched_on(await asyncio.to_thread(notifiers), switches)
     except Exception as exc:
         log.error("Couldn't load digest channels (%s); jobs remain pending", type(exc).__name__)
         channels = []
     if not channels:
         result.failed = True
-        log.error("No digest channel configured; %d job(s) remain pending", len(queued))
+        log.error("No digest channel is both configured and switched on; %d job(s) remain pending", len(queued))
 
     for channel in channels:
         pending = [item for item in queued if channel.name not in item[2].notified_channels]

@@ -11,6 +11,10 @@ same names in SSM Parameter Store), so secrets never live in the repo:
 With environment variables and none set, alerts are printed to stdout (handy
 locally). With SSM, no channels means alerts stay pending, so they're never
 lost to a log nobody reads.
+
+Discord and email each have an on/off switch (`role-radar switch discord off`,
+or the menu bar app). Alerts go only to the channels switched on; with both
+off, matches stay pending and go out in the first digest after one is back on.
 """
 
 from __future__ import annotations
@@ -25,12 +29,12 @@ import ssl
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email.message import EmailMessage
-from typing import Callable
+from typing import Callable, Sequence
 
 import httpx
 
 from role_radar.models import JobPosting, normalize_text
-from role_radar.storage import SeenJob, to_iso, utcnow
+from role_radar.storage import SeenJob, switch_on, to_iso, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -129,6 +133,7 @@ class DiscordNotifier(Notifier):
 
     A message holds about 6,000 characters of embeds (roughly 40-60 jobs). A digest
     that doesn't fit shows what does and says how many more are in the email.
+    With `every_job` (email is off), the rest go in more messages instead.
     """
 
     name = "discord"
@@ -137,45 +142,64 @@ class DiscordNotifier(Notifier):
     MESSAGE_TEXT = 5850  # all of a message's embeds together hold 6,000, so it's 2 embeds at most
     COLOR = 0x5865F2
 
-    def __init__(self, webhook_url: str) -> None:
+    def __init__(self, webhook_url: str, *, every_job: bool = False) -> None:
         self._url = webhook_url  # never logged
+        self.every_job = every_job
+
+    def alone(self) -> DiscordNotifier:
+        """This channel for when no email goes out: a big digest takes more messages, not a pointer to the email."""
+        return DiscordNotifier(self._url, every_job=True)
 
     def build_message(self, jobs: list[JobPosting]) -> dict:
-        """The webhook payload for one digest."""
-        lines: list[str] = []
+        """The webhook payload for a digest that fits one message (the first message of a bigger one)."""
+        return self.build_messages(jobs)[0]
+
+    def build_messages(self, jobs: list[JobPosting]) -> list[dict]:
+        """The webhook payloads for one digest: one message, or with `every_job` as many as it takes."""
+        pages: list[list[str]] = [[]]
         size, company, shown = 0, None, 0
-        for group_company, group_lines, count in _discord_groups(jobs):
-            block = group_lines if group_company == company else ["", f"__**{_md(group_company)}**__", *group_lines]
+        for group_company, group_lines, count in _discord_groups(jobs, every_job=self.every_job):
+            header = ["", f"__**{_md(group_company)}**__"]
+            block = group_lines if group_company == company else [*header, *group_lines]
             cost = sum(len(text) + 1 for text in block)
+            if size + cost > self.MESSAGE_TEXT - 100 and self.every_job and pages[-1]:
+                pages.append([])  # a new message repeats the company's name
+                block, size = [*header, *group_lines], 0
+                cost = sum(len(text) + 1 for text in block)
             if size + cost > self.MESSAGE_TEXT - 100:  # room for the "more" line; smaller groups may still fit
                 continue
-            lines += block
+            pages[-1] += block
             size += cost
             company, shown = group_company, shown + count
         if shown < len(jobs):
-            lines += ["", f"**…and {len(jobs) - shown} more.** That's all one Discord message holds; the email has every job."]
-        embeds = [{"description": text, "color": self.COLOR} for text in _chunks(lines, self.EMBED_TEXT)]
-        return {"content": f"**Role Radar** — {_md(headline(jobs))}"[: self.CONTENT_LIMIT],
-                "embeds": embeds, "allowed_mentions": {"parse": []}}
+            pages[-1] += ["", f"**…and {len(jobs) - shown} more.** That's all one Discord message holds; the email has every job."]
+        title = f"**Role Radar** — {_md(headline(jobs))}"
+        return [
+            {"content": (title if len(pages) == 1 else f"{title} ({i}/{len(pages)})")[: self.CONTENT_LIMIT],
+             "embeds": [{"description": text, "color": self.COLOR} for text in _chunks(lines, self.EMBED_TEXT)],
+             "allowed_mentions": {"parse": []}}
+            for i, lines in enumerate(pages, 1)
+        ]
 
     async def send(self, jobs: list[JobPosting]) -> None:
-        payload = self.build_message(jobs)
+        # A failure part-way raises, so the whole digest is sent again next time.
         url = httpx.URL(self._url).copy_merge_params({"wait": "true"})
         async with httpx.AsyncClient(timeout=20) as client:
-            for attempt in range(4):
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 429 and attempt < 3:
-                    await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
-                    continue
-                if not resp.is_success:
-                    raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
-                break
+            for payload in self.build_messages(jobs):
+                for attempt in range(4):
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 429 and attempt < 3:
+                        await asyncio.sleep(min(float(resp.json().get("retry_after", 2)), 30))
+                        continue
+                    if not resp.is_success:
+                        raise NotificationError(f"Discord webhook returned HTTP {resp.status_code}")
+                    break
 
 
 MAX_PLACES = 8  # location links shown for one role posted in many places
 
 
-def _discord_groups(jobs: list[JobPosting]):
+def _discord_groups(jobs: list[JobPosting], *, every_job: bool = False):
     """(company, lines, job count) for each job group: its title linking to the job, then
     its locations; a group whose locations have their own links links each location."""
     for group in group_jobs(jobs):
@@ -189,7 +213,7 @@ def _discord_groups(jobs: list[JobPosting]):
             links.setdefault(job.url, job.location or "Apply")
         places = [_link(place, url) for url, place in list(links.items())[:MAX_PLACES]]
         if len(links) > MAX_PLACES:
-            places.append(f"+{len(links) - MAX_PLACES} more (in the email)")
+            places.append(f"+{len(links) - MAX_PLACES} more" + ("" if every_job else " (in the email)"))
         yield group.company, [f"• **{_md(_clip(group.title, 150))}** — {' · '.join(places)}"], len(group.jobs)
 
 
@@ -317,6 +341,17 @@ def notifiers_from_env(env: dict[str, str] | None = None, console_fallback: bool
     if not notifiers and console_fallback:
         return [ConsoleNotifier()]
     return notifiers
+
+
+def switched_on(channels: Sequence[Notifier], switches: dict[str, bool]) -> list[Notifier]:
+    """The channels whose switch is on (others, like the console, have no switch).
+
+    Without email, Discord sends every job of a big digest itself.
+    """
+    on = [channel for channel in channels if switch_on(switches, channel.name)]
+    if not any(channel.name == "email" for channel in on):
+        on = [channel.alone() if isinstance(channel, DiscordNotifier) else channel for channel in on]
+    return on
 
 
 async def notify_all(

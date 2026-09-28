@@ -41,10 +41,18 @@ def from_iso(value: str) -> datetime:
 
 
 RUNNERS = ("laptop", "lambda")  # the runners a switch can turn off
+CHANNELS = ("discord", "email")  # the alert channels a switch can turn off
+SWITCHES = RUNNERS + CHANNELS
 
 
-def runner_on(switches: dict[str, bool], runner: str) -> bool:
-    return switches.get(runner, True)
+def switch_on(switches: dict[str, bool], name: str) -> bool:
+    """Whether a runner or alert channel is on: anything not switched off is."""
+    return switches.get(name, True)
+
+
+def alerts_off(switches: dict[str, bool]) -> bool:
+    """Every alert channel is switched off: new matches wait, unsent, until one is back on."""
+    return not any(switch_on(switches, channel) for channel in CHANNELS)
 
 
 def compact(obj: object) -> dict:
@@ -157,7 +165,7 @@ class MonitorState:
     runs: dict[str, dict] = field(default_factory=dict)
     alerts: list[dict] = field(default_factory=list)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
-    # Runner on/off switches ("laptop", "lambda"); a runner not listed is on.
+    # On/off switches for the runners and alert channels (SWITCHES); one not listed is on.
     switches: dict[str, bool] = field(default_factory=dict)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
@@ -219,11 +227,11 @@ class MonitorState:
 
 class StateStore(ABC):
     def load_switches(self) -> dict[str, bool]:
-        """Runner on/off switches; a runner not listed is on."""
+        """Runner and alert channel on/off switches; one not listed is on."""
         return {}
 
-    def save_switch(self, runner: str, on: bool) -> None:
-        raise NotImplementedError("This store does not support runner switches")
+    def save_switch(self, name: str, on: bool) -> None:
+        raise NotImplementedError("This store does not support switches")
 
     def load_digest(self) -> DigestSchedule:
         raise NotImplementedError("This store does not support digest scheduling")
@@ -287,9 +295,9 @@ class MemoryStateStore(StateStore):
         with self._lock:
             return dict(self._current().switches)
 
-    def save_switch(self, runner: str, on: bool) -> None:
+    def save_switch(self, name: str, on: bool) -> None:
         with self._lock:
-            self._current().switches[runner] = on
+            self._current().switches[name] = on
             self._persist()
 
     def load_digest(self) -> DigestSchedule:

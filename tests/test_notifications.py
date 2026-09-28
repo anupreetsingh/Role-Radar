@@ -6,7 +6,10 @@ import httpx
 import pytest
 
 from role_radar import notifications
-from role_radar.notifications import DiscordNotifier, EmailNotifier, UnconfiguredNotifier, format_digest, notifiers_from_env, notify_all
+from role_radar.notifications import (
+    ConsoleNotifier, DiscordNotifier, EmailNotifier, UnconfiguredNotifier, format_digest, notifiers_from_env, notify_all,
+    switched_on,
+)
 from tests.conftest import job
 
 
@@ -50,6 +53,31 @@ def test_a_role_in_many_places_links_the_first_few():
     assert "+172 more (in the email)" in text_of(payload) and "…and" not in text_of(payload)
 
 
+def test_discord_without_email_sends_every_job_over_several_messages():
+    jobs = [job(f"Software Engineer {i:03}", str(i), location="L" * 100) for i in range(180)]
+    payloads = DiscordNotifier("https://discord.invalid/webhook").alone().build_messages(jobs)
+    assert len(payloads) > 1 and all(within_discord_limits(p) for p in payloads)
+    text = "\n".join(text_of(p) for p in payloads)
+    assert all(text.count(f"({j.url})") == 1 for j in jobs) and "email" not in text
+    assert all(text_of(p).startswith("__**Acme**__") for p in payloads)  # each message names the company
+    assert [p["content"][-5:] for p in payloads[:2]] == [f"(1/{len(payloads)})", f"(2/{len(payloads)})"]
+
+    many_places = [job("Software Engineer", str(i), location=f"City {i}") for i in range(180)]
+    (payload,) = DiscordNotifier("https://discord.invalid/webhook").alone().build_messages(many_places)
+    assert "+172 more" in text_of(payload) and "email" not in text_of(payload)
+
+
+def test_only_the_channels_switched_on_send():
+    discord = DiscordNotifier("https://discord.invalid/hook")
+    email = EmailNotifier("smtp.invalid", 587, "from@example.com", ["to@example.com"])
+    assert switched_on([discord, email], {}) == [discord, email]
+    assert switched_on([discord, email], {"discord": False}) == [email]
+    (alone,) = switched_on([discord, email], {"email": False})
+    assert alone.name == "discord" and alone.every_job and not discord.every_job
+    assert switched_on([discord], {})[0].every_job  # no email set up: Discord carries every job too
+    assert [c.name for c in switched_on([ConsoleNotifier()], {"discord": False, "email": False})] == ["console"]
+
+
 def test_discord_escapes_markdown_and_keeps_links_intact():
     jobs = [job("C++ Engineer [Senior] *Remote*", "1", location="Austin_TX", url="https://x.example/a job (1)")]
     payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
@@ -90,6 +118,10 @@ def test_large_discord_digest_is_one_json_message(monkeypatch):
     assert len(requests) == 1 and requests[0].headers["content-type"] == "application/json"
     sent = json.loads(requests[0].content)
     assert sent["allowed_mentions"] == {"parse": []} and "more.**" in text_of(sent)
+
+    requests.clear()
+    asyncio.run(DiscordNotifier("https://discord.invalid/hook").alone().send(jobs))
+    assert len(requests) > 1 and all(f"({j.url})" in "\n".join(text_of(json.loads(r.content)) for r in requests) for j in jobs)
 
 
 def test_email_digest_lists_jobs_from_every_company():

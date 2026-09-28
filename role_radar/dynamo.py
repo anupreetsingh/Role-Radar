@@ -29,7 +29,7 @@ from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
 from role_radar.storage import (
-    RUNNERS, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso,
+    SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso,
 )
 
 log = logging.getLogger(__name__)
@@ -282,13 +282,13 @@ class DynamoStateStore(StateStore):
 
     def load_switches(self) -> dict[str, bool]:
         item = self.client.get_item(TableName=self.table, Key=_key(SWITCHES, SWITCHES), ConsistentRead=True).get("Item")
-        return {k: bool(v) for k, v in _plain(item).items() if k in RUNNERS} if item else {}
+        return {k: bool(v) for k, v in _plain(item).items() if k in SWITCH_NAMES} if item else {}
 
-    def save_switch(self, runner: str, on: bool) -> None:
+    def save_switch(self, name: str, on: bool) -> None:
         """Not fenced on the lease: a switch is the user's, and any runner may read it."""
         self.client.update_item(
             TableName=self.table, Key=_key(SWITCHES, SWITCHES), UpdateExpression="SET #r = :on",
-            ExpressionAttributeNames={"#r": runner}, ExpressionAttributeValues={":on": {"BOOL": on}},
+            ExpressionAttributeNames={"#r": name}, ExpressionAttributeValues={":on": {"BOOL": on}},
         )
 
     def load_digest(self) -> DigestSchedule:
@@ -402,7 +402,7 @@ class DynamoStateStore(StateStore):
                 elif item["pk"] == DIGEST:
                     state.digest = DigestSchedule.from_dict(item)
                 elif item["pk"] == SWITCHES:
-                    state.switches = {k: bool(v) for k, v in item.items() if k in RUNNERS}
+                    state.switches = {k: bool(v) for k, v in item.items() if k in SWITCH_NAMES}
                 elif not item["pk"].startswith("#"):
                     state.jobs_for(item["pk"])[item["sk"]] = SeenJob.from_dict(item)
             if "LastEvaluatedKey" not in page:

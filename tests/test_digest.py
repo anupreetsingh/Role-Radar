@@ -205,6 +205,46 @@ def test_digest_receipts_survive_failed_save_in_warm_runner(monkeypatch):
     assert len(discord.batches) == len(email.batches) == 1
 
 
+def test_matches_wait_while_alerts_are_off_then_go_only_to_the_channels_switched_on(monkeypatch, store_factory):
+    cfg = config("Continental Finance", "Other")
+    discord, email = RecordingNotifier(), RecordingNotifier()
+    discord.name, email.name = "discord", "email"
+    channels = [discord, email]
+    store_factory().save_switch("discord", False)
+    store_factory().save_switch("email", False)
+    assert run_monitor(monkeypatch, store_factory(), channels, config=cfg) == 0
+
+    # Both off: digest slots pass without sending, and that isn't a failure.
+    for minutes in (30, 60):
+        assert run_monitor(monkeypatch, store_factory(), channels, config=cfg, clock=lambda: T0 + timedelta(minutes=minutes)) == 0
+    assert not discord.batches and not email.batches
+    for name in ("Continental Finance", "Other"):
+        record = store_factory().load_company(name)
+        assert record.pending_count() == 2 and all(not j.notified_channels for j in record.jobs.values())
+
+    # Discord back on: everything that waited goes there, once, and email never gets it.
+    store_factory().save_switch("discord", True)
+    for minutes in (90, 120):
+        assert run_monitor(monkeypatch, store_factory(), channels, config=cfg, clock=lambda: T0 + timedelta(minutes=minutes)) == 0
+    assert len(discord.batches) == 1 and len(discord.batches[0]) == 4 and not email.batches
+    store_factory().save_switch("email", True)
+    assert run_monitor(monkeypatch, store_factory(), channels, config=cfg, clock=lambda: T0 + timedelta(minutes=150)) == 0
+    assert not email.batches
+    for name in ("Continental Finance", "Other"):
+        assert all(j.notified_at and set(j.notified_channels) == {"discord"}
+                   for j in store_factory().load_company(name).jobs.values() if j.matched)
+
+
+def test_a_channel_switched_on_but_not_configured_is_a_failure(monkeypatch, store_factory):
+    cfg = config("Continental Finance")
+    email = RecordingNotifier()
+    email.name = "email"
+    store_factory().save_switch("email", False)  # only Discord is on, and it isn't set up
+    run_monitor(monkeypatch, store_factory(), [email], config=cfg)
+    assert run_monitor(monkeypatch, store_factory(), [email], config=cfg, clock=lambda: T0 + timedelta(minutes=30)) == 1
+    assert not email.batches and store_factory().load_company("Continental Finance").pending_count() == 2
+
+
 @pytest.mark.parametrize("minutes", [-1, float("inf"), float("nan")])
 def test_invalid_digest_interval_is_rejected(minutes):
     with pytest.raises(ValueError, match="digest_interval_minutes"):

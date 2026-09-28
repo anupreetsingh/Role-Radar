@@ -348,6 +348,21 @@ def test_bounded_gates_limit_their_jobs_without_holding_other_jobs_slots():
     assert order[0] == "gh"  # the ungated job didn't queue behind gated ones
 
 
+def test_immediate_alerts_wait_while_both_channels_are_switched_off(monkeypatch):
+    store, email = MemoryStateStore(), RecordingNotifier()
+    email.name = "email"
+    config = AppConfig(settings=build_config().settings, companies=build_config().companies[:1])
+    store.save_switch("discord", False)
+    store.save_switch("email", False)
+    assert run_monitor(monkeypatch, store, email, config=config) == 0
+    assert not email.batches and store.load_company("Continental Finance").pending_count() == 2
+
+    store.save_switch("email", True)
+    assert run_monitor(monkeypatch, store, email, config=config, check_all=True) == 0
+    assert len(email.batches) == 1 and len(email.batches[0]) == 2
+    assert store.load_company("Continental Finance").pending_count() == 0
+
+
 def test_max_alert_age_days_records_old_new_matches_without_alerting():
     from datetime import date, datetime, timezone
 
@@ -362,5 +377,10 @@ def test_max_alert_age_days_records_old_new_matches_without_alerting():
     diff = reconcile(state, "Acme", [fresh, old, undated], {j.uid: True for j in (fresh, old, undated)},
                      max_alert_age_days=14, now=now)
     assert [j.job_id for j in diff.to_notify] == ["1", "3"]  # no date: can't tell, so it alerts
-    assert [(j.job_id, reason) for j, reason in diff.suppressed] == [("2", "posted 474 days ago")]
+    assert [(j.job_id, reason) for j, reason in diff.suppressed] == [("2", "posted 474 days before it was found")]
     assert state.companies["Acme"][old.uid].notified_at  # recorded, never alerts later
+
+    # A match still pending weeks later (alerts switched off) is judged by when it was found.
+    later = reconcile(state, "Acme", [fresh, old, undated], {j.uid: True for j in (fresh, old, undated)},
+                      max_alert_age_days=14, now=datetime(2026, 11, 1, tzinfo=timezone.utc))
+    assert [j.job_id for j in later.to_notify] == ["1", "3"] and not later.suppressed

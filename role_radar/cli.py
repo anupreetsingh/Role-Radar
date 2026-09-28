@@ -9,7 +9,8 @@
   role-radar run --once          one pass over the due companies
                                  [--all] [--company NAME] [--dry-run] [--baseline]
   role-radar list-matches        print every job matching right now (no state, no alerts)
-  role-radar switch laptop|lambda on|off   turn a runner on or off (no arguments: show both)
+  role-radar switch laptop|lambda|discord|email on|off
+                                 turn a runner or alert channel on or off (no arguments: show all)
   role-radar ui                  a local page with on/off switches for the laptop and Lambda
   role-radar config push         upload the local companies file to runtime.config_url
   role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE
@@ -47,7 +48,7 @@ from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
 from role_radar.runner import EXIT_LEASE_HELD, Runner
 from role_radar.schedule import due_companies, interval_for, next_due
-from role_radar.storage import RUNNERS, JsonStateStore, StateStore, from_iso, runner_on, utcnow
+from role_radar.storage import CHANNELS, RUNNERS, SWITCHES, JsonStateStore, StateStore, alerts_off, from_iso, switch_on, utcnow
 
 log = logging.getLogger("role-radar")
 
@@ -235,11 +236,11 @@ def cmd_switch(args: argparse.Namespace) -> int:
     ctx = context(args)
     backend = open_backend(ctx.runtime, "switch", ctx.clients)
     store = backend.store
-    if args.runner:
+    if args.name:
         if args.state is None:
             raise ValueError("say on or off, e.g. role-radar switch lambda off")
-        store.save_switch(args.runner, args.state == "on")
-        if args.start and args.runner == "laptop" and args.state == "on" and not InstanceLock().running_pid():
+        store.save_switch(args.name, args.state == "on")
+        if args.start and args.name == "laptop" and args.state == "on" and not InstanceLock().running_pid():
             if sys.platform != "darwin":
                 raise ValueError("--start uses the macOS login item")
             if not launchd.start():
@@ -251,13 +252,17 @@ def cmd_switch(args: argparse.Namespace) -> int:
         return 0
     switches = store.load_switches()
     print(f"Switches: {describe_switches(switches)}")
-    if args.runner == "laptop" and args.state:
+    if args.name == "laptop" and args.state:
         print("A running laptop app picks this up within a minute." if InstanceLock().running_pid()
               else "role-radar start isn't running on this Mac, so the switch applies when it next starts.")
-    elif args.runner == "lambda" and args.state:
+    elif args.name == "lambda" and args.state:
         print("Lambda applies it at its next run (every 5 minutes).")
-    if not any(runner_on(switches, r) for r in RUNNERS):
+    elif args.name in CHANNELS and args.state:
+        print("The next digest applies it.")
+    if not any(switch_on(switches, r) for r in RUNNERS):
         print("Both runners are off: no companies will be checked.")
+    if alerts_off(switches):
+        print("Both alert channels are off: new matches are saved and sent once one is back on.")
     return 0
 
 
@@ -412,7 +417,7 @@ def describe(runtime: RuntimeSettings) -> str:
 
 
 def describe_switches(switches: dict[str, bool]) -> str:
-    return ", ".join(f"{runner} {'on' if runner_on(switches, runner) else 'OFF'}" for runner in RUNNERS)
+    return ", ".join(f"{name} {'on' if switch_on(switches, name) else 'OFF'}" for name in SWITCHES)
 
 
 def describe_lease(lease: Lease, runtime: RuntimeSettings) -> str:
@@ -515,8 +520,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--company", action="append", default=[], metavar="NAME", help="only this company (repeatable)")
     p.set_defaults(func=cmd_list_matches)
 
-    p = sub.add_parser("switch", parents=[common], help="turn the laptop or Lambda runner on or off")
-    p.add_argument("runner", nargs="?", choices=RUNNERS)
+    p = sub.add_parser("switch", parents=[common], help="turn a runner (laptop, Lambda) or alert channel (Discord, email) on or off")
+    p.add_argument("name", nargs="?", choices=SWITCHES)
     p.add_argument("state", nargs="?", choices=["on", "off"])
     p.add_argument("--start", action="store_true", help="switching the laptop on: also start role-radar start (via the login item)")
     p.add_argument("--json", action="store_true", help="print the switches, who's checking and last passes as JSON")

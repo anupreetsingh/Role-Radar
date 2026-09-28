@@ -54,7 +54,8 @@ def reconcile(
 
     `matches` maps uid → filter result. With `notify=False` (baseline run),
     matching jobs are recorded as already notified so they never alert; so are
-    jobs posted more than `max_alert_age_days` before now.
+    jobs posted more than `max_alert_age_days` before they were first seen (not
+    before now: a match waiting while alerts are switched off still alerts).
     """
     now = now or utcnow()
     stamp = to_iso(now)
@@ -92,13 +93,13 @@ def reconcile(
 
     for job in candidates:
         rec = records[job.uid]
-        age = (now.date() - job.date_posted).days if job.date_posted else None
+        age = (from_iso(rec.first_seen).date() - job.date_posted).days if job.date_posted else None
         if not notify:
             rec.notified_at = stamp
             diff.suppressed.append((job, "baseline run"))
         elif max_alert_age_days is not None and age is not None and age > max_alert_age_days:
             rec.notified_at = stamp
-            diff.suppressed.append((job, f"posted {age} days ago"))
+            diff.suppressed.append((job, f"posted {age} days before it was found"))
         else:
             diff.to_notify.append(job)
     return diff

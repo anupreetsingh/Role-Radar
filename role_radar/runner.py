@@ -32,7 +32,7 @@ from role_radar.config import AppConfig
 from role_radar.http_client import RobotsCache
 from role_radar.lease import Lease
 from role_radar.monitor import Notifiers, PassResult, Unsaved, run_pass
-from role_radar.storage import runner_on
+from role_radar.storage import switch_on
 
 log = logging.getLogger("runner")
 
@@ -249,7 +249,7 @@ class Runner:
     async def switched_on(self, runner: str = "laptop") -> bool:
         """Whether `runner`'s on/off switch is on. On if the store can't be read, as before switches existed."""
         try:
-            return runner_on(await asyncio.to_thread(self.store.load_switches), runner)
+            return switch_on(await asyncio.to_thread(self.store.load_switches), runner)
         except Exception as exc:
             log.warning("Couldn't read the runner switches (%s); assuming %s is on", exc, runner)
             return True

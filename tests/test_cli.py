@@ -54,6 +54,20 @@ def test_run_once_alerts_then_finds_nothing_due(config, capsys):
     assert "NEW JOB" not in capsys.readouterr().out  # checked minutes ago: not due
 
 
+def test_alert_switches_hold_matches_until_one_is_back_on(config, capsys):
+    assert cli.main(["switch", "discord", "off", "--config", str(config)]) == 0
+    assert cli.main(["switch", "email", "off", "--config", str(config)]) == 0
+    out = capsys.readouterr().out
+    assert "discord OFF, email OFF" in out and "Both alert channels are off" in out
+    assert cli.main(["run", "--once", "--config", str(config)]) == 0
+    assert "NEW JOB" not in capsys.readouterr().out
+
+    assert cli.main(["switch", "email", "on", "--config", str(config)]) == 0  # the console has no switch of its own
+    assert cli.main(["run", "--once", "--all", "--config", str(config)]) == 0
+    out = capsys.readouterr().out
+    assert "Mid/Senior Software Developer" in out and "Data Engineer" in out
+
+
 def test_run_needs_once(config):
     with pytest.raises(SystemExit) as exc:
         cli.main(["run", "--config", str(config)])

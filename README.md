@@ -216,7 +216,13 @@ still due and get picked up next time.
 companies into one email and one Discord message, grouped by company. In Discord each
 job's title is a link to apply. A Discord message holds about 6,000 characters, roughly
 30-35 jobs; a longer digest shows what fits and says how many more are in the email.
+With email switched off (or not set up), Discord sends the rest in more messages instead.
 Empty intervals send nothing.
+
+Discord and email each have an on/off switch (`role-radar switch discord off`, or the
+menu bar app). A digest goes only to the channels switched on. With both off, sites are
+still checked and new matches saved; they go out in the first digest after one is
+switched back on. Jobs sent while a channel was off aren't sent to it later.
 
 The schedule targets `:00` and `:30`. Lambda sends on its first run after the boundary,
 after any checks in that run finish; its five-minute trigger can add a short delay.
@@ -378,9 +384,10 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
 | `role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE` | Copies state between stores (either direction). |
 | `role-radar login-item on\|off` | Starts `role-radar start` whenever you log in to your Mac. It's a launchd agent with RunAtLoad and no KeepAlive, so quitting it stays quit until your next login. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a login item can't see your shell's environment variables. |
-| `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows both. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
+| `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
+| `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two switches as native toggles, who's checking right now, and each runner's last pass. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. Switching the Mac on also starts `role-radar start` through the login item (installing it if needed). Needs Xcode or the Command Line Tools. |
+| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, and Discord and email alert switches. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. Switching the Mac on also starts `role-radar start` through the login item (installing it if needed). Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
 file is `$ROLE_RADAR_CONFIG_FILE`, else `./config/companies.yaml`, else

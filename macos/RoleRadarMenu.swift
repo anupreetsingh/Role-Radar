@@ -1,7 +1,10 @@
-// Role Radar menu bar app: on/off switches for the Mac and Lambda runners.
+// Role Radar menu bar app: on/off switches for the Mac and Lambda runners,
+// and for the Discord and email alerts.
 //
-// Both on: the Mac checks while its app runs; Lambda covers when it doesn't.
-// One on: only that runner checks. Both off: nothing checks.
+// Runners. Both on: the Mac checks while its app runs; Lambda covers when it
+// doesn't. One on: only that runner checks. Both off: nothing checks.
+// Alerts. Each goes out only to the channels switched on. Both off: sites are
+// still checked and new matches saved, then sent once one is back on.
 // Every read and write goes through the role-radar CLI (`switch --json`), so
 // the rules live in one place. Build with scripts/build_menubar.sh.
 
@@ -13,6 +16,27 @@ struct RunnerState: Decodable {
     struct Switches: Decodable {
         var laptop: Bool
         var lambda: Bool
+        var discord: Bool
+        var email: Bool
+
+        subscript(name: String) -> Bool {
+            get {
+                switch name {
+                case "laptop": return laptop
+                case "lambda": return lambda
+                case "discord": return discord
+                default: return email
+                }
+            }
+            set {
+                switch name {
+                case "laptop": laptop = newValue
+                case "lambda": lambda = newValue
+                case "discord": discord = newValue
+                default: email = newValue
+                }
+            }
+        }
     }
 
     struct Run: Decodable {
@@ -80,12 +104,13 @@ final class Model: ObservableObject {
         await run(["switch", "--json"])
     }
 
-    func set(_ runner: String, on: Bool) async {
-        busy.insert(runner)
-        if runner == "laptop" { state?.switches.laptop = on } else { state?.switches.lambda = on }
+    /// Flip a switch: "laptop" or "lambda" (runners), "discord" or "email" (alerts).
+    func set(_ name: String, on: Bool) async {
+        busy.insert(name)
+        state?.switches[name] = on
         // Switching the Mac on also starts `role-radar start` (via the login item) if it isn't running.
-        await run(["switch", runner, on ? "on" : "off", "--json"] + (runner == "laptop" && on ? ["--start"] : []))
-        busy.remove(runner)
+        await run(["switch", name, on ? "on" : "off", "--json"] + (name == "laptop" && on ? ["--start"] : []))
+        busy.remove(name)
     }
 
     private func run(_ args: [String]) async {
@@ -150,7 +175,7 @@ final class Model: ObservableObject {
     }
 }
 
-struct RunnerRow: View {
+struct SwitchRow: View {
     let title: String
     let symbol: String
     let detail: String
@@ -230,6 +255,23 @@ struct Panel: View {
         return "Standing by · covers when the Mac isn't"
     }
 
+    private var alertsOff: Bool {
+        guard let s = model.state else { return false }
+        return !s.switches.discord && !s.switches.email
+    }
+
+    private func alertDetail(_ name: String) -> String {
+        guard let s = model.state else { return "" }
+        if alertsOff { return "Off · new matches are saved for later" }
+        return s.switches[name] ? "New matches are sent here" : "Off"
+    }
+
+    private func alertRow(_ title: String, _ name: String, symbol: String) -> SwitchRow {
+        let on = model.state?.switches[name] ?? false
+        return SwitchRow(title: title, symbol: symbol, detail: alertDetail(name), isOn: on, active: on,
+                         busy: model.busy.contains(name)) { on in Task { await model.set(name, on: on) } }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -249,12 +291,12 @@ struct Panel: View {
                 .labelStyle(DotLabel())
 
             VStack(spacing: 10) {
-                RunnerRow(title: "Mac", symbol: "laptopcomputer", detail: macDetail,
+                SwitchRow(title: "Mac", symbol: "laptopcomputer", detail: macDetail,
                           isOn: model.state?.switches.laptop ?? false, active: model.state?.checking == "laptop",
                           busy: model.busy.contains("laptop"),
                           action: macNeedsStart ? ("Start", { Task { await model.set("laptop", on: true) } }) : nil
                 ) { on in Task { await model.set("laptop", on: on) } }
-                RunnerRow(title: "Lambda", symbol: "cloud", detail: lambdaDetail,
+                SwitchRow(title: "Lambda", symbol: "cloud", detail: lambdaDetail,
                           isOn: model.state?.switches.lambda ?? false, active: model.state?.checking == "lambda",
                           busy: model.busy.contains("lambda")) { on in Task { await model.set("lambda", on: on) } }
             }
@@ -264,6 +306,21 @@ struct Panel: View {
 
             Text("Both on: the Mac checks while it's running, Lambda covers when it isn't.")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Alerts").font(.system(size: 12, weight: .semibold))
+            VStack(spacing: 10) {
+                alertRow("Discord", "discord", symbol: "bubble.left.and.bubble.right")
+                alertRow("Email", "email", symbol: "envelope")
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
+            .disabled(model.state == nil)
+
+            Text(alertsOff
+                 ? "Both off: sites are still checked. New matches are sent when you switch one back on."
+                 : "Only the channels switched on get new matches.")
+                .font(.system(size: 11)).foregroundStyle(alertsOff ? Color.orange : Color.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let error = model.error {
