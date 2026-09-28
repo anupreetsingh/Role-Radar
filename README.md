@@ -188,9 +188,9 @@ completed alerts are not replayed when another channel is added.
 ### Scheduling
 
 Companies aren't all checked at once. Each one is checked when it's **due**: when
-`check_interval_minutes` (20; Workday companies 240, via `check_interval_by_ats`) have
+`check_interval_minutes` (20; Workday companies 360, via `check_interval_by_ats`) have
 passed since its last check, or straight away if it has never been checked. Between full
-checks, `quick_check_by_ats` (Workday: every 10 minutes) reads only the listing's newest
+checks, `quick_check_by_ats` (Workday: every 20 minutes) reads only the listing's newest
 page, one request, and compares its jobs with the ones it showed at the last check. Only
 if some are new does it read the company's saved state, and further pages until one holds
 a job it already knows. A quick check never marks jobs removed and leaves the full check's
@@ -274,8 +274,8 @@ check). Other sources have no description, so their matches are kept. Set
 The default role list follows the candidate's resume: application development
 (including full stack, frontend and backend), platforms/cloud, distributed systems,
 compilers, performance and graphics, AI/LLM/ML and applied research, data engineering
-and data science, GRC engineering, test automation, technical program management and
-associate product manager programs, and forward-deployed and solutions engineering
+and data science, GRC engineering, test automation, technical program and product
+management, and forward-deployed and solutions engineering
 ([why](docs/company-coverage.md#resume-alignment-september-2026)).
 It targets potential opportunities for a spring-2026 MS CS graduate; matching a title
 does not establish eligibility. Review the posting's experience, specialized skills,
@@ -284,7 +284,7 @@ roles in particular need this review. Graduation years and "new grad" are not
 required in titles, so unlabelled early-career openings can match.
 
 The defaults exclude senior and leadership titles, while permitting Technical Program
-Manager and Associate Product Manager. "Member of Technical Staff" is also allowed.
+Manager and Product Manager. "Member of Technical Staff" is also allowed.
 They also exclude off-profile titles the broad keywords catch: ERP/CRM platform
 developers (ServiceNow, SAP, Salesforce and similar), technical-writing "developers",
 and hardware or manufacturing titles (firmware, FPGA, ASIC, CNC, technician and
@@ -644,10 +644,11 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   on the same service, which answers bursts from one IP with HTTP 429. The config
   spaces all `myworkdayjobs.com` tenants as one host (0.5 s), checks at most two
   Workday companies at a time (`settings.company_concurrency_by_ats`), and checks
-  them every four hours (`settings.check_interval_by_ats`). With ~150 Workday
-  companies that is about 4,500 requests per round, under 0.5 requests/s on average.
-  Quick checks (`settings.quick_check_by_ats`) add about one request per company every
-  10 minutes, about 0.25 requests/s, and run before a pass's full checks.
+  them every six hours (`settings.check_interval_by_ats`). With ~820 Workday
+  companies (most capped at their newest 200 jobs) that is about 9,000 requests per
+  round, about 0.4 requests/s on average. Quick checks (`settings.quick_check_by_ats`)
+  add about one request per company every 20 minutes, about 0.7 requests/s, and run
+  before a pass's full checks.
 - Detail requests are made only when a filter needs a field the listing lacks, only for
   unseen jobs that could still match, and at most `max_detail_requests` per company per
   check. Any left over are fetched at the next check.

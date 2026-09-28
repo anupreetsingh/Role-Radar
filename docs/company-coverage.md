@@ -7,11 +7,15 @@ systems and graphics. Employer selection covers AI companies, developer tools,
 scientific software, healthcare, financial services, regional business software and
 infrastructure. A company's recruiting platform does not determine whether it belongs
 in the list. See [Resume alignment](#resume-alignment-september-2026) for how the
-role keywords and employers were narrowed to that profile.
+role keywords were narrowed to that profile. Any employer that posts tech jobs can post
+an entry-level one, so beyond the hand-picked groups below the list takes in every
+employer found on the job-board platforms Role Radar reads that was posting tech jobs
+in the target regions; see [Job-board index discovery](#job-board-index-discovery-september-2026).
 
 ## Enabled employers
 
-The 336 enabled employers are defined in [the configuration](../config/companies.yaml).
+4,516 employers are enabled in [the configuration](../config/companies.yaml): the 337
+grouped below, and 4,179 found through job-board indexes.
 The latest source check is in [the validation report](company-validation.json).
 Counts in that report are a dated observation, not a promise that a position remains
 open or that its requirements fit the candidate. The report predates the US tech
@@ -61,7 +65,7 @@ Cognition, CoreWeave, Cresta, Crusoe, Cursor, Decagon, ElevenLabs, Etched, Field
 Figure AI, Fireworks AI, Glean, Graphcore, Harvey, Labelbox, Lambda, LangChain,
 LlamaIndex, Luma AI, Mercor, Modal, NewsBreak, OpenAI, OpenEvidence, Perplexity,
 Pinecone, Replit, Scale AI, Sierra AI, Snorkel AI, Solace Health, Suno, Tenstorrent,
-Together AI, Truveta, Unstructured, Weaviate, Writer and xAI.
+Together AI, Truveta, Unstructured, Voxel, Weaviate, Writer and xAI.
 
 ### Compliance and GRC software
 
@@ -128,8 +132,8 @@ board would still exceed the limit or carry mostly unrelated roles, an
 `applied_facets` filter: US jobs only, or technology and engineering job families
 (Micron, PNC, Lowe's, Genuine Parts). All Workday tenants share one request rate
 through the `myworkdayjobs.com` and `myworkdaysite.com` entries in `settings.http.host_delays`, and Workday companies
-are checked every four hours, two at a time, so the list stays well under Workday's
-per-IP rate limit. Between those, a quick check every 10 minutes reads each board's newest
+are checked every six hours, two at a time, so the list stays well under Workday's
+per-IP rate limit. Between those, a quick check every 20 minutes reads each board's newest
 page. In a September 2026 sample, 9 of 10 boards listed newest first (NVIDIA, Bank of
 America, Capital One, Cisco, Boeing, Salesforce, Adobe, Visa, and Northrop Grumman nearly);
 Intel did not, so its new jobs are found by the full check.
@@ -183,9 +187,8 @@ matched offline against the old and new filters, so the effect was measured with
 scraping. At the employers that stayed, open title matches fell from about 9,600 to
 about 6,200 before the experience filter.
 
-**Role keywords dropped**, since the resume doesn't show that work: generic product
-management, product owner and analyst roles (Associate Product Manager and Technical
-Program Manager stay); business, data, BI, systems, IT and quantitative analysts;
+**Role keywords dropped**, since the resume doesn't show that work: product owner and
+product analyst roles (Product Manager and Technical Program Manager stay); business, data, BI, systems, IT and quantitative analysts;
 security, SOC, penetration testing and detection roles; network and system
 administration; support, cloud support, implementation and technical consulting;
 mobile (iOS/Android) specialists; hardware-side systems, embedded, firmware,
@@ -202,7 +205,7 @@ engineers.
 SAP, Salesforce, Pega, MuleSoft and similar), technical-writing "developers"
 (courseware, content, documentation), hardware and manufacturing titles (firmware,
 BIOS, PCB, FPGA, ASIC, RTL, CNC, CMM, PLC, HVAC, design release, process integration,
-supplier, technician), and product managers other than associate product managers.
+supplier, technician).
 Amazon's search no longer spends its newest-500 budget on hardware, database
 administration, BI or security categories.
 
@@ -244,6 +247,65 @@ Not added: Cloudflare's Greenhouse board gives "Hybrid" or "Distributed" as each
 location instead of a city, so the location filter can't tell US jobs apart without a
 scraper change. No readable board was found for dbt Labs, Weights & Biases, Rippling,
 Retool, Hugging Face, Mistral AI, Unity, Atlassian, Grammarly, Hebbia or Fannie Mae.
+
+## Job-board index discovery (September 2026)
+
+Hand-picked lists miss most employers (Voxel was one example). On 2026-09-27 4,179
+more were added from indexes of the job-board platforms Role Radar reads, in the
+config's last section. The role keywords and the experience filter pick out the
+entry-level roles, so an employer only needs to post tech jobs to be worth checking.
+
+Where the boards came from:
+
+- [Common Crawl](https://index.commoncrawl.org/)'s URL index for `jobs.ashbyhq.com`,
+  `job-boards.greenhouse.io`, `boards.greenhouse.io` and `jobs.lever.co`, from the
+  CC-MAIN-2026-39, -34 and -30 crawls (about 336,000 job-board URLs; the -25 index
+  timed out). Every board name in them was a candidate.
+- Simplify's new-grad and internship listing data (about 36,600 postings from 5,300
+  employers), for the Greenhouse, Ashby, Lever and Workday boards it links to.
+
+How they were checked, all from the laptop with the tracker's runner switched off:
+
+- **Greenhouse, Ashby and Lever:** 9,932 boards not already tracked were each read once
+  (0.4 s apart per host, no rate limiting). 3,727 listed at least one tech-titled job
+  (the default keywords, any seniority) in the target regions; 3,388 of those were new
+  names. Each was read once more with descriptions, and 169 where at least half the
+  tech jobs require a security clearance or US citizenship were left out, for the same
+  reason the defense employers were removed. Names were taken from the Greenhouse API,
+  Simplify, or the board page's title. 3,471 were added (1,668 Greenhouse, 1,631
+  Ashby, 172 Lever); the count is higher than the final queue because batches added
+  under an earlier ordering kept some boards a later deduplication would have
+  replaced.
+- **Workday:** the 811 tenants Simplify had seen post a matching role. 49 were skipped
+  by name (defense, aerospace and space, and the resume-alignment removals); the rest
+  were read one page each, a request about every second (762 read, 732 answered, no
+  rate limiting). 708 were added, one per board, each capped at its newest 200 jobs
+  (`options.max_jobs: 200`).
+- Names on the defense, aerospace and space list, the resume-alignment removals and
+  staffing agencies were skipped for every platform.
+
+**Rollout.** An employer's first check saves its whole listing as a baseline (no
+alerts), and the table's free provisioned write capacity (25 WCU; transactional writes
+count double) absorbs about 20,000 jobs per half hour with burst capacity. Batches of
+about 20,000 stored jobs every 30 minutes were planned: two went out ordered by current
+matches, then about 2,260 small boards in one batch. The remaining 1,526 employers
+(about 138,000 jobs) were added at once so the rollout didn't depend on the laptop
+staying on, accepting a few hours of delayed alerts while those first checks'
+throttled saves are retried; a company whose save fails simply stays due.
+
+**Workday schedule.** With about 820 Workday tenants, full checks moved from every four
+hours to every six, and quick checks from every 10 minutes to every 20, keeping Workday
+traffic near 1.1 requests/s under the shared 0.5 s spacing.
+
+**Costs to watch.** At this size a Lambda pass is busy most of the time when the laptop
+runner is off, which can exceed the free Lambda allowance by roughly $10 a month.
+Steady-state reads should stay under the table's 25 RCU (each full check reads that
+company's saved jobs); if `ReadThrottleEvents` persist, see the README's
+[throttling](../README.md#throttling-and-on-demand-capacity) section.
+
+**Not covered by these sources:** SmartRecruiters, Workable, Rippling, iCIMS, Oracle and
+custom career sites (about 1,850 of Simplify's employers), Workday tenants that Simplify
+hasn't seen post a matching role, and European Greenhouse and Lever boards.
 
 ## How the less conventional sources are covered
 
