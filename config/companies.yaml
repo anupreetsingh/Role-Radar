@@ -83,8 +83,10 @@ settings:
 
 defaults:
   filters:
-    # Broad discovery for a spring-2026 MS CS graduate. These are title matches,
-    # not eligibility checks: experience, degree, graduation window and work
+    # Tuned to the resume: backend/full-stack software engineering, AI and LLM
+    # applications (RAG, agents), ML, data engineering, cloud/platform work, and
+    # C++ systems, performance and graphics. These are title matches, not
+    # eligibility checks: experience, degree, graduation window and work
     # authorization requirements still need review in each job description.
     include_keywords:
       # Application development (spaces also match hyphens or no separator).
@@ -99,12 +101,10 @@ defaults:
       - front end
       - back end
       - web engineer
-      - mobile engineer
-      - iOS engineer
-      - Android engineer
-      - application engineer
-      - applications engineer
+      - UI engineer
+      - Python engineer
       - product engineer
+      - application engineer
       - integration engineer
       - integrations engineer
       # Platforms, cloud infrastructure and developer tooling.
@@ -112,7 +112,6 @@ defaults:
       - platforms engineer
       - platform engineering
       - cloud engineer
-      - cloud operations
       - infrastructure engineer
       - site reliability
       - SRE
@@ -122,24 +121,19 @@ defaults:
       - build engineer
       - release engineer
       - tools engineer
-      # Compilers, operating systems, embedded and performance work.
+      # Distributed systems, compilers, performance and graphics.
+      - distributed systems
+      - systems development
       - compiler
       - toolchain engineer
       - runtime engineer
       - kernel engineer
-      - systems engineer
-      - system engineer
-      - systems development
-      - embedded engineer
-      - embedded software
-      - firmware
-      - distributed systems
       - performance engineer
       - GPU engineer
       - graphics engineer
       - rendering engineer
-      - robotics engineer
-      - simulation engineer
+      - computer graphics
+      - gameplay engineer
       - algorithm engineer
       - algorithms engineer
       - high performance computing
@@ -147,92 +141,64 @@ defaults:
       - member of technical staff
       - member technical staff
       - associate technical staff
-      # AI, applied research, data and analytics.
+      # AI, LLM applications, ML and applied research.
       - machine learning
       - ML engineer
       - MLOps
+      - LLMOps
       - AI engineer
       - AI engineering
       - applied AI
       - artificial intelligence
       - generative AI
+      - gen AI engineer
       - LLM engineer
+      - agent engineer
+      - agents engineer
+      - AI agent
+      - AI agents
+      - conversational AI
+      - deep learning
       - NLP engineer
       - natural language processing
       - computer vision
+      - perception engineer
+      - inference engineer
+      - search engineer
+      - information retrieval
       - research engineer
-      - research scientist
       - applied scientist
+      - AI residency
+      # Data engineering and data science.
       - data engineer
       - data engineering
       - data scientist
       - data science
-      - data analyst
       - analytics engineer
-      - analytics analyst
-      - business intelligence
-      - BI engineer
-      - BI analyst
       - database engineer
-      - database administrator
       - ETL engineer
-      - quantitative analyst
-      - quantitative researcher
-      # Security, networking and IT systems.
-      - security engineer
-      - security analyst
-      - cybersecurity
-      - cyber security
-      - information security
-      - SOC analyst
-      - penetration tester
-      - detection engineer
-      - network engineer
-      - network development
-      - network administrator
-      - systems administrator
-      - system administrator
-      - systems analyst
-      - system analyst
-      - IT analyst
-      # Software quality and test automation.
+      # Compliance tooling, like the NIST 800-53 audit platform.
+      - GRC engineer
+      # Test automation.
       - SDET
       - QA engineer
-      - QA analyst
       - quality assurance engineer
-      - quality assurance analyst
-      - software quality
-      - test engineer
+      - QA automation
       - test automation
-      - automation engineer
-      - software tester
-      # Product and technical delivery: "manager" need not mean people manager.
-      - product manager
-      - product management
-      - product owner
-      - product analyst
+      - software test
+      # Technical program management and associate product manager programs.
       - technical program manager
       - technical program management
-      - technical project manager
-      - technical project management
-      - business analyst
-      - business systems analyst
-      # Customer-facing engineering and technical implementation.
+      - associate product manager
+      - product manager
+      # Customer-facing engineering: forward deployed, AI deployment and solutions.
+      - forward deployed engineer
+      - forward deployment engineer
+      - AI deployment engineer
       - solutions engineer
       - solution engineer
       - solutions architect
       - solution architect
-      - implementation engineer
-      - implementation consultant
-      - technical consultant
-      - technology consultant
-      - support engineer
-      - cloud support
-      - application support
-      - technical support analyst
-      - customer engineer
-      - customer success engineer
-      - forward deployed engineer
       # Employer-specific graduate/rotation programs with nonstandard titles.
       - engineering development group
       - EDG
@@ -249,8 +215,8 @@ defaults:
       - principal
       - distinguished
       - lead
-      # Permit product/technical program/project managers, exclude other managers.
-      - 're:^(?!.*\b(?:product|technical[\s/_-]+(?:program|project))[\s/_-]+manager\b).*\bmanagers?\b'
+      # Permit technical program managers and associate product managers, exclude other managers.
+      - 're:^(?!.*\b(?:technical[\s/_-]+program|associate[\s/_-]+product)[\s/_-]+manager\b).*\bmanagers?\b'
       - director
       - vice president
       - vp
@@ -258,6 +224,16 @@ defaults:
       - chief
       - president
       - officer
+      # Off-profile titles the broad keywords above also catch: ERP/CRM platform
+      # developers, technical writing, and hardware or manufacturing roles.
+      - 're:\b(?:ServiceNow|SAP|ABAP|Pega|MuleSoft|PeopleSoft|Fiori|Power[\s-]*Platform)\b'
+      - 're:\bSalesforce[\s/_-]+(?:developer|engineer|architect|administrator|consultant)\b'
+      - 're:\b(?:courseware|content|documentation|information|course|curriculum|certification)[\s/_-]+developer\b'
+      - 're:\b(?:firmware|BIOS|UEFI|PCB|FPGA|ASIC|RTL|CNC|CMM|PLC|HVAC)\b'
+      - design release
+      - process integration
+      - supplier
+      - technician
     match_on: [title]
     exclude_on: [title]
     # New matches whose description asks for more years of experience are recorded, not
@@ -288,15 +264,15 @@ companies:
     url: https://contfinco.bamboohr.com/careers
     ats: bamboohr
     filters:
-      # Inherit the broad role list. Keep "Mid/Senior" titles for review, while
-      # excluding purely senior roles and the same leadership titles as defaults.
+      # Inherit the default role list. Keep "Mid/Senior" titles for review, while
+      # excluding purely senior roles and the same titles as the defaults.
       exclude_keywords:
         - 're:^(?!.*\bmid[\s/_-]*(?:senior|sr)\b).*\b(?:senior|sr)\b'
         - 're:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b'
         - principal
         - distinguished
         - lead
-        - 're:^(?!.*\b(?:product|technical[\s/_-]+(?:program|project))[\s/_-]+manager\b).*\bmanagers?\b'
+        - 're:^(?!.*\b(?:technical[\s/_-]+program|associate[\s/_-]+product)[\s/_-]+manager\b).*\bmanagers?\b'
         - director
         - vice president
         - vp
@@ -304,6 +280,14 @@ companies:
         - chief
         - president
         - officer
+        - 're:\b(?:ServiceNow|SAP|ABAP|Pega|MuleSoft|PeopleSoft|Fiori|Power[\s-]*Platform)\b'
+        - 're:\bSalesforce[\s/_-]+(?:developer|engineer|architect|administrator|consultant)\b'
+        - 're:\b(?:courseware|content|documentation|information|course|curriculum|certification)[\s/_-]+developer\b'
+        - 're:\b(?:firmware|BIOS|UEFI|PCB|FPGA|ASIC|RTL|CNC|CMM|PLC|HVAC)\b'
+        - design release
+        - process integration
+        - supplier
+        - technician
       match_on: [title]
       exclude_on: [title]
 
@@ -409,17 +393,9 @@ companies:
     url: https://jobs.ashbyhq.com/gecko-robotics
     ats: ashby
 
-  - name: Form Energy
-    url: https://jobs.ashbyhq.com/formenergy
-    ats: ashby
-
   - name: Geotab
     url: https://job-boards.greenhouse.io/geotab
     ats: greenhouse
-
-  - name: LHP Engineering Solutions
-    url: https://lhpes.hrmdirect.com/employment/job-openings.php?search=true
-    ats: hrmdirect
 
   # --- Financial technology and business software ---
 
@@ -583,15 +559,149 @@ companies:
     url: https://jobs.lever.co/palantir
     ats: lever
 
+  - name: Airbyte
+    url: https://jobs.ashbyhq.com/airbyte
+    ats: ashby
+
+  - name: Confluent
+    url: https://jobs.ashbyhq.com/confluent
+    ats: ashby
+
+  - name: Docker
+    url: https://jobs.ashbyhq.com/docker
+    ats: ashby
+
+  - name: GitLab
+    url: https://job-boards.greenhouse.io/gitlab
+    ats: greenhouse
+
+  - name: LaunchDarkly
+    url: https://job-boards.greenhouse.io/launchdarkly
+    ats: greenhouse
+
+  - name: Linear
+    url: https://jobs.ashbyhq.com/linear
+    ats: ashby
+
+  - name: Materialize
+    url: https://jobs.ashbyhq.com/materialize
+    ats: ashby
+
+  - name: Neo4j
+    url: https://job-boards.greenhouse.io/neo4j
+    ats: greenhouse
+
+  - name: PlanetScale
+    url: https://job-boards.greenhouse.io/planetscale
+    ats: greenhouse
+
+  - name: Redis
+    url: https://jobs.ashbyhq.com/redis
+    ats: ashby
+
+  - name: Render
+    url: https://jobs.ashbyhq.com/render
+    ats: ashby
+
+  - name: Sourcegraph
+    url: https://job-boards.greenhouse.io/sourcegraph91
+    ats: greenhouse
+
+  - name: Starburst
+    url: https://job-boards.greenhouse.io/starburst
+    ats: greenhouse
+
+  - name: Supabase
+    url: https://jobs.ashbyhq.com/supabase
+    ats: ashby
+
+  - name: Temporal
+    url: https://jobs.ashbyhq.com/temporal
+    ats: ashby
+
+  - name: Vercel
+    url: https://job-boards.greenhouse.io/vercel
+    ats: greenhouse
+
+  # --- Compliance and GRC software ---
+
+  - name: Drata
+    url: https://jobs.ashbyhq.com/drata
+    ats: ashby
+
+  - name: Hyperproof
+    url: https://job-boards.greenhouse.io/hyperproof
+    ats: greenhouse
+
+  - name: OneTrust
+    url: https://job-boards.greenhouse.io/onetrust
+    ats: greenhouse
+
+  - name: RegScale
+    url: https://jobs.ashbyhq.com/regscale
+    ats: ashby
+
+  - name: Secureframe
+    url: https://jobs.ashbyhq.com/secureframe
+    ats: ashby
+
+  - name: Thoropass
+    url: https://job-boards.greenhouse.io/thoropass
+    ats: greenhouse
+
+  - name: Vanta
+    url: https://jobs.ashbyhq.com/vanta
+    ats: ashby
+
   # --- AI labs and AI-native startups ---
+
+  - name: Abridge
+    url: https://jobs.ashbyhq.com/abridge
+    ats: ashby
 
   - name: Anthropic
     url: https://job-boards.greenhouse.io/anthropic
     ats: greenhouse
 
+  - name: Anyscale
+    url: https://jobs.ashbyhq.com/anyscale
+    ats: ashby
+
+  - name: Baseten
+    url: https://jobs.ashbyhq.com/baseten
+    ats: ashby
+
+  - name: C3 AI
+    url: https://job-boards.greenhouse.io/c3iot
+    ats: greenhouse
+
   - name: Cerebras
     url: https://jobs.ashbyhq.com/cerebras
     ats: ashby
+
+  - name: Character.AI
+    url: https://jobs.ashbyhq.com/character
+    ats: ashby
+
+  - name: Chroma
+    url: https://jobs.ashbyhq.com/trychroma
+    ats: ashby
+
+  - name: Clay
+    url: https://jobs.ashbyhq.com/claylabs
+    ats: ashby
+
+  - name: Cognition
+    url: https://jobs.ashbyhq.com/cognition
+    ats: ashby
+
+  - name: CoreWeave
+    url: https://job-boards.greenhouse.io/coreweave
+    ats: greenhouse
+
+  - name: Cresta
+    url: https://job-boards.greenhouse.io/cresta
+    ats: greenhouse
 
   - name: Crusoe
     url: https://jobs.ashbyhq.com/Crusoe
@@ -601,6 +711,14 @@ companies:
     url: https://jobs.ashbyhq.com/cursor
     ats: ashby
 
+  - name: Decagon
+    url: https://jobs.ashbyhq.com/decagon
+    ats: ashby
+
+  - name: ElevenLabs
+    url: https://jobs.ashbyhq.com/elevenlabs
+    ats: ashby
+
   - name: Etched
     url: https://jobs.ashbyhq.com/etched
     ats: ashby
@@ -608,6 +726,14 @@ companies:
   - name: Field AI
     url: https://jobs.lever.co/field-ai
     ats: lever
+
+  - name: Figure AI
+    url: https://job-boards.greenhouse.io/figureai
+    ats: greenhouse
+
+  - name: Fireworks AI
+    url: https://jobs.ashbyhq.com/fireworks
+    ats: ashby
 
   - name: Glean
     url: https://job-boards.greenhouse.io/gleanwork
@@ -621,8 +747,32 @@ companies:
     url: https://jobs.ashbyhq.com/harvey
     ats: ashby
 
+  - name: Labelbox
+    url: https://job-boards.greenhouse.io/labelbox
+    ats: greenhouse
+
   - name: Lambda
     url: https://jobs.ashbyhq.com/lambda
+    ats: ashby
+
+  - name: LangChain
+    url: https://jobs.ashbyhq.com/langchain
+    ats: ashby
+
+  - name: LlamaIndex
+    url: https://jobs.ashbyhq.com/llamaindex
+    ats: ashby
+
+  - name: Luma AI
+    url: https://jobs.ashbyhq.com/lumaai
+    ats: ashby
+
+  - name: Mercor
+    url: https://jobs.ashbyhq.com/mercor
+    ats: ashby
+
+  - name: Modal
+    url: https://jobs.ashbyhq.com/modal
     ats: ashby
 
   - name: NewsBreak
@@ -633,8 +783,16 @@ companies:
     url: https://jobs.ashbyhq.com/openai
     ats: ashby
 
+  - name: OpenEvidence
+    url: https://jobs.ashbyhq.com/openevidence
+    ats: ashby
+
   - name: Perplexity
     url: https://jobs.ashbyhq.com/perplexity
+    ats: ashby
+
+  - name: Pinecone
+    url: https://jobs.ashbyhq.com/pinecone
     ats: ashby
 
   - name: Replit
@@ -649,8 +807,16 @@ companies:
     url: https://jobs.ashbyhq.com/sierra
     ats: ashby
 
+  - name: Snorkel AI
+    url: https://job-boards.greenhouse.io/snorkelai
+    ats: greenhouse
+
   - name: Solace Health
     url: https://jobs.ashbyhq.com/solace
+    ats: ashby
+
+  - name: Suno
+    url: https://jobs.ashbyhq.com/suno
     ats: ashby
 
   - name: Tenstorrent
@@ -664,6 +830,18 @@ companies:
   - name: Truveta
     url: https://job-boards.greenhouse.io/truveta
     ats: greenhouse
+
+  - name: Unstructured
+    url: https://jobs.ashbyhq.com/unstructured
+    ats: ashby
+
+  - name: Weaviate
+    url: https://jobs.ashbyhq.com/weaviate
+    ats: ashby
+
+  - name: Writer
+    url: https://jobs.ashbyhq.com/writer
+    ats: ashby
 
   - name: xAI
     url: https://job-boards.greenhouse.io/xai
@@ -680,6 +858,10 @@ companies:
       applied_facets:
         locationCountry:
           - bc33aa3152ec42d4995f4791a106ed09
+
+  - name: Airbnb
+    url: https://job-boards.greenhouse.io/airbnb
+    ats: greenhouse
 
   - name: Alkami Technology
     url: https://alkami.wd12.myworkdayjobs.com/alkami
@@ -751,9 +933,17 @@ companies:
     options:
       max_jobs: 3000
 
+  - name: Dropbox
+    url: https://job-boards.greenhouse.io/dropbox
+    ats: greenhouse
+
   - name: eBay
     url: https://ebay.wd5.myworkdayjobs.com/apply
     ats: workday
+
+  - name: Epic Games
+    url: https://job-boards.greenhouse.io/epicgames
+    ats: greenhouse
 
   - name: Expedia
     url: https://expedia.wd108.myworkdayjobs.com/search
@@ -766,16 +956,6 @@ companies:
   - name: Figma
     url: https://job-boards.greenhouse.io/figma
     ats: greenhouse
-
-  - name: Gartner
-    url: https://gartner.wd5.myworkdayjobs.com/EXT
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        locationCountry:
-          - bc33aa3152ec42d4995f4791a106ed09
 
   - name: Hewlett Packard Enterprise
     url: https://hpe.wd5.myworkdayjobs.com/Jobsathpe
@@ -877,6 +1057,10 @@ companies:
     url: https://job-boards.greenhouse.io/relaypro
     ats: greenhouse
 
+  - name: Riot Games
+    url: https://job-boards.greenhouse.io/riotgames
+    ats: greenhouse
+
   - name: Roblox
     url: https://job-boards.greenhouse.io/roblox
     ats: greenhouse
@@ -901,6 +1085,14 @@ companies:
 
   - name: Sony Interactive Entertainment
     url: https://job-boards.greenhouse.io/sonyinteractiveentertainmentglobal
+    ats: greenhouse
+
+  - name: Spotify
+    url: https://jobs.lever.co/spotify
+    ats: lever
+
+  - name: Squarespace
+    url: https://job-boards.greenhouse.io/squarespace
     ats: greenhouse
 
   - name: Twilio
@@ -947,18 +1139,26 @@ companies:
     url: https://job-boards.greenhouse.io/zscaler
     ats: greenhouse
 
-  - name: ZT Systems
-    url: https://connect.wd1.myworkdayjobs.com/ztsystemscareers
-    ats: workday
-
   # --- Consumer internet and fintech ---
 
   - name: Affirm
     url: https://job-boards.greenhouse.io/affirm
     ats: greenhouse
 
+  - name: Block
+    url: https://job-boards.greenhouse.io/block
+    ats: greenhouse
+
   - name: Brex
     url: https://job-boards.greenhouse.io/brex
+    ats: greenhouse
+
+  - name: Checkr
+    url: https://job-boards.greenhouse.io/checkr
+    ats: greenhouse
+
+  - name: Chime
+    url: https://job-boards.greenhouse.io/chime
     ats: greenhouse
 
   - name: Coinbase
@@ -969,12 +1169,36 @@ companies:
     url: https://job-boards.greenhouse.io/doordashusa
     ats: greenhouse
 
+  - name: Duolingo
+    url: https://job-boards.greenhouse.io/duolingo
+    ats: greenhouse
+
+  - name: Gusto
+    url: https://job-boards.greenhouse.io/gusto
+    ats: greenhouse
+
   - name: iCapital Network
     url: https://job-boards.greenhouse.io/icapitalnetwork
     ats: greenhouse
 
+  - name: Instacart
+    url: https://job-boards.greenhouse.io/instacart
+    ats: greenhouse
+
+  - name: Klaviyo
+    url: https://job-boards.greenhouse.io/klaviyo
+    ats: greenhouse
+
   - name: Lyft
     url: https://job-boards.greenhouse.io/lyft
+    ats: greenhouse
+
+  - name: Mercury
+    url: https://job-boards.greenhouse.io/mercury
+    ats: greenhouse
+
+  - name: Nextdoor
+    url: https://job-boards.greenhouse.io/nextdoor
     ats: greenhouse
 
   - name: Plaid
@@ -997,7 +1221,15 @@ companies:
     url: https://job-boards.greenhouse.io/stripe
     ats: greenhouse
 
+  - name: Toast
+    url: https://job-boards.greenhouse.io/toast
+    ats: greenhouse
+
   # --- Semiconductors and hardware ---
+
+  - name: AMD
+    url: https://careers.amd.com/jobs
+    ats: jibe
 
   - name: Analog Devices
     url: https://analogdevices.wd1.myworkdayjobs.com/External
@@ -1035,16 +1267,6 @@ companies:
         Location_Country:
           - bc33aa3152ec42d4995f4791a106ed09
 
-  - name: GlobalFoundries
-    url: https://globalfoundries.wd1.myworkdayjobs.com/External
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        locationCountry:
-          - bc33aa3152ec42d4995f4791a106ed09
-
   - name: Intel
     url: https://intel.wd1.myworkdayjobs.com/External
     ats: workday
@@ -1061,10 +1283,6 @@ companies:
         Country:
           - bc33aa3152ec42d4995f4791a106ed09
 
-  - name: Marvell
-    url: https://marvell.wd1.myworkdayjobs.com/MarvellCareers
-    ats: workday
-
   - name: Micron
     url: https://micron.wd1.myworkdayjobs.com/External
     ats: workday
@@ -1078,22 +1296,6 @@ companies:
           - bff7a31dbdd30107ee937f0caa010862
           - bff7a31dbdd3011b9dce800caa010a62
 
-  - name: Moog
-    url: https://moog.wd5.myworkdayjobs.com/moog_external_career_site
-    ats: workday
-    options:
-      max_jobs: 3000
-
-  - name: NXP
-    url: https://nxp.wd3.myworkdayjobs.com/careers
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        Location_Country:
-          - bc33aa3152ec42d4995f4791a106ed09
-
   - name: Samsung Semiconductor
     url: https://sec.wd3.myworkdayjobs.com/Samsung_Careers
     ats: workday
@@ -1102,26 +1304,6 @@ companies:
       max_jobs: 3000
       applied_facets:
         Location_Country:
-          - bc33aa3152ec42d4995f4791a106ed09
-
-  - name: Teledyne
-    url: https://flir.wd1.myworkdayjobs.com/flircareers
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        locationCountry:
-          - bc33aa3152ec42d4995f4791a106ed09
-
-  - name: Vishay
-    url: https://vishay.wd3.myworkdayjobs.com/VishayCareers
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        locationCountry:
           - bc33aa3152ec42d4995f4791a106ed09
 
   # --- Autonomy, robotics and mobility ---
@@ -1200,10 +1382,6 @@ companies:
     url: https://job-boards.greenhouse.io/akunacapital
     ats: greenhouse
 
-  - name: Ascensus
-    url: https://ascensushr.wd1.myworkdayjobs.com/ascensuscareers
-    ats: workday
-
   - name: Broadridge
     url: https://broadridge.wd5.myworkdayjobs.com/careers
     ats: workday
@@ -1272,17 +1450,9 @@ companies:
         locationCountry:
           - bc33aa3152ec42d4995f4791a106ed09
 
-  - name: PIMCO
-    url: https://pimco.wd1.myworkdayjobs.com/pimco-careers
-    ats: workday
-
   - name: Point72
     url: https://job-boards.greenhouse.io/point72
     ats: greenhouse
-
-  - name: Raymond James Financial
-    url: https://raymondjames.wd1.myworkdayjobs.com/RaymondJamesCareers
-    ats: workday
 
   - name: SS&C
     url: https://ssctech.wd1.myworkdayjobs.com/ssctechnologies
@@ -1298,6 +1468,10 @@ companies:
         Location_Country:
           - bc33aa3152ec42d4995f4791a106ed09
 
+  - name: T. Rowe Price
+    url: https://troweprice.wd5.myworkdayjobs.com/TRowePrice
+    ats: workday
+
   - name: Tower Research Capital
     url: https://job-boards.greenhouse.io/towerresearchcapital
     ats: greenhouse
@@ -1311,10 +1485,6 @@ companies:
     ats: greenhouse
 
   # --- Banks, payments and insurance ---
-
-  - name: AAA Club Alliance
-    url: https://ace.wd5.myworkdayjobs.com/careers
-    ats: workday
 
   - name: Allstate
     url: https://allstate.wd5.myworkdayjobs.com/allstate_careers
@@ -1360,32 +1530,16 @@ companies:
     url: https://fnbcorp.wd501.myworkdayjobs.com/FNBCORP
     ats: workday
 
-  - name: Federal Reserve
-    url: https://rb.wd5.myworkdayjobs.com/FRS
+  - name: Freddie Mac
+    url: https://freddiemac.wd5.myworkdayjobs.com/External
     ats: workday
 
-  - name: Great American Insurance
-    url: https://gaig.wd1.myworkdayjobs.com/GAIG_External
+  - name: GEICO
+    url: https://geico.wd1.myworkdayjobs.com/External
     ats: workday
-
-  - name: Highmark Health
-    url: https://highmarkhealth.wd1.myworkdayjobs.com/highmark
-    ats: workday
-    options:
-      max_jobs: 3000
 
   - name: Huntington Bank
     url: https://huntington.wd12.myworkdayjobs.com/HNBcareers
-    ats: workday
-    options:
-      max_jobs: 3000
-
-  - name: Integrity Marketing Group
-    url: https://integritymarketing.wd1.myworkdayjobs.com/Integrity
-    ats: workday
-
-  - name: KeyBank
-    url: https://keybank.wd5.myworkdayjobs.com/External_Career_Site
     ats: workday
     options:
       max_jobs: 3000
@@ -1435,10 +1589,6 @@ companies:
       applied_facets:
         locationCountry:
           - bc33aa3152ec42d4995f4791a106ed09
-
-  - name: Texas Capital Bank
-    url: https://texascapitalbank.wd12.myworkdayjobs.com/Careers
-    ats: workday
 
   - name: TransUnion
     url: https://transunion.wd5.myworkdayjobs.com/TransUnion
@@ -1494,12 +1644,6 @@ companies:
     url: https://allegion.wd5.myworkdayjobs.com/careers
     ats: workday
 
-  - name: Becton Dickinson
-    url: https://bdx.wd1.myworkdayjobs.com/EXTERNAL_CAREER_SITE_USA
-    ats: workday
-    options:
-      max_jobs: 3000
-
   - name: Blissway
     url: https://jobs.ashbyhq.com/blissway
     ats: ashby
@@ -1507,16 +1651,6 @@ companies:
   - name: Caris
     url: https://wd12.myworkdaysite.com/recruiting/carislifesciences/CLS
     ats: workday
-
-  - name: Carrier Global
-    url: https://carrier.wd5.myworkdayjobs.com/jobs
-    ats: workday
-    # US jobs only, to keep Workday traffic down
-    options:
-      max_jobs: 3000
-      applied_facets:
-        location_Country:
-          - bc33aa3152ec42d4995f4791a106ed09
 
   - name: Danaher Corporation
     url: https://danaher.wd1.myworkdayjobs.com/DanaherJobs
@@ -1539,10 +1673,6 @@ companies:
   - name: Freeform
     url: https://job-boards.greenhouse.io/freeformfuturecorp
     ats: greenhouse
-
-  - name: GE Appliances
-    url: https://haier.wd3.myworkdayjobs.com/ge_appliances
-    ats: workday
 
   - name: Genuine Parts Company
     url: https://genpt.wd1.myworkdayjobs.com/Careers
@@ -1684,7 +1814,7 @@ companies:
     ats: amazon
     options:
       max_jobs: 500             # newest 500 US jobs in these categories
-      categories: [software-development, machine-learning-science, data-science, solutions-architect, business-intelligence, systems-quality-security-engineering, project-program-product-management-technical, hardware-development, research-science, database-administration]
+      categories: [software-development, machine-learning-science, data-science, solutions-architect, project-program-product-management-technical, research-science]
 
   - name: Apple
     url: https://jobs.apple.com/en-us/search?location=united-states-USA
@@ -1743,13 +1873,6 @@ companies:
       domain: johndeere.com
       max_jobs: 100
 
-  - name: Eaton
-    url: https://eaton.eightfold.ai/careers
-    ats: eightfold
-    options:
-      domain: eaton.com
-      max_jobs: 100
-
   - name: Boston Scientific
     url: https://bostonscientific.eightfold.ai/careers
     ats: eightfold
@@ -1765,10 +1888,6 @@ companies:
 
   - name: Oracle
     url: https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_45001/jobs
-    ats: oracle_hcm
-
-  - name: Texas Instruments
-    url: https://ebgj.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
 
   - name: Honeywell
@@ -1795,10 +1914,6 @@ companies:
     url: https://eofe.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
 
-  - name: Citizens
-    url: https://hcgn.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
-    ats: oracle_hcm
-
   - name: DTCC
     url: https://ebxr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
@@ -1815,14 +1930,6 @@ companies:
     url: https://edel.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
     ats: oracle_hcm
 
-  - name: onsemi
-    url: https://hctz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
-    ats: oracle_hcm
-
-  - name: Coherent
-    url: https://hcwp.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
-    ats: oracle_hcm
-
   - name: Nokia
     url: https://fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
@@ -1831,34 +1938,6 @@ companies:
     url: https://hdjq.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
 
-  - name: Cummins
-    url: https://fa-espx-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
-    ats: oracle_hcm
-
-  - name: Vertiv
-    url: https://egup.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
-    ats: oracle_hcm
-
   - name: Fortive
     url: https://ejta.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
-    ats: oracle_hcm
-
-  - name: Denso
-    url: https://hcwt.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
-    ats: oracle_hcm
-
-  - name: Hologic
-    url: https://ebwb.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
-    ats: oracle_hcm
-
-  - name: UL Solutions
-    url: https://fa-eups-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/ULSolutionsCareers/jobs
-    ats: oracle_hcm
-
-  - name: ADT
-    url: https://fa-erqb-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
-    ats: oracle_hcm
-
-  - name: Albertsons
-    url: https://eofd.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm

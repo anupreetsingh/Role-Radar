@@ -271,20 +271,26 @@ request per new match, at most `max_detail_requests` a check (the rest wait for 
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.
 
-The default role list covers application development (including full stack, frontend
-and backend), platforms/cloud, compilers/systems/embedded software, AI/research/data,
-security, testing, product/technical delivery, and customer-facing engineering.
+The default role list follows the candidate's resume: application development
+(including full stack, frontend and backend), platforms/cloud, distributed systems,
+compilers, performance and graphics, AI/LLM/ML and applied research, data engineering
+and data science, GRC engineering, test automation, technical program management and
+associate product manager programs, and forward-deployed and solutions engineering
+([why](docs/company-coverage.md#resume-alignment-september-2026)).
 It targets potential opportunities for a spring-2026 MS CS graduate; matching a title
 does not establish eligibility. Review the posting's experience, specialized skills,
-degree, graduation window and work authorization requirements separately. Research
-scientist and product/program roles in particular need this review. Graduation years
-and "new grad" are not required in titles, so unlabelled early-career openings can match.
+degree, graduation window and work authorization requirements separately. Program
+roles in particular need this review. Graduation years and "new grad" are not
+required in titles, so unlabelled early-career openings can match.
 
-The defaults exclude senior and leadership titles, while permitting Product Manager,
-Technical Program Manager and Technical Project Manager. "Member of Technical Staff"
-is also allowed. Continental Finance inherits the expanded role list and retains its
-"Mid/Senior Software Developer" exception for review, but now excludes purely senior
-roles and the same leadership titles as the defaults. The location rules target the
+The defaults exclude senior and leadership titles, while permitting Technical Program
+Manager and Associate Product Manager. "Member of Technical Staff" is also allowed.
+They also exclude off-profile titles the broad keywords catch: ERP/CRM platform
+developers (ServiceNow, SAP, Salesforce and similar), technical-writing "developers",
+and hardware or manufacturing titles (firmware, FPGA, ASIC, CNC, technician and
+similar). Continental Finance inherits the role list and retains its
+"Mid/Senior Software Developer" exception for review, but otherwise excludes the same
+titles as the defaults. The location rules target the
 US, Canada, Australia and India, including common region/city formats. Unqualified
 Remote/Worldwide listings are retained for eligibility review; other remote regions
 are not automatically included. Location-text matching is approximate and does not
