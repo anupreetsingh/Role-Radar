@@ -141,6 +141,63 @@ def test_workday_wants_details_only_when_filter_needs_them(filters, wanted):
     assert {j.job_id for j in listing.jobs if scraper.wants_details(j)} == wanted
 
 
+def scrape_rippling(url, *, details=(), described=(), max_pages=None):
+    pages, detail = fixture_json("rippling_jobs.json"), fixture_json("rippling_detail.json")
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == "/api/v2/board/acme/jobs":
+            return httpx.Response(200, json=pages[request.url.params["page"]])
+        if request.url.path == "/api/v2/board/acme/jobs/a1":
+            return httpx.Response(200, json=detail)
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company(url=url)
+            cfg.options = {"max_pages": max_pages} if max_pages else {}
+            scraper = SCRAPERS["rippling"](cfg, http)
+            result = await scraper.fetch_jobs()
+            for j in result.jobs:
+                if j.job_id in details:
+                    await scraper.fetch_details(j)
+            descriptions = {j.job_id: await scraper.fetch_description(j) for j in result.jobs if j.job_id in described}
+            return result, descriptions, seen
+
+    return asyncio.run(go())
+
+
+def test_rippling_merges_locations_and_reads_every_page():
+    result, _, seen = scrape_rippling("https://ats.rippling.com/en-GB/acme/jobs")  # locale prefix is skipped
+    jobs = {j.job_id: j for j in result.jobs}
+    assert list(jobs) == ["a1", "b2", "c3"] and result.complete
+    grad = jobs["a1"]
+    assert grad.title == "Software Engineer, New Grad" and grad.department == "Engineering"
+    assert grad.location == "Denver, CO, United States; Remote, United States"
+    assert grad.url == "https://ats.rippling.com/acme/jobs/a1" and grad.uid == "acme:rippling:a1"
+    assert jobs["c3"].location == "Latin America, Brazil (Remote)"
+    assert [u.split("?")[1] for u in seen] == ["page=0&pageSize=1000", "page=1&pageSize=1000"]
+
+
+def test_rippling_page_cap_leaves_listing_incomplete():
+    result, _, _ = scrape_rippling("https://ats.rippling.com/acme/jobs", max_pages=1)
+    assert not result.complete and {j.job_id for j in result.jobs} == {"a1", "b2"}
+
+
+def test_rippling_detail_gives_type_date_and_role_description():
+    result, descriptions, seen = scrape_rippling("https://ats.rippling.com/acme/jobs", details={"a1"}, described={"a1"})
+    grad = result.jobs[0]
+    assert grad.employment_type == "Salaried, full-time" and grad.date_posted == date(2026, 9, 20)
+    assert descriptions == {"a1": "<p>Requirements: 0-2 years of experience with Python.</p>"}  # not the company blurb
+    assert sum("/jobs/a1" in u for u in seen) == 1  # the description reuses the detail already read
+
+
+def test_rippling_fetches_description_when_details_were_not_needed():
+    _, descriptions, seen = scrape_rippling("https://ats.rippling.com/acme/jobs", described={"a1"})
+    assert descriptions["a1"].startswith("<p>Requirements") and sum("/jobs/a1" in u for u in seen) == 1
+
+
 def test_generic_json_ld():
     result = scrape("generic", "https://acme.example/careers", {"/careers": fixture_text("generic_jsonld.html")})
     (pe,) = result.jobs
@@ -185,6 +242,7 @@ def test_generic_empty_page_raises():
         ("https://jobs.eu.lever.co/acme", "lever"),
         ("https://jobs.ashbyhq.com/acme", "ashby"),
         ("https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite", "workday"),
+        ("https://ats.rippling.com/en-US/acme/jobs", "rippling"),
         ("https://www.acme.com/careers", "generic"),
     ],
 )

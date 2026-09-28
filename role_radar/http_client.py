@@ -36,6 +36,7 @@ DEFAULT_HOST_DELAYS = {
     "api.lever.co": 0.3,
     "api.eu.lever.co": 0.3,
     "api.ashbyhq.com": 0.3,
+    "ats.rippling.com": 0.5,
 }
 
 

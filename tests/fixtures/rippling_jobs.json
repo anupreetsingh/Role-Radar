@@ -1,0 +1,98 @@
+{
+ "0": {
+  "items": [
+   {
+    "id": "a1",
+    "name": "Software Engineer, New Grad",
+    "url": "https://ats.rippling.com/acme/jobs/a1",
+    "department": {
+     "name": "Engineering"
+    },
+    "locations": [
+     {
+      "name": "Denver, CO",
+      "country": "United States",
+      "countryCode": "US",
+      "state": "",
+      "stateCode": "",
+      "city": "Denver",
+      "workplaceType": "ON_SITE"
+     }
+    ],
+    "language": "en-US"
+   },
+   {
+    "id": "a1",
+    "name": "Software Engineer, New Grad",
+    "url": "https://ats.rippling.com/acme/jobs/a1",
+    "department": {
+     "name": "Engineering"
+    },
+    "locations": [
+     {
+      "name": "Remote",
+      "country": "United States",
+      "countryCode": "US",
+      "state": "",
+      "stateCode": "",
+      "city": "",
+      "workplaceType": "REMOTE"
+     }
+    ],
+    "language": "en-US"
+   },
+   {
+    "id": "b2",
+    "name": "Account Executive",
+    "url": "https://ats.rippling.com/acme/jobs/b2",
+    "department": {
+     "name": "Sales"
+    },
+    "locations": [
+     {
+      "name": "London",
+      "country": "United Kingdom",
+      "countryCode": "GB",
+      "state": "",
+      "stateCode": "",
+      "city": "London",
+      "workplaceType": "ON_SITE"
+     }
+    ],
+    "language": "en-US"
+   }
+  ],
+  "page": 0,
+  "pageSize": 3,
+  "totalItems": 4,
+  "totalPages": 2
+ },
+ "1": {
+  "items": [
+   {
+    "id": "c3",
+    "name": "Data Engineer",
+    "url": "https://ats.rippling.com/acme/jobs/c3",
+    "department": {
+     "name": "Data"
+    },
+    "locations": [
+     {
+      "name": "Latin America",
+      "country": "Brazil",
+      "countryCode": "BR",
+      "state": "",
+      "stateCode": "",
+      "city": "São Paulo",
+      "workplaceType": "REMOTE"
+     }
+    ],
+    "language": "en-US"
+   }
+  ],
+  "page": 1,
+  "pageSize": 3,
+  "totalItems": 4,
+  "totalPages": 2
+ }
+}

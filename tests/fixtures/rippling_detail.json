@@ -1,0 +1,19 @@
+{
+ "uuid": "a1",
+ "name": "Software Engineer, New Grad",
+ "description": {
+  "company": "<p>Acme has served customers for 15+ years.</p>",
+  "role": "<p>Requirements: 0-2 years of experience with Python.</p>"
+ },
+ "workLocations": [
+  "Denver, CO",
+  "Remote"
+ ],
+ "employmentType": {
+  "label": "SALARIED_FT",
+  "id": "Salaried, full-time"
+ },
+ "createdOn": "2026-09-20T08:00:07.452000-07:00",
+ "url": "https://ats.rippling.com/acme/jobs/a1",
+ "unlistedFromSearch": false
+}

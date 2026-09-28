@@ -129,6 +129,7 @@ alert again. The previous version behaved the same way.
 | Greenhouse | `boards-api.greenhouse.io/v1/boards/{token}/jobs` | no |
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
+| Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
 | Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
 | MathWorks | Official RSS job feed, including EDG | no |
 | HRM Direct / ClearCompany | Public search-results table, including malformed job links | no |
@@ -267,7 +268,7 @@ recorded without alerting, with the reason (`dropped_for` on the stored job, and
 
 Where descriptions come from: the listing already has them for Ashby, Lever, amazon.jobs
 (basic qualifications), Google (minimum qualifications), Meta (from the job page it
-already reads) and TikTok. Greenhouse, Workday, Oracle HCM, Eightfold and Apple take one
+already reads) and TikTok. Greenhouse, Workday, Rippling, Oracle HCM, Eightfold and Apple take one
 request per new match, at most `max_detail_requests` a check (the rest wait for the next
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.
@@ -645,8 +646,8 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
 
 - The defaults allow 16 requests in flight overall, 40 companies in flight, and one
   request per second per host. The shared ATS APIs are exceptions:
-  `boards-api.greenhouse.io` gets 0.25 s, and `api.lever.co` / `api.ashbyhq.com` get
-  0.3 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
+  `boards-api.greenhouse.io` gets 0.25 s, `api.lever.co` / `api.ashbyhq.com` get
+  0.3 s, and `ats.rippling.com` gets 0.5 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
   subdomains, and subdomains under a parent-domain key share one rate. An HTTP 429
   pauses every host sharing that rate for the Retry-After time (or 60 s). Most boards
   take one request, so a full round of 1,000 companies takes a few minutes, and the
