@@ -299,6 +299,19 @@ def test_migration_stops_when_the_lease_is_taken(table):
     assert set(DynamoStateStore(*table).load().companies) == {"Acme"}  # nothing written after the loss
 
 
+def test_hourly_stats_add_up_per_runner_and_hour(table):
+    store = DynamoStateStore(table[0], table[1])
+    store.record_stats("laptop", "2026-09-28T08", {"checked": 5, "alerts": 0})
+    store.record_stats("laptop", "2026-09-28T09", {"checked": 3, "new_jobs": 2})
+    store.record_stats("laptop", "2026-09-28T09", {"checked": 4, "matches": 1})
+    store.record_stats("lambda", "2026-09-28T09", {"checked": 10})
+    store.record_stats("lambda", "2026-09-28T09", {"checked": 0})  # nothing to add: no write
+    rows = sorted(store.load_stats("2026-09-28T09"), key=lambda r: r["runner"])
+    assert rows == [{"hour": "2026-09-28T09", "runner": "lambda", "checked": 10},
+                    {"hour": "2026-09-28T09", "runner": "laptop", "checked": 7, "new_jobs": 2, "matches": 1}]
+    assert store.load().companies == {}  # stats rows aren't companies
+
+
 def test_runner_switches_round_trip_and_survive_migration(table):
     store = DynamoStateStore(table[0], table[1])
     assert store.load_switches() == {}  # nothing stored: both runners on

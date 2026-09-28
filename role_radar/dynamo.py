@@ -6,6 +6,7 @@
   #lease        #lease                     who may check companies right now (lease.py)
   #alerts       <time>#<company>#<uid>     log of sent alerts for `status`; expire via TTL
   #runs         <runner>                   each runner's last pass, for `status`
+  #stats        <hour>#<runner>            a runner's activity counts for one UTC hour; expire via TTL
 
 Company names can't start with "#" (the config loader rejects them), so they
 never collide with the rows the store keeps for itself.
@@ -29,7 +30,8 @@ from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
 from role_radar.storage import (
-    SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore, compact, to_iso,
+    STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore,
+    compact, to_iso,
 )
 
 log = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ ALERTS = "#alerts"
 RUNS = "#runs"
 DIGEST = "#digest"
 SWITCHES = "#switches"
+STATS = "#stats"
 ALERT_TTL = 30 * 86400  # seconds an alert-log row lives (the table's TTL attribute is "ttl")
 MAX_TRANSACTION = 100  # DynamoDB's limit on actions per TransactWriteItems
 TRANSACTION_ATTEMPTS = 11
@@ -384,6 +387,32 @@ class DynamoStateStore(StateStore):
                 if not _RETRYABLE_TXN.intersection(reasons) or attempt == TRANSACTION_ATTEMPTS - 1:
                     raise
                 _backoff(attempt, cap=5.0)
+
+    def record_stats(self, runner: str, hour: str, counts: dict[str, int]) -> None:
+        """Add to the hour's row with one update (not fenced: it's informational)."""
+        counts = {name: value for name, value in counts.items() if value}
+        if not counts:
+            return
+        names = {f"#c{i}": name for i, name in enumerate(counts)}
+        values = {f":c{i}": {"N": str(value)} for i, value in enumerate(counts.values())}
+        self.client.update_item(
+            TableName=self.table, Key=_key(STATS, f"{hour}#{runner}"),
+            UpdateExpression="SET #ttl = :ttl ADD " + ", ".join(f"#c{i} :c{i}" for i in range(len(counts))),
+            ExpressionAttributeNames={**names, "#ttl": "ttl"},
+            ExpressionAttributeValues={**values, ":ttl": {"N": str(int(self.clock() + STATS_KEPT.total_seconds()))}},
+        )
+
+    def load_stats(self, since: str) -> list[dict[str, Any]]:
+        rows = self._query(
+            STATS, KeyConditionExpression="pk = :pk AND sk >= :since", ConsistentRead=False,
+            ExpressionAttributeValues={":pk": {"S": STATS}, ":since": {"S": since}},
+        )
+        out = []
+        for row in rows:
+            hour, runner = row.pop("sk").split("#", 1)
+            counts = {k: v for k, v in row.items() if k not in ("pk", "ttl")}
+            out.append({"hour": hour, "runner": runner, **counts})
+        return out
 
     def record_run(self, runner: str, summary: dict[str, Any]) -> None:
         """Remember a runner's last pass for `status` (not fenced: it's informational)."""

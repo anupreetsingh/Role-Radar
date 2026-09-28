@@ -75,3 +75,43 @@ def test_switches_survive_the_json_state_file():
 ])
 def test_who_is_checking(switches, holder, pid, expected):
     assert ui.checking(switches, holder, pid) == expected
+
+
+def test_activity_fills_every_hour_and_counts_the_mac_and_lambda_apart():
+    from datetime import datetime, timezone
+
+    store = MemoryStateStore()
+    store.record_stats("laptop", "2026-09-27T09", {"checked": 99})  # 25 hours ago: too old
+    store.record_stats("laptop", "2026-09-28T08", {"checked": 5, "new_jobs": 3, "matches": 1, "alerts": 1})
+    store.record_stats("cli", "2026-09-28T08", {"checked": 1})
+    store.record_stats("lambda", "2026-09-28T09", {"checked": 7, "failed": 2})
+    day = ui.activity(store, datetime(2026, 9, 28, 9, 30, tzinfo=timezone.utc))
+    assert len(day["hours"]) == 24
+    assert day["hours"][0] == {"start": "2026-09-27T10:00:00Z", "mac": 0, "lambda": 0}
+    assert day["hours"][-2:] == [{"start": "2026-09-28T08:00:00Z", "mac": 6, "lambda": 0},
+                                 {"start": "2026-09-28T09:00:00Z", "mac": 0, "lambda": 7}]
+    assert {k: day[k] for k in ("checked", "failed", "new_jobs", "matches", "alerts")} == {
+        "checked": 13, "failed": 2, "new_jobs": 3, "matches": 1, "alerts": 1}
+
+
+def test_stats_survive_the_json_state_file_and_old_hours_are_dropped(tmp_path):
+    from role_radar.storage import JsonStateStore
+
+    store = JsonStateStore(tmp_path / "state.json")
+    store.record_stats("laptop", "2026-09-25T09", {"checked": 1})
+    store.record_stats("laptop", "2026-09-28T09", {"checked": 2})
+    assert JsonStateStore(tmp_path / "state.json").load_stats("2000-01-01T00") == [
+        {"hour": "2026-09-28T09", "runner": "laptop", "checked": 2}]
+
+
+def test_snapshot_shows_the_latest_pass_and_whether_alerts_are_off(served):
+    base, store = served
+    store.record_run("lambda", {"finished_at": "2026-09-28T09:00:00Z", "checked": 3, "pending": 5, "failing": 1})
+    store.record_run("laptop:mac", {"finished_at": "2026-09-28T09:10:00Z", "checked": 40, "failed": 0, "pending": 4})
+    store.save_switch("discord", False)
+    store.save_switch("email", False)
+    status, state = call(base + "/api/state")
+    assert status == 200 and state["alerts_off"] is True
+    assert state["latest_pass"] == {"runner": "laptop", "finished_at": "2026-09-28T09:10:00Z", "checked": 40,
+                                    "failed": 0, "seconds": None, "failing": None, "pending": 4}
+    assert len(state["activity"]["hours"]) == 24 and "next_digest" in state

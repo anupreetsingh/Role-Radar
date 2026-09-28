@@ -124,6 +124,8 @@ class PassResult:
     digest_jobs: int = 0
     digest_completed: int = 0
     digest_failed: bool = False
+    failing: int | None = None  # enabled companies whose last check failed, after this pass
+    pending: int | None = None  # matches waiting to be sent (the digest, or alerts switched off)
 
     @property
     def checked(self) -> list[CompanyOutcome]:
@@ -167,6 +169,20 @@ class PassResult:
             "requests": self.requests,
             "bytes": self.bytes,
             "lease_lost": self.lease_lost,
+            "failing": self.failing,
+            "pending": self.pending,
+        }
+
+    def counts(self) -> dict[str, int]:
+        """What this pass did, added to its runner's hourly activity (`status`, the menu bar app)."""
+        diffs = [o.diff for o in self.checked if o.diff]
+        return {
+            "checked": len(self.checked),
+            "failed": len(self.failed),
+            "new_jobs": sum(len(d.new) for d in diffs),
+            # New jobs that match; to_notify alone also holds matches still waiting from earlier checks.
+            "matches": sum(len({j.uid for j in d.new} & {j.uid for j in d.to_notify}) for d in diffs),
+            "alerts": self.alerts,
         }
 
 
@@ -583,6 +599,7 @@ async def run_pass(
         result.next_due = _next_due(companies, schedule, clock(), settings)
         if not baseline and not dry_run:
             await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
+        _health(result, config, schedule)
         result.seconds = time.monotonic() - started
         result.finished_at = clock()
         log.debug("Nothing due; next check at %s", to_iso(result.next_due) if result.next_due else "-")
@@ -635,11 +652,20 @@ async def run_pass(
     # Lambda with a backlog, which always works to the end of its window, would never send one.
     if not baseline and not dry_run and not result.lease_lost:
         await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved)
+    _health(result, config, schedule)
     result.seconds = time.monotonic() - started
     result.finished_at = clock()
     _log_pass(result, len(work), http, dry_run)
     write_step_summary(result.outcomes, result.alerts)
     return result
+
+
+def _health(result: PassResult, config: AppConfig, schedule: dict[str, CompanyMeta]) -> None:
+    """Failing companies and matches waiting to be sent, from the schedule as this pass left it."""
+    metas = [schedule[c.name] for c in config.companies if c.enabled and c.name in schedule]
+    result.failing = sum(1 for meta in metas if meta.failures)
+    # The digest's own saves don't reach `schedule`: take off what it sent.
+    result.pending = max(0, sum(meta.pending or 0 for meta in metas) - result.digest_completed)
 
 
 async def _digest(

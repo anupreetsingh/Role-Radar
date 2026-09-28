@@ -200,6 +200,13 @@ def cmd_status(args: argparse.Namespace) -> int:
             f"{run.get('undelivered', 0)} with undelivered alerts, {run.get('seconds', 0)}s"
         )
 
+    from role_radar import ui
+
+    day = ui.activity(backend.store, now)
+    mac, cloud = (sum(h[who] for h in day["hours"]) for who in ("mac", "lambda"))
+    print(f"Last 24 hours:  {day['checked']:,} checks (Mac {mac:,}, Lambda {cloud:,}), {day['failed']:,} failed, "
+          f"{day['new_jobs']:,} new jobs, {day['matches']:,} new matches, {day['alerts']:,} alerts sent")
+
     enabled = [c for c in config.companies if c.enabled]
     schedule = backend.store.load_schedule()
     interval = interval_for(config.settings)

@@ -74,7 +74,13 @@ def test_serve_takes_the_lease_checks_due_companies_and_releases_on_stop(table, 
     assert len(batch) == 2
     info = runner.lease.read()
     assert info.holder == "laptop:mac" and info.released_at  # released, so Lambda can take over at once
-    assert runner.store.last_runs()["laptop:mac"]["alerts"] == 2
+    run = runner.store.last_runs()["laptop:mac"]
+    assert run["alerts"] == 2 and run["pending"] == 0 and run["failing"] == 0
+    # The pass's activity went to the laptop's row for this hour.
+    (row,) = runner.store.load_stats("2000-01-01T00")
+    assert row["runner"] == "laptop"
+    assert {k: row.get(k, 0) for k in ("checked", "failed", "new_jobs", "matches", "alerts")} == {
+        "checked": 1, "failed": 0, "new_jobs": 4, "matches": 2, "alerts": 2}
 
 
 def test_serve_waits_for_the_holder_and_asks_it_to_hand_over(table, tmp_path, requests_made):

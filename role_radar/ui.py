@@ -11,11 +11,14 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 
 from role_radar.backends import Backend
-from role_radar.storage import RUNNERS, SWITCHES, switch_on
+from role_radar.storage import (
+    RUNNERS, SWITCHES, StateStore, alerts_off, hour_start, stats_hour, switch_on, to_iso, utcnow,
+)
 
 log = logging.getLogger(__name__)
 
@@ -24,19 +27,46 @@ log = logging.getLogger(__name__)
 WRITE_HEADER = "X-Role-Radar"
 
 
-def snapshot(backend: Backend, laptop_pid: Callable[[], int | None]) -> dict[str, Any]:
+ACTIVITY_HOURS = 24
+PASS_FIELDS = ("finished_at", "checked", "failed", "seconds", "failing", "pending")
+
+
+def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: datetime | None = None) -> dict[str, Any]:
     stored = backend.store.load_switches()
     switches = {name: switch_on(stored, name) for name in SWITCHES}
     lease = backend.lease.read()
     holder = lease.holder if lease and lease.holder and lease.held(time.time()) else None
     pid = laptop_pid()
+    runs = backend.store.last_runs()
+    latest = max(runs.items(), key=lambda run: run[1].get("finished_at", ""), default=None)
     return {
         "switches": switches,
         "checking": checking(switches, holder, pid),
         "lease_holder": holder,
         "laptop_app_pid": pid,
-        "last_runs": backend.store.last_runs(),
+        "last_runs": runs,
+        "activity": activity(backend.store, now or utcnow()),
+        "latest_pass": {"runner": latest[0].split(":", 1)[0], **{k: latest[1].get(k) for k in PASS_FIELDS}} if latest else None,
+        "next_digest": backend.store.load_digest().next_send_at,
+        "alerts_off": alerts_off(stored),
     }
+
+
+def activity(store: StateStore, now: datetime) -> dict[str, Any]:
+    """The last 24 hours, oldest hour first: checks per hour by the Mac and by Lambda, and totals.
+
+    `run --once` (runner "cli") counts as the Mac: it runs on it.
+    """
+    hours = [stats_hour(now - timedelta(hours=h)) for h in range(ACTIVITY_HOURS - 1, -1, -1)]
+    by_hour = {hour: {"start": to_iso(hour_start(hour)), "mac": 0, "lambda": 0} for hour in hours}
+    totals = dict.fromkeys(("checked", "failed", "new_jobs", "matches", "alerts"), 0)
+    for row in store.load_stats(hours[0]):
+        if row["hour"] not in by_hour:
+            continue
+        by_hour[row["hour"]]["lambda" if row["runner"] == "lambda" else "mac"] += row.get("checked", 0)
+        for name in totals:
+            totals[name] += row.get(name, 0)
+    return {"hours": list(by_hour.values()), **totals}
 
 
 def checking(switches: dict[str, bool], lease_holder: str | None, laptop_pid: int | None) -> str | None:

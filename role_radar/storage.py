@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 4  # 2: schedules; 3: channel receipts; 4: digest cadence. Older files still load.
 ALERT_LOG_SIZE = 50  # alerts the JSON store remembers for `status`
+STATS_KEPT = timedelta(days=2)  # how long hourly activity counts are kept
 
 
 def utcnow() -> datetime:
@@ -38,6 +39,15 @@ def to_iso(value: datetime) -> str:
 
 def from_iso(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def stats_hour(when: datetime) -> str:
+    """The UTC hour that activity at `when` is counted in, e.g. "2026-09-28T09"."""
+    return when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H")
+
+
+def hour_start(hour: str) -> datetime:
+    return datetime.strptime(hour, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc)
 
 
 RUNNERS = ("laptop", "lambda")  # the runners a switch can turn off
@@ -167,6 +177,8 @@ class MonitorState:
     digest: DigestSchedule = field(default_factory=DigestSchedule)
     # On/off switches for the runners and alert channels (SWITCHES); one not listed is on.
     switches: dict[str, bool] = field(default_factory=dict)
+    # Activity counts per runner per hour ("<hour>#<runner>" → counts), for `status` and the menu bar app.
+    stats: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
         return self.companies.setdefault(company, {})
@@ -211,6 +223,8 @@ class MonitorState:
             data["digest"] = compact(self.digest)
         if self.switches:
             data["switches"] = self.switches
+        if self.stats:
+            data["stats"] = self.stats
         return data
 
     @classmethod
@@ -222,7 +236,8 @@ class MonitorState:
         meta = {company: CompanyMeta.from_dict(m) for company, m in (data.get("schedule") or {}).items()}
         return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []),
                    digest=DigestSchedule.from_dict(data.get("digest") or {}),
-                   switches={k: bool(v) for k, v in (data.get("switches") or {}).items()})
+                   switches={k: bool(v) for k, v in (data.get("switches") or {}).items()},
+                   stats={k: dict(v) for k, v in (data.get("stats") or {}).items()})
 
 
 class StateStore(ABC):
@@ -270,6 +285,13 @@ class StateStore(ABC):
 
     def recent_alerts(self, limit: int = 10) -> list[dict]:
         """The latest alerts sent, newest first: company, title, location, url, notified_at, by."""
+        return []
+
+    def record_stats(self, runner: str, hour: str, counts: dict[str, int]) -> None:
+        """Add a pass's counts (checked, new_jobs, ...) to `runner`'s row for `hour` (stats_hour). Default: not kept."""
+
+    def load_stats(self, since: str) -> list[dict]:
+        """Every runner's hourly rows from hour `since` on: {"hour", "runner", and the counts}."""
         return []
 
 
@@ -343,6 +365,26 @@ class MemoryStateStore(StateStore):
     def recent_alerts(self, limit: int = 10) -> list[dict]:
         with self._lock:
             return [dict(a) for a in reversed(self._current().alerts[-limit:])]
+
+    def record_stats(self, runner: str, hour: str, counts: dict[str, int]) -> None:
+        with self._lock:
+            stats = self._current().stats
+            row = stats.setdefault(f"{hour}#{runner}", {})
+            for name, value in counts.items():
+                row[name] = row.get(name, 0) + value
+            oldest = stats_hour(hour_start(hour) - STATS_KEPT)
+            for key in [k for k in stats if k.split("#", 1)[0] < oldest]:
+                del stats[key]
+            self._persist()
+
+    def load_stats(self, since: str) -> list[dict]:
+        with self._lock:
+            rows = []
+            for key, counts in sorted(self._current().stats.items()):
+                hour, runner = key.split("#", 1)
+                if hour >= since:
+                    rows.append({"hour": hour, "runner": runner, **counts})
+            return rows
 
     def load(self) -> MonitorState:
         with self._lock:

@@ -32,7 +32,7 @@ from role_radar.config import AppConfig
 from role_radar.http_client import RobotsCache
 from role_radar.lease import Lease
 from role_radar.monitor import Notifiers, PassResult, Unsaved, run_pass
-from role_radar.storage import switch_on
+from role_radar.storage import stats_hour, switch_on
 
 log = logging.getLogger("runner")
 
@@ -115,6 +115,10 @@ class Runner:
         if (result.checked or result.lease_lost or result.digest_attempted or result.digest_failed or record_idle) and not kwargs.get("dry_run"):
             try:
                 await asyncio.to_thread(self.store.record_run, self.name, {**result.summary(), "holder": self.lease.holder})
+                counts = result.counts()
+                if any(counts.values()):  # "laptop", "lambda" or "cli"
+                    await asyncio.to_thread(self.store.record_stats, self.name.split(":", 1)[0],
+                                            stats_hour(result.finished_at or self.now()), counts)
             except Exception as exc:  # informational only
                 log.warning("Couldn't record the pass: %s", exc)
         return result
