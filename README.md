@@ -368,7 +368,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 |---|---|
 | `role-radar start` | Runs until you quit (Ctrl+C). Takes the lease and checks companies as they come due. If Lambda holds the lease, it asks Lambda to hand over and takes over once it has. |
 | `role-radar stop` | Asks a running `start` (for example the login item) to finish the companies in flight, release the lease and quit. |
-| `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, the latest alerts, and whether the pushed config matches your local file. |
+| `role-radar status` | Shows who holds the lease, each runner's last pass, which companies are due or failing, how many haven't had their first successful check yet (after adding companies, it reaches zero once every baseline is saved), the latest alerts, and whether the pushed config matches your local file. |
 | `role-radar doctor` | Checks setup without sending alerts or changing job state. Add `--stack role-radar --profile admin --region us-east-1` to inspect the deployed Lambda and EventBridge schedule. |
 | `role-radar notifications test` | Sends a labeled test through the configured channels without changing job state. Add `--channel email` or `--channel discord` to test one. |
 | `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease), `--baseline` (record everything as seen, no alerts) or `--local-config` (read the local file instead of the pushed copy). |
@@ -457,9 +457,10 @@ The stack creates:
 - The DynamoDB table (provisioned 25 RCU / 25 WCU, TTL, point-in-time recovery,
   deletion protection).
 - The config bucket (versioned, private).
-- The Lambda (arm64, 512 MB, 14-minute timeout, reserved concurrency 1, outside any VPC,
+- The Lambda (arm64, 1 GB, 14-minute timeout, reserved concurrency 1, outside any VPC,
   so no NAT gateway) and its 5-minute EventBridge schedule.
-- A CloudWatch error alarm with an email subscription, and a $5/month AWS Budget alert.
+- CloudWatch error and falling-behind alarms with an email subscription, and a $5/month
+  AWS Budget alert.
 - `LaptopPolicy`, an IAM policy for the laptop user.
 
 The table and bucket are kept even if the stack is deleted.
@@ -536,17 +537,20 @@ laptop takes over.
 
 ## Costs
 
-After the credits run out, everything here stays within AWS's always-free allowances,
-except S3 requests (fractions of a cent) and point-in-time recovery (about $0.20 per
-GB-month of a table that's a few MB). Expect **about $0.01–0.05 a month**. The $5 budget
-emails you at 80% of actual spend, or if the month is forecast to exceed $5.
+After the credits run out, everything here stays within AWS's always-free allowances
+except Lambda, S3 requests (fractions of a cent) and point-in-time recovery (about $0.20
+per GB-month of the table). With ~4,500 companies, a Lambda pass takes a few minutes
+(mostly waiting out the Workday request spacing), so while the laptop runner is off
+Lambda uses roughly 1–1.6M GB-s a month at 1 GB: **about $10–16 a month** over the free
+400,000 GB-s. While the laptop runs, Lambda costs next to nothing. The $5 budget emails
+you at 80% of actual spend, or if the month is forecast to exceed $5.
 
 | Service | This project's use | Always-free allowance (checked 2026-09-26) |
 |---|---|---|
-| Lambda (arm64, 512 MB) | 8,640 runs/month. When the laptop is off, about 10–60 s each: 43k–259k GB-s. Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
+| Lambda (arm64, 1 GB) | 8,640 runs/month. When the laptop is off, with ~4,500 companies, about 2–3 minutes each: roughly 1–1.6M GB-s. Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
 | DynamoDB (provisioned) | 25 RCU / 25 WCU, a few MB. A check costs about 4 WCU (transactional writes cost 2 per item) and 6 RCU | 25 WCU, 25 RCU, 25 GB per region ([pricing](https://aws.amazon.com/dynamodb/pricing/provisioned/), [transactions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)) |
 | EventBridge Scheduler | 8,640 invocations/month | 14M per month ([pricing](https://aws.amazon.com/eventbridge/pricing/)) |
-| CloudWatch | Under 1 GB of logs/month (kept 14 days), 1 alarm | 5 GB of logs, 10 alarms ([pricing](https://aws.amazon.com/cloudwatch/pricing/)) |
+| CloudWatch | A few GB of logs/month (kept 14 days), 2 alarms, 2 custom metrics | 5 GB of logs, 10 alarms, 10 custom metrics ([pricing](https://aws.amazon.com/cloudwatch/pricing/)) |
 | SNS | A few alarm emails | 1,000 emails per month ([pricing](https://aws.amazon.com/sns/pricing/)) |
 | AWS Budgets | 1 budget with email alerts | Monitoring and notifications are free ([pricing](https://aws.amazon.com/aws-cost-management/aws-budgets/pricing/)) |
 | SSM Parameter Store | A handful of standard SecureString parameters | Standard parameters and standard throughput are free ([pricing](https://aws.amazon.com/systems-manager/pricing/)) |
@@ -616,8 +620,14 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   the login item (rotated at 5 MB). Lambda logs to CloudWatch:
   `aws logs tail /aws/lambda/role-radar-monitor --follow --profile admin`.
 - **Error alarm.** It emails you when a Lambda run fails: alerts that couldn't be
-  delivered, every company failing, a bad config, or missing permissions. Single broken
-  sites don't trip it; `role-radar status` lists them.
+  delivered, every company failing, a bad config, or missing permissions, and also
+  when Lambda runs out of memory or times out. Single broken sites don't trip it;
+  `role-radar status` lists them.
+- **Falling-behind alarm.** Each pass publishes how many due companies it ran out of
+  time for (`RoleRadar/LeftForLater`). If every pass for six hours left some, it emails
+  you: alerts are running late. Right after adding many companies it can fire while
+  their baselines are saved; otherwise raise the Lambda's `MemorySize` or check fewer
+  companies.
 - **Changing companies or filters.** Edit `config/companies.yaml`, then
   `role-radar config push`. A running laptop app picks it up within 5 minutes, and Lambda
   at its next run. `status` warns when your local file and the pushed copy differ.

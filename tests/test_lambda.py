@@ -1,5 +1,6 @@
 """lambda_handler against fake AWS (moto): S3 config, DynamoDB state and lease, SSM secrets."""
 
+import json
 import time
 
 import httpx
@@ -96,6 +97,15 @@ def test_lambda_checks_due_companies_then_releases_the_lease(deployed, sites, di
 
     again = lambda_handler.handler({}, FakeContext())  # 5 minutes later: nothing due
     assert again["checked"] == 0 and sites["requests"] == 1
+
+
+def test_lambda_publishes_how_many_due_companies_it_left_for_later(deployed, sites, discord, capsys):
+    lambda_handler.handler({}, FakeContext())
+    lines = [line for line in capsys.readouterr().out.splitlines() if '"_aws"' in line]
+    assert len(lines) == 1
+    emf = json.loads(lines[0])
+    assert emf["_aws"]["CloudWatchMetrics"][0]["Namespace"] == "RoleRadar"
+    assert (emf["LeftForLater"], emf["CompaniesChecked"]) == (0, 1)
 
 
 def test_lambda_exits_at_once_while_the_laptop_holds_the_lease(deployed, sites):

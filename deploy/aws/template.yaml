@@ -107,7 +107,7 @@ Resources:
       Handler: lambda_handler.handler
       Runtime: python3.13 # `sam build` needs a local python3.13 (or use --use-container)
       Architectures: [arm64]
-      MemorySize: 512 # 256 ran out of memory (and CPU) with ~340 companies
+      MemorySize: 1024 # 256 ran out of memory (and CPU) with ~340 companies; 512 peaked at 397 MB with ~4,500
       Timeout: 840 # 14 minutes: it stops starting companies after 10 (ROLE_RADAR_WORK_SECONDS)
       ReservedConcurrentExecutions: !If [ReserveConcurrency, !Ref ReservedConcurrency, !Ref AWS::NoValue]
       LoggingConfig:
@@ -192,6 +192,25 @@ Resources:
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+  BehindAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: >-
+        Role Radar is falling behind: for 6 hours every Lambda pass ran out of time with due
+        companies still unchecked, so alerts are running late. Raise MemorySize, or check
+        fewer companies (or check quiet ones less often). `role-radar status` shows the backlog.
+      Namespace: RoleRadar # published by lambda_handler._publish_metrics
+      MetricName: LeftForLater
+      Statistic: Minimum # one pass in the hour that caught up keeps the hour healthy
+      Period: 3600
+      EvaluationPeriods: 6
+      DatapointsToAlarm: 6
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching # no Lambda passes while the laptop holds the lease
       AlarmActions: [!Ref AlarmTopic]
       OKActions: [!Ref AlarmTopic]
 

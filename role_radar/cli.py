@@ -204,6 +204,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     upcoming = next_due(enabled, schedule, now, interval)
     line = f"Companies:      {len(enabled)} enabled, {len(due)} due now"
     print(line + (f", next due {when(upcoming)}" if not due and upcoming else ""))
+    # A company is saved once a check succeeds (the same test as CompanyRecord.is_new).
+    unsaved = sum(1 for c in enabled if not ((m := schedule.get(c.name)) and (m.last_ok_at or (m.last_checked_at and not m.failures))))
+    if unsaved:
+        print(f"                {unsaved} not saved yet: waiting for a first successful check")
     names = {c.name for c in enabled}
     failing = sorted(((n, m) for n, m in schedule.items() if m.failures and n in names), key=lambda nm: -nm[1].failures)
     for name, meta in failing[:5]:

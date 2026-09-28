@@ -66,6 +66,15 @@ def test_dry_run_saves_nothing(config, capsys):
     assert not (config.parent / "state.json").exists()
 
 
+def test_status_counts_companies_not_saved_yet(config, capsys):
+    assert cli.main(["status", "--config", str(config)]) == 0
+    assert "1 not saved yet: waiting for a first successful check" in capsys.readouterr().out
+    cli.main(["run", "--once", "--config", str(config)])
+    capsys.readouterr()
+    cli.main(["status", "--config", str(config)])
+    assert "not saved yet" not in capsys.readouterr().out
+
+
 def test_status_after_a_run(config, capsys):
     cli.main(["run", "--once", "--config", str(config)])
     capsys.readouterr()

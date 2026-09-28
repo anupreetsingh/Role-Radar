@@ -12,8 +12,10 @@ ROLE_RADAR_SECRETS=ssm:/role-radar/, ROLE_RADAR_WORK_SECONDS.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+import time
 from typing import Any
 
 from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend
@@ -59,9 +61,30 @@ def handler(event: Any, context: Any) -> dict[str, Any]:
         return {"skipped": True, "reason": result.reason}
 
     summary = result.summary()
+    _publish_metrics(summary)
     # Raise (so the CloudWatch error alarm fires) only for problems worth an email:
     # alerts that couldn't be delivered, or every company failing (e.g. no network).
     # Single broken sites show up in `role-radar status` instead.
     if result.exit_code in (EXIT_FAILED, EXIT_NOTHING):
         raise RuntimeError(f"Role Radar pass failed: {summary}")
     return summary
+
+
+METRIC_NAMESPACE = "RoleRadar"
+
+
+def _publish_metrics(summary: dict[str, Any]) -> None:
+    """Report the pass as CloudWatch metrics, via one Embedded Metric Format log line.
+
+    LeftForLater counts due companies the pass ran out of time for. The template's
+    falling-behind alarm fires when every pass leaves some for hours on end.
+    """
+    metrics = {"LeftForLater": summary["skipped"], "CompaniesChecked": summary["checked"]}
+    print(json.dumps({
+        "_aws": {
+            "Timestamp": int(time.time() * 1000),
+            "CloudWatchMetrics": [{"Namespace": METRIC_NAMESPACE, "Dimensions": [[]],
+                                   "Metrics": [{"Name": name, "Unit": "Count"} for name in metrics]}],
+        },
+        **metrics,
+    }), flush=True)
