@@ -306,5 +306,5 @@ Outputs:
     Description: Attach to the laptop's IAM user
     Value: !Ref LaptopPolicy
   RuntimeSection:
-    Description: Paste into the runtime section of your local config/companies.yaml
+    Description: Paste into the runtime section of your config/profile.yaml
     Value: !Sub "storage: dynamodb | table: ${StateTable} | config_url: s3://${ConfigBucket}/companies.yaml | secrets: ssm:/${SsmPathName}/ | region: ${AWS::Region}"

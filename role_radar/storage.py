@@ -179,6 +179,32 @@ def waiting(job: SeenJob) -> bool:
     return job.matched and not job.notified_at and not job.duplicate_of
 
 
+def queue_changes(record: CompanyRecord, current: dict[str, dict], loaded: dict[str, dict]) -> list[tuple[str, str, SeenJob | None]]:
+    """How a save changes the company's rows in Live Tracking's list, from its job rows before and after.
+
+    ("put", uid, job): it's waiting (new, or its fields changed); ("done", uid, job): the
+    digest applied the user's skip; ("delete", uid, None): it stopped waiting (sent, dropped, pruned).
+    """
+    changes: list[tuple[str, str, SeenJob | None]] = []
+    for uid in current.keys() | loaded.keys():
+        before, after = loaded.get(uid), current.get(uid)
+        if before == after:
+            continue
+        job = record.jobs.get(uid)
+        if job and _waiting_row(after):
+            changes.append(("put", uid, job))
+        elif job and job.dropped_for == SKIPPED and _waiting_row(before):
+            changes.append(("done", uid, job))
+        elif _waiting_row(before):
+            changes.append(("delete", uid, None))
+    return changes
+
+
+def _waiting_row(attrs: dict | None) -> bool:
+    """waiting() for a stored job row (compact(SeenJob))."""
+    return bool(attrs and attrs.get("matched") and not attrs.get("notified_at") and not attrs.get("duplicate_of"))
+
+
 @dataclass
 class QueuedMatch:
     """A match waiting for the digest, as Live Tracking lists it."""

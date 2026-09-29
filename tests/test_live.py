@@ -36,10 +36,14 @@ def companies(*names):
     )
 
 
-@pytest.fixture(params=["json", "dynamodb"])
+@pytest.fixture(params=["json", "sqlite", "dynamodb"])
 def store_factory(request, tmp_path):
     if request.param == "json":
         return lambda: JsonStateStore(tmp_path / "state.json")
+    if request.param == "sqlite":
+        from role_radar.sqlite import SqliteStateStore
+
+        return lambda: SqliteStateStore(tmp_path / "state.db")
     from role_radar.dynamo import DynamoStateStore
 
     client, table = request.getfixturevalue("table")

@@ -6,9 +6,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
+import yaml
+
 from role_radar import aws
 from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend
-from role_radar.config import RuntimeSettings
+from role_radar.config import RuntimeSettings, combined, profile_path
 from role_radar.notifications import ConsoleNotifier, UnconfiguredNotifier
 from role_radar.storage import from_iso, utcnow
 
@@ -97,9 +99,13 @@ def diagnose(runtime: RuntimeSettings, path: Path | None, clients: AwsClients, s
         elif deployed:
             checks.append(Check("Stack outputs", False, "Missing Role Radar outputs; check the stack name."))
 
-    checks.append(Check("Automatic monitoring", runtime.storage == "dynamodb" and bool(runtime.config_url),
-                        "Shared AWS state and config selected" if runtime.storage == "dynamodb" and runtime.config_url
-                        else "Local mode only. Deploy the SAM stack and set runtime.storage/table/config_url/secrets from its outputs."))
+    if runtime.storage == "sqlite":
+        checks.append(Check("Automatic monitoring", True,
+                            "This Mac only: it checks while the menu bar app is open (README: Add AWS to check while it's off)"))
+    else:
+        checks.append(Check("Automatic monitoring", runtime.storage == "dynamodb" and bool(runtime.config_url),
+                            "Shared AWS state and config selected" if runtime.storage == "dynamodb" and runtime.config_url
+                            else "Local mode only. Deploy the SAM stack and set runtime.storage/table/config_url/secrets from its outputs."))
 
     def config() -> str:
         source = ConfigSource(runtime, path, clients)
@@ -107,7 +113,7 @@ def diagnose(runtime: RuntimeSettings, path: Path | None, clients: AwsClients, s
         count = sum(c.enabled for c in loaded.companies)
         if not count:
             raise DiagnosticError("No companies enabled.")
-        if runtime.config_url and path and path.read_text(encoding="utf-8") != source.read_text():
+        if runtime.config_url and path and combined(path, profile_path(path)) != yaml.safe_load(source.read_text()):
             raise DiagnosticError("Local config differs from S3. Run role-radar config push after connecting the local runtime.")
         return f"{count} enabled company/companies; config readable"
 
@@ -138,7 +144,7 @@ def diagnose(runtime: RuntimeSettings, path: Path | None, clients: AwsClients, s
         return ", ".join(n.name for n in configured) + " configured; delivery not tested"
 
     check("Notifications", channels)
-    if not stack:
+    if not stack and runtime.storage == "dynamodb":
         checks.append(Check("AWS deployment inspection", False,
                             "Use doctor --stack role-radar --profile PROFILE --region REGION to inspect Lambda and EventBridge."))
     return checks

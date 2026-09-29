@@ -1,11 +1,16 @@
 """Pick the backends from RuntimeSettings, so one codebase serves the laptop, Lambda and tests.
 
-  storage: json       → JsonStateStore(state_file) + LocalLease (one process, nothing to share)
-  storage: dynamodb   → DynamoStateStore + DynamoLease, sharing one table
-  config_url: s3://…  → companies and settings come from that object; a local file
-                        then only supplies the `runtime:` section
+  storage: sqlite     → SqliteStateStore(state_file) + LocalLease: everything on this Mac
+  storage: dynamodb   → DynamoStateStore + DynamoLease, sharing one table with Lambda
+  storage: json       → JsonStateStore(state_file) + LocalLease (one process: tests, dry runs)
+  config_url: s3://…  → companies and settings come from that object (what `config push`
+                        uploaded); the local files then only supply the `runtime:` section
+  secrets: keychain   → Discord/SMTP settings from this Mac's Keychain (keychain.py)
   secrets: ssm:/path/ → Discord/SMTP settings from Parameter Store, fetched the
                         first time an alert is actually sent
+
+The local config is the companies file with the profile beside it applied
+(config.py): the profile holds the `runtime:` section and the filters.
 """
 
 from __future__ import annotations
@@ -19,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from role_radar import aws
-from role_radar.config import AppConfig, RuntimeSettings, load_runtime, parse_config
+from role_radar.config import AppConfig, RuntimeSettings, load_config, load_runtime, parse_config, profile_path
 from role_radar.lease import Lease, LocalLease
 from role_radar.notifications import Notifier, notifiers_from_env
 from role_radar.storage import JsonStateStore, StateStore
@@ -51,9 +56,9 @@ class AwsClients:
 
 
 def resolve_runtime(local_config: str | Path | None, env: Mapping[str, str] | None = None) -> RuntimeSettings:
-    """The local file's `runtime:` section (if the file exists) with environment overrides applied."""
+    """The `runtime:` section of the local config (its profile's, if it has one) with environment overrides applied."""
     path = Path(local_config) if local_config else None
-    base = load_runtime(path) if path and path.exists() else RuntimeSettings()
+    base = load_runtime(path, profile_path(path)) if path and path.exists() else RuntimeSettings()
     return base.with_env(env)
 
 
@@ -84,10 +89,21 @@ class ConfigSource:
         return self.local_config.read_text(encoding="utf-8")
 
     def load(self) -> AppConfig:
-        text = self.read_text()
         if self._s3 or not self.local_config:
-            return parse_config(text, self.description)
-        return parse_config(text, str(self.local_config), as_json=self.local_config.suffix == ".json")
+            config = parse_config(self.read_text(), self.description)
+        else:
+            config = load_config(self.local_config, profile_path(self.local_config))
+        require_filters(config, self.description)
+        return config
+
+
+def require_filters(config: AppConfig, source: str) -> None:
+    """Refuse a config with no roles to look for: every job would match, and each would be alerted."""
+    if config.companies and not any(c.filter.include_keywords for c in config.companies):
+        raise ValueError(
+            f"{source}: no roles to look for. Put include_keywords under `filters:` in your profile "
+            "(config/profile.yaml; start from config/profile.example.yaml)"
+        )
 
 
 class NotifierSource:
@@ -113,18 +129,24 @@ class NotifierSource:
         with self._lock:
             if self._notifiers is None or self._clock() - self._loaded_at >= 300:
                 path = self.runtime.ssm_path
+                stored = bool(path) or self.runtime.secrets == "keychain"
                 if path:
                     clients = self._clients or AwsClients(self.runtime)
                     settings = aws.ssm_parameters(clients.ssm, path)
+                elif self.runtime.secrets == "keychain":
+                    from role_radar import keychain
+
+                    settings = keychain.read_all()
                 else:
                     settings = self._env
-                # With SSM, no settings is a mistake: print nothing and keep alerts pending instead.
-                self._notifiers = notifiers_from_env(settings, console_fallback=not path)
+                # With stored settings, none is a mistake: print nothing and keep alerts pending instead.
+                self._notifiers = notifiers_from_env(settings, console_fallback=not stored)
                 self._loaded_at = self._clock()
                 if self._notifiers:
                     log.info("Alert channels: %s", ", ".join(n.name for n in self._notifiers))
                 else:
-                    log.error("No alert channel settings under %s: add DISCORD_WEBHOOK_URL or SMTP_HOST + EMAIL_TO", path)
+                    log.error("No alert channel settings in %s: add DISCORD_WEBHOOK_URL or SMTP_HOST + EMAIL_TO",
+                              path or "the Keychain (role-radar secrets set NAME)")
             return self._notifiers
 
     def invalidate(self) -> None:
@@ -144,7 +166,11 @@ def open_backend(
 ) -> Backend:
     """The state store and the lease for `holder` (e.g. "laptop:<host>", "lambda")."""
     if runtime.storage == "json":
-        return Backend(JsonStateStore(runtime.state_file), LocalLease(holder, clock))
+        return Backend(JsonStateStore(runtime.state_path), LocalLease(holder, clock))
+    if runtime.storage == "sqlite":
+        from role_radar.sqlite import SqliteStateStore
+
+        return Backend(SqliteStateStore(runtime.state_path, clock), LocalLease(holder, clock))
     from role_radar.dynamo import DynamoLease, DynamoStateStore
 
     client = (clients or AwsClients(runtime)).dynamodb

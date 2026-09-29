@@ -34,7 +34,9 @@ SENT_ROWS = 150  # alert log rows Live Tracking reads: the latest alerts, each w
 ROUND_STALE = timedelta(minutes=2)  # a round not updated for this long was cut short (the runner quit)
 
 
-def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: datetime | None = None) -> dict[str, Any]:
+def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: datetime | None = None,
+             storage: str = "dynamodb") -> dict[str, Any]:
+    """What the menu bar app shows. `storage`: with anything but dynamodb there's no Lambda."""
     stored = backend.store.load_switches()
     switches = {name: switch_on(stored, name) for name in SWITCHES}
     lease = backend.lease.read()
@@ -44,7 +46,8 @@ def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: dateti
     latest = max(runs.items(), key=lambda run: run[1].get("finished_at", ""), default=None)
     return {
         "switches": switches,
-        "checking": checking(switches, holder, pid),
+        "checking": checking(switches, holder, pid, lambda_too=storage == "dynamodb"),
+        "storage": storage,
         "lease_holder": holder,
         "laptop_app_pid": pid,
         "last_runs": runs,
@@ -129,17 +132,19 @@ def activity(store: StateStore, now: datetime) -> dict[str, Any]:
     return {"hours": list(by_hour.values()), **totals}
 
 
-def checking(switches: dict[str, bool], lease_holder: str | None, laptop_pid: int | None) -> str | None:
+def checking(switches: dict[str, bool], lease_holder: str | None, laptop_pid: int | None,
+             lambda_too: bool = True) -> str | None:
     """Which runner is checking sites: "laptop", "lambda", or None.
 
     Both on: the laptop while its app runs (it takes the lease from Lambda),
     otherwise Lambda. One on: that one, if it can run. Both off: nobody.
+    Without AWS (`lambda_too` false) there's only the laptop.
     """
-    if lease_holder:
+    if lease_holder and lambda_too:
         return lease_holder.split(":", 1)[0]
     if switches["laptop"] and laptop_pid:
         return "laptop"
-    return "lambda" if switches["lambda"] else None
+    return "lambda" if switches["lambda"] and lambda_too else None
 
 
 def make_handler(backend: Backend, laptop_pid: Callable[[], int | None]) -> type[BaseHTTPRequestHandler]:

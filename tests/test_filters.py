@@ -121,7 +121,8 @@ def test_continental_finance_config():
 
     from role_radar.config import load_config
 
-    cfg = load_config(Path(__file__).parent.parent / "config" / "companies.yaml")
+    config_dir = Path(__file__).parent.parent / "config"
+    cfg = load_config(config_dir / "companies.yaml", config_dir / "profile.example.yaml")
     cf = next(c for c in cfg.companies if c.name == "Continental Finance")
     f = cf.filter
     assert f.evaluate(job("Mid/Senior Software Developer (.NET Core / React / AWS)"))

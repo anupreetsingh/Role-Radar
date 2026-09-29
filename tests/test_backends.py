@@ -12,6 +12,9 @@ from role_radar.storage import JsonStateStore
 CONFIG = """
 settings:
   check_interval_minutes: 15
+defaults:
+  filters:
+    include_keywords: [engineer]
 companies:
   - name: Acme
     url: https://jobs.lever.co/acme
@@ -30,7 +33,7 @@ def test_environment_overrides_the_runtime_section():
 @pytest.mark.parametrize(
     "settings, message",
     [
-        ({"storage": "sqlite"}, "json' or 'dynamodb"),
+        ({"storage": "postgres"}, "'sqlite', 'dynamodb' or 'json'"),
         ({"storage": "dynamodb"}, "no table"),
         ({"secrets": "vault"}, "ssm:/path/"),
         ({"secrets": "ssm:/role-radar"}, "ssm:/path/"),  # needs the trailing slash

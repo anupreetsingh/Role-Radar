@@ -8,7 +8,7 @@
 #             avature | hrmdirect | recruiterbox | eightfold | oracle_hcm | amazon |
 #             apple | google | meta | tiktok | mathworks | comsol | generic
 #             (auto-detected from the URL when omitted)
-#   filters   optional; each key REPLACES the same key from defaults.filters
+#   filters   optional; each key REPLACES the same key from your profile's filters
 #   options   optional scraper-specific settings (see each scraper's docstring)
 #   enabled   optional, default true
 #   max_alert_age_days  optional: record, don't alert, new matches posted longer ago
@@ -24,18 +24,10 @@
 #                      without alerting those asking for more years (null: don't read)
 # Matching is case-insensitive, on word boundaries ("AI" won't match "maintain").
 # Prefix a keyword with "re:" to use a regular expression.
-
-# Where state, this config and alert secrets live. Environment variables override
-# each key: ROLE_RADAR_STORAGE, ROLE_RADAR_STATE_FILE, ROLE_RADAR_TABLE,
-# ROLE_RADAR_CONFIG_URL, ROLE_RADAR_SECRETS, AWS_REGION, AWS_PROFILE.
-runtime:
-  storage: dynamodb
-  state_file: seen_jobs.json
-  table: role-radar-StateTable-UVW1FTNH6RAD
-  config_url: s3://role-radar-configbucket-sgxptx7mtuif/companies.yaml
-  secrets: ssm:/role-radar/
-  region: us-east-1
-  profile: role-radar  # the laptop IAM user (permanent key); role-radar-admin is only for sam deploy
+#
+# Your own settings live beside this file in profile.yaml (not in git): the roles and
+# places you want (`filters`), the experience you have, and where state and alert
+# settings live (`runtime`). Start from profile.example.yaml.
 
 settings:
   # Target: a new job reaches you within 30 minutes (check every 20 + digest every 10).
@@ -81,184 +73,6 @@ settings:
     read_timeout: 30
     max_retries: 3
     respect_robots: true
-
-defaults:
-  filters:
-    # Tuned to the resume: backend/full-stack software engineering, AI and LLM
-    # applications (RAG, agents), ML, data engineering, cloud/platform work, and
-    # C++ systems, performance and graphics. These are title matches, not
-    # eligibility checks: experience, degree, graduation window and work
-    # authorization requirements still need review in each job description.
-    include_keywords:
-      # Application development (spaces also match hyphens or no separator).
-      - software engineer
-      - software engineering
-      - software development
-      - developer
-      - programmer
-      - SWE
-      - SDE
-      - full stack
-      - front end
-      - back end
-      - web engineer
-      - UI engineer
-      - Python engineer
-      - product engineer
-      - application engineer
-      - integration engineer
-      - integrations engineer
-      # Platforms, cloud infrastructure and developer tooling.
-      - platform engineer
-      - platforms engineer
-      - platform engineering
-      - cloud engineer
-      - infrastructure engineer
-      - site reliability
-      - SRE
-      - DevOps
-      - DevSecOps
-      - production engineer
-      - build engineer
-      - release engineer
-      - tools engineer
-      # Distributed systems, compilers, performance and graphics.
-      - distributed systems
-      - systems development
-      - compiler
-      - toolchain engineer
-      - runtime engineer
-      - kernel engineer
-      - performance engineer
-      - GPU engineer
-      - graphics engineer
-      - rendering engineer
-      - computer graphics
-      - gameplay engineer
-      - algorithm engineer
-      - algorithms engineer
-      - high performance computing
-      - HPC engineer
-      - member of technical staff
-      - member technical staff
-      - associate technical staff
-      # AI, LLM applications, ML and applied research.
-      - machine learning
-      - ML engineer
-      - MLOps
-      - LLMOps
-      - AI engineer
-      - AI engineering
-      - applied AI
-      - artificial intelligence
-      - generative AI
-      - gen AI engineer
-      - LLM engineer
-      - agent engineer
-      - agents engineer
-      - AI agent
-      - AI agents
-      - conversational AI
-      - deep learning
-      - NLP engineer
-      - natural language processing
-      - computer vision
-      - perception engineer
-      - inference engineer
-      - search engineer
-      - information retrieval
-      - research engineer
-      - applied scientist
-      - AI residency
-      # Data engineering and data science.
-      - data engineer
-      - data engineering
-      - data scientist
-      - data science
-      - analytics engineer
-      - database engineer
-      - ETL engineer
-      # Compliance tooling, like the NIST 800-53 audit platform.
-      - GRC engineer
-      # Test automation.
-      - SDET
-      - QA engineer
-      - quality assurance engineer
-      - QA automation
-      - test automation
-      - software test
-      # Technical program management and product management.
-      - technical program manager
-      - technical program management
-      - associate product manager
-      - product manager
-      # Customer-facing engineering: forward deployed, AI deployment and solutions.
-      - forward deployed engineer
-      - forward deployment engineer
-      - AI deployment engineer
-      - solutions engineer
-      - solution engineer
-      - solutions architect
-      - solution architect
-      # Employer-specific graduate/rotation programs with nonstandard titles.
-      - engineering development group
-      - EDG
-      - technology development program
-      - technology analyst program
-      - technical development program
-      - software development program
-      - technology graduate
-    exclude_keywords:
-      - senior
-      - sr
-      # "Member of Technical Staff" can be an early-career title.
-      - 're:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b'
-      - principal
-      - distinguished
-      - lead
-      # Permit technical program managers and product managers, exclude other managers.
-      - 're:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b'
-      - director
-      - vice president
-      - vp
-      - head of
-      - chief
-      - president
-      - officer
-      # Off-profile titles the broad keywords above also catch: ERP/CRM platform
-      # developers, technical writing, and hardware or manufacturing roles.
-      - 're:\b(?:ServiceNow|SAP|ABAP|Pega|MuleSoft|PeopleSoft|Fiori|Power[\s-]*Platform)\b'
-      - 're:\bSalesforce[\s/_-]+(?:developer|engineer|architect|administrator|consultant)\b'
-      - 're:\b(?:courseware|content|documentation|information|course|curriculum|certification)[\s/_-]+developer\b'
-      - 're:\b(?:firmware|BIOS|UEFI|PCB|FPGA|ASIC|RTL|CNC|CMM|PLC|HVAC)\b'
-      - design release
-      - process integration
-      - supplier
-      - technician
-    match_on: [title]
-    exclude_on: [title]
-    # New matches whose description asks for more years of experience are recorded, not
-    # alerted. A master's counts where the posting allows it ("3+ years, or 1+ with an MS").
-    # A description that is unclear or can't be read keeps the job.
-    max_experience_years: 2
-    # Target countries, plus regional/city names used by boards that omit countries.
-    # Unqualified Remote/Worldwide listings need a country-eligibility check.
-    locations:
-      - United States
-      - USA
-      - US
-      - Canada
-      - Australia
-      - India
-      - 're:\b(?-i:US|USA|CAN|AU|AUS|IND)\b'
-      - 're:^(?-i:IN|CA)-'
-      - 're:\b(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|District of Columbia)\b'
-      - 're:(?:,\s*|\s-\s)(?-i:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC|AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT|NSW|VIC|QLD|ACT|SA|TAS)\b'
-      - 're:\b(?:Ontario|Quebec|Québec|British Columbia|Alberta|Manitoba|Saskatchewan|Nova Scotia|New Brunswick|Newfoundland|Toronto|Vancouver|Montréal|Montreal|Ottawa|Waterloo|Kitchener|Calgary|Edmonton|Winnipeg|Halifax)\b'
-      - 're:\b(?:Sydney|Melbourne|Brisbane|Perth|Adelaide|Canberra|Hobart|New South Wales|Victoria|Queensland|Tasmania)\b'
-      - 're:\b(?:Bangalore|Bengaluru|Hyderabad|Pune|Mumbai|Delhi|Noida|Gurgaon|Gurugram|Chennai|Kolkata|Ahmedabad|Jaipur|Kochi|Thiruvananthapuram|Chandigarh|Indore|Coimbatore)\b'
-      - 're:\b(?:San Francisco|Bay Area|San Jose|Palo Alto|Mountain View|Sunnyvale|Redwood City|Menlo Park|Seattle|Bellevue|Redmond|Boston|Cambridge|Natick|Austin|Dallas|Houston|Chicago|Los Angeles|San Diego|New York City|NYC|Brooklyn|Atlanta|Denver|Boulder|Portland|Raleigh|Durham|Cary|Charlotte|Baltimore|Bethesda|Rockville|Reston|Arlington|McLean|Herndon|Philadelphia|Pittsburgh|Cleveland|Columbus|Cincinnati|Detroit|Ann Arbor|Minneapolis|Madison|Verona|Olathe|San Antonio|Tampa|Orlando|Miami|Phoenix|Salt Lake City|Nashville)\b(?!,?\s*(?:UK|United Kingdom|England|New Zealand|Germany))'
-      - 're:^(?:remote|anywhere|worldwide|global)(?:\s*[/,-]\s*(?:remote|anywhere|worldwide|global))*\s*$'
 
 companies:
   - name: Continental Finance

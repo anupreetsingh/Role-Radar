@@ -15,15 +15,19 @@
   role-radar ui                  a local page with on/off switches for the laptop and Lambda
   role-radar matches             matches waiting to be sent, skipped, and sent
                                  [skip|unskip COMPANY UID | skip --all | send] [--json]
-  role-radar config push         upload the local companies file to runtime.config_url
-  role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE
+  role-radar config push         upload the companies file, with your profile applied, to runtime.config_url
+  role-radar config pull         restore a lost profile.yaml from what `config push` uploaded
+  role-radar secrets [set|delete NAME]
+                                 alert settings in this Mac's Keychain (runtime.secrets: keychain)
+  role-radar migrate --from dynamodb:TABLE --to sqlite:PATH   (or json:PATH, either way)
   role-radar login-item on|off   set up the Mac's background checker (`role-radar start` under
                                  launchd), which the menu bar app starts and stops (macOS)
 
 The local companies file is --config, else $ROLE_RADAR_CONFIG_FILE, else
-./config/companies.yaml, else ~/.config/role-radar/companies.yaml. Its
-`runtime:` section, overridden by ROLE_RADAR_* environment variables, says
-where state, the pushed config and alert secrets live.
+./config/companies.yaml, else ~/.config/role-radar/companies.yaml. The
+profile beside it (profile.yaml, or $ROLE_RADAR_PROFILE) holds your filters
+and the `runtime:` section, which, overridden by ROLE_RADAR_* environment
+variables, says where state, the pushed config and alert secrets live.
 """
 
 from __future__ import annotations
@@ -44,9 +48,11 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from role_radar import __version__, aws, launchd
-from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend, resolve_runtime
-from role_radar.config import RuntimeSettings, parse_config
+from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend, require_filters, resolve_runtime
+from role_radar.config import PROFILE_SECTIONS, RuntimeSettings, combined, parse_raw, profile_path, split_profile
 from role_radar.instance import InstanceLock
 from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
@@ -156,6 +162,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         if not ctx.config_path:
             raise ValueError("--local-config needs a local config file (--config PATH)")
         ctx = Context(ctx.config_path, replace(ctx.runtime, config_url=None), ctx.clients)
+    if ctx.runtime.storage != "dynamodb" and not args.dry_run and InstanceLock().running_pid():
+        raise ValueError("role-radar start is checking on this Mac, and a run now would clash with it. "
+                         "Stop it first (role-radar stop, or switch the Mac off in the menu bar app).")
     runner = make_runner(ctx, f"cli:{hostname()}")
     options: dict[str, Any] = {
         "baseline": args.baseline,
@@ -190,7 +199,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     now = utcnow()
 
     print(f"State:          {describe(runtime)}")
-    print(f"Switches:       {describe_switches(backend.store.load_switches())}")
+    print(f"Switches:       {describe_switches(backend.store.load_switches(), runtime)}")
     print(f"Lease:          {describe_lease(backend.lease, runtime)}")
     pid = InstanceLock().running_pid()
     print(f"This machine:   role-radar start {'is running (pid %d)' % pid if pid else 'is not running'}")
@@ -235,8 +244,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         print(f"  {when(a.get('notified_at'))}  {a.get('company')}: {a.get('title')}{where}{by}")
 
     if runtime.config_url and ctx.config_path:
-        same = ctx.config_path.read_text(encoding="utf-8") == source.read_text()
-        note = "same as your local copy" if same else f"differs from {ctx.config_path}: run `role-radar config push`"
+        same = combined(ctx.config_path, profile_path(ctx.config_path)) == yaml.safe_load(source.read_text())
+        note = "same as your local files" if same else "differs from your local files: run `role-radar config push`"
         print(f"Config:         {runtime.config_url} ({note})")
     return 0
 
@@ -258,12 +267,12 @@ def cmd_switch(args: argparse.Namespace) -> int:
             _install_login_item(ctx)
         _wait_for_start()
     if args.json:
-        state = ui.snapshot(backend, InstanceLock().running_pid)
+        state = ui.snapshot(backend, InstanceLock().running_pid, storage=ctx.runtime.storage)
         state["login_item"] = sys.platform == "darwin" and launchd.plist_path().exists()
         print(json.dumps(state))
         return 0
     switches = store.load_switches()
-    print(f"Switches: {describe_switches(switches)}")
+    print(f"Switches: {describe_switches(switches, ctx.runtime)}")
     if args.name == "laptop" and args.state:
         print("A running laptop app picks this up within a minute." if InstanceLock().running_pid()
               else "role-radar start isn't running on this Mac, so the switch applies when it next starts.")
@@ -305,7 +314,8 @@ def cmd_matches(args: argparse.Namespace) -> int:
         print(json.dumps(state))
         return 0
     if args.action == "send":
-        print("Asked for the waiting matches to go out now: the Mac within a minute, Lambda at its next run.")
+        print("Asked for the waiting matches to go out now: the Mac sends them within a minute"
+              + (", Lambda at its next run." if ctx.runtime.storage == "dynamodb" else "."))
     if state["alerts_off"]:
         print("Both alert channels are off: waiting matches are sent once one is back on.")
     else:
@@ -353,23 +363,76 @@ def cmd_ui(args: argparse.Namespace) -> int:
 
 
 def cmd_config_push(args: argparse.Namespace) -> int:
+    """Upload the companies file with the profile applied, as one file, so Lambda needs only that."""
     ctx = context(args)
     path = Path(args.file).expanduser() if args.file else ctx.config_path
     if not path or not path.exists():
         raise FileNotFoundError("no local config file to push; pass --file PATH")
-    text = path.read_text(encoding="utf-8")
-    config = parse_config(text, str(path), as_json=path.suffix == ".json")  # never upload a broken file
+    profile = profile_path(path)
+    raw = combined(path, profile)
+    config = parse_raw(raw, str(path))  # never upload a broken file...
+    require_filters(config, str(path))  # ...or one that would alert every job
     if not ctx.runtime.config_url:
         raise ValueError(
-            f"nowhere to push to: set runtime.config_url in {path} (or ROLE_RADAR_CONFIG_URL) "
+            f"nowhere to push to: set runtime.config_url in {profile} (or ROLE_RADAR_CONFIG_URL) "
             "to the ConfigUrl output of the SAM stack"
         )
+    text = path.read_text(encoding="utf-8") if not profile.exists() else (
+        f"# {path.name} with {profile.name} applied, uploaded by `role-radar config push`.\n"
+        + yaml.safe_dump(raw, sort_keys=False, allow_unicode=True, width=120)
+    )
     aws.S3Text(ctx.clients.s3, ctx.runtime.config_url).write(text)
     enabled = sum(c.enabled for c in config.companies)
     print(
-        f"Uploaded {path} to {ctx.runtime.config_url}: {len(config.companies)} companies, {enabled} enabled. "
+        f"Uploaded {path}{' with ' + str(profile) if profile.exists() else ''} to {ctx.runtime.config_url}: "
+        f"{len(config.companies)} companies, {enabled} enabled. "
         "A running laptop app picks it up within 5 minutes, Lambda at its next run."
     )
+    return 0
+
+
+def cmd_config_pull(args: argparse.Namespace) -> int:
+    """Write profile.yaml back from the pushed copy (e.g. on a new Mac)."""
+    ctx = context(args)
+    url = args.url or ctx.runtime.config_url
+    if not url:
+        raise ValueError("where from? pass --url s3://BUCKET/companies.yaml (the ConfigUrl output of the SAM stack)")
+    if not ctx.config_path:
+        raise ValueError("no local companies file to put the profile beside; pass --config PATH")
+    runtime = replace(ctx.runtime, config_url=url)
+    raw = yaml.safe_load(aws.S3Text(AwsClients(runtime).s3, url).read())
+    profile = split_profile(raw if isinstance(raw, dict) else {})
+    if not profile:
+        raise ValueError(f"{url} has no runtime or filters to restore")
+    target = profile_path(ctx.config_path)
+    text = (f"# Restored from {url} by `role-radar config pull`. Your own settings: not in git.\n"
+            + yaml.safe_dump(profile, sort_keys=False, allow_unicode=True, width=120))
+    if target.exists() and target.read_text(encoding="utf-8") != text and not args.force:
+        raise ValueError(f"{target} already exists; add --force to replace it")
+    target.write_text(text, encoding="utf-8")
+    print(f"Wrote {target} ({', '.join(k for k in PROFILE_SECTIONS if k in profile)}) from {url}.")
+    return 0
+
+
+def cmd_secrets(args: argparse.Namespace) -> int:
+    """Alert settings in the Keychain: which are set (never their values), set one, or delete one."""
+    from role_radar import keychain
+
+    ctx = context(args)
+    if ctx.runtime.secrets != "keychain":
+        print(f"Note: runtime.secrets is {ctx.runtime.secrets!r}, so the Keychain isn't read. "
+              "Set `secrets: keychain` under runtime: in your profile to use it.", file=sys.stderr)
+    if args.action == "set":
+        if args.value is None and not sys.stdin.isatty():
+            raise ValueError(f"type the value in a terminal (role-radar secrets set {args.name}), or pass it after the name")
+        keychain.write(args.name, args.value)
+        print(f"Saved {args.name} in the Keychain. A running checker uses it for its next alert.")
+    elif args.action == "delete":
+        print(f"Deleted {args.name}." if keychain.delete(args.name) else f"{args.name} wasn't set.")
+    else:
+        stored = keychain.read_all()
+        for name in keychain.NAMES:
+            print(f"{name:20} {'set' if name in stored else '-'}")
     return 0
 
 
@@ -406,7 +469,11 @@ def open_store_spec(spec: str, ctx: Context, holder: str) -> tuple[StateStore, L
     """json:PATH or dynamodb:TABLE (either part after the colon defaults to the runtime settings)."""
     kind, _, where = spec.partition(":")
     if kind == "json":
-        return JsonStateStore(Path(where or ctx.runtime.state_file).expanduser()), None
+        return JsonStateStore(Path(where).expanduser() if where else ctx.runtime.state_path), None
+    if kind == "sqlite":
+        from role_radar.sqlite import SqliteStateStore
+
+        return SqliteStateStore(Path(where).expanduser() if where else replace(ctx.runtime, storage="sqlite").state_path), None
     if kind == "dynamodb":
         table = where or ctx.runtime.table
         if not table:
@@ -463,10 +530,11 @@ def _install_login_item(ctx: Context) -> Path:
     """Install and load the LaunchAgent, and start `role-radar start` now."""
     if not ctx.config_path:
         raise ValueError("the login item needs your config file: pass --config PATH")
-    if not ctx.runtime.ssm_path:
+    if not ctx.runtime.ssm_path and ctx.runtime.secrets != "keychain":
         raise ValueError(
             "the login item can't see DISCORD_WEBHOOK_URL / SMTP_* from your shell, so its alerts would "
-            "only reach a log file. Put them in SSM Parameter Store and set runtime.secrets: ssm:/role-radar/"
+            "only reach a log file. Keep them in the Keychain (runtime.secrets: keychain, then role-radar secrets set "
+            "NAME) or in SSM Parameter Store (runtime.secrets: ssm:/role-radar/)"
         )
     config_path = ctx.config_path.resolve()
     log_file = launchd.log_dir() / "role-radar.log"
@@ -480,16 +548,20 @@ def _install_login_item(ctx: Context) -> Path:
 def describe(runtime: RuntimeSettings) -> str:
     if runtime.storage == "dynamodb":
         return f"DynamoDB table {runtime.table}" + (f" ({runtime.region})" if runtime.region else "")
-    return f"JSON file {runtime.state_file}"
+    if runtime.storage == "sqlite":
+        return f"this Mac: {runtime.state_path}"
+    return f"JSON file {runtime.state_path}"
 
 
-def describe_switches(switches: dict[str, bool]) -> str:
-    return ", ".join(f"{name} {'on' if switch_on(switches, name) else 'OFF'}" for name in SWITCHES)
+def describe_switches(switches: dict[str, bool], runtime: RuntimeSettings | None = None) -> str:
+    """Every switch, leaving out Lambda's without AWS."""
+    names = [n for n in SWITCHES if n != "lambda" or not runtime or runtime.storage == "dynamodb"]
+    return ", ".join(f"{name} {'on' if switch_on(switches, name) else 'OFF'}" for name in names)
 
 
 def describe_lease(lease: Lease, runtime: RuntimeSettings) -> str:
     if runtime.storage != "dynamodb":
-        return "not needed (JSON state is local to this machine)"
+        return "not needed (state is on this Mac)"
     info = lease.read()
     now = time.time()
     if not info or not info.holder:
@@ -613,12 +685,25 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("config", parents=[common], help="manage the shared companies file")
     config_sub = p.add_subparsers(dest="action", required=True, metavar="ACTION")
     push = config_sub.add_parser("push", parents=[common], help="validate the local file and upload it to runtime.config_url")
-    push.add_argument("--file", help="file to upload (default: the local config file)")
+    push.add_argument("--file", help="companies file to upload (default: the local config file); its profile is applied")
     push.set_defaults(func=cmd_config_push)
+    pull = config_sub.add_parser("pull", parents=[common], help="restore profile.yaml from the copy `config push` uploaded")
+    pull.add_argument("--url", help="the pushed copy, s3://BUCKET/companies.yaml (default: runtime.config_url)")
+    pull.add_argument("--force", action="store_true", help="replace an existing profile.yaml")
+    pull.set_defaults(func=cmd_config_pull)
 
-    p = sub.add_parser("migrate", parents=[common], help="copy state between stores, e.g. JSON file → DynamoDB")
-    p.add_argument("--from", dest="source", required=True, metavar="SPEC", help="json:PATH or dynamodb:TABLE")
-    p.add_argument("--to", dest="target", required=True, metavar="SPEC", help="json:PATH or dynamodb:TABLE")
+    p = sub.add_parser("secrets", parents=[common], help="alert settings in this Mac's Keychain (runtime.secrets: keychain)")
+    secrets_sub = p.add_subparsers(dest="action", metavar="ACTION")
+    s_set = secrets_sub.add_parser("set", parents=[common], help="save one (without VALUE: typed hidden, twice)")
+    s_set.add_argument("name", metavar="NAME", help="EMAIL_TO, SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, DISCORD_WEBHOOK_URL...")
+    s_set.add_argument("value", nargs="?", metavar="VALUE", help="leave out for passwords, so they're never on a command line")
+    s_delete = secrets_sub.add_parser("delete", parents=[common], help="remove one")
+    s_delete.add_argument("name", metavar="NAME")
+    p.set_defaults(func=cmd_secrets)
+
+    p = sub.add_parser("migrate", parents=[common], help="copy state between stores, e.g. DynamoDB → this Mac (sqlite)")
+    p.add_argument("--from", dest="source", required=True, metavar="SPEC", help="sqlite:PATH, dynamodb:TABLE or json:PATH")
+    p.add_argument("--to", dest="target", required=True, metavar="SPEC", help="sqlite:PATH, dynamodb:TABLE or json:PATH")
     p.add_argument("--force", action="store_true", help="merge into a target that already has state")
     p.set_defaults(func=cmd_migrate)
 

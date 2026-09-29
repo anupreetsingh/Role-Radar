@@ -40,8 +40,8 @@ from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
 from role_radar.storage import (
-    SKIPPED, SKIPPED_KEPT, STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState,
-    QueuedMatch, SeenJob, StateStore, compact, to_iso,
+    SKIPPED_KEPT, STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState,
+    QueuedMatch, SeenJob, StateStore, compact, queue_changes, to_iso,
 )
 
 log = logging.getLogger(__name__)
@@ -84,11 +84,6 @@ def _plain(item: dict[str, Any]) -> dict[str, Any]:
             value = int(value) if value == value.to_integral_value() else float(value)
         out[name] = value
     return out
-
-
-def _waiting(attrs: dict[str, Any] | None) -> bool:
-    """storage.waiting() for a stored job row."""
-    return bool(attrs and attrs.get("matched") and not attrs.get("notified_at") and not attrs.get("duplicate_of"))
 
 
 def _num(value: float) -> dict[str, str]:
@@ -398,16 +393,10 @@ class DynamoStateStore(StateStore):
     def _queue_writes(self, record: CompanyRecord, current: dict[str, dict], loaded: dict[str, dict]) -> list[dict[str, Any]]:
         """Keep the company's #queue rows in step with its job rows."""
         writes = []
-        for uid in current.keys() | loaded.keys():
-            before, after = loaded.get(uid), current.get(uid)
-            if before == after:
-                continue
-            job = record.jobs.get(uid)
-            if job and _waiting(after):
-                writes.append({"Update": self._queue_update(record.name, uid, job)})
-            elif job and job.dropped_for == SKIPPED and _waiting(before):
-                writes.append({"Update": self._queue_update(record.name, uid, job, done=True)})
-            elif _waiting(before):
+        for change, uid, job in queue_changes(record, current, loaded):
+            if job:
+                writes.append({"Update": self._queue_update(record.name, uid, job, done=change == "done")})
+            else:
                 writes.append({"Delete": {"TableName": self.table, "Key": _key(QUEUE, f"{record.name}#{uid}")}})
         return writes
 

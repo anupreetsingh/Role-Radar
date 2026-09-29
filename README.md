@@ -4,6 +4,89 @@ Watches company careers pages and collects new jobs matching your criteria into 
 every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
 the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
 
+There are two ways to run it:
+
+- **On your Mac only.** Everything, from the jobs it has seen to your email settings, stays
+  on your Mac, and it checks while the menu bar app is open. No AWS account needed. See
+  [Run it on your Mac](#run-it-on-your-mac).
+- **Your Mac plus AWS.** A Lambda takes over whenever your Mac is closed or asleep, with
+  state in DynamoDB; it fits in AWS's free tier. See
+  [Add AWS](#add-aws-keep-checking-while-your-mac-is-off).
+
+## Run it on your Mac
+
+Two files in `config/` decide what Role Radar does. Edit both as you like:
+
+| File | In git | Holds |
+|---|---|---|
+| `companies.yaml` | yes | The companies to watch (about 4,800 to start from) and how often to check them |
+| `profile.yaml` | no | You: the roles and places you want, the most years of experience a job may ask for, and where state and alert settings live. [profile.example.yaml](config/profile.example.yaml) shows every setting |
+
+**1. Get the code and install it** (Python 3.10 or newer). Keep it outside Desktop,
+Documents and Downloads: macOS asks for permission to those folders again every time the
+menu bar app is rebuilt, and holds the checker until you answer.
+
+```bash
+git clone https://github.com/<you>/Role-Radar.git ~/Projects/Role-Radar   # your fork, or this repo
+cd ~/Projects/Role-Radar
+python3 -m venv .venv && .venv/bin/pip install -e .
+```
+
+**2. Make your profile.**
+
+```bash
+cp config/profile.example.yaml config/profile.yaml
+```
+
+Change its `filters` to what you're looking for: `include_keywords` (a job title must
+contain one), `exclude_keywords` (it mustn't contain any), `locations`, and
+`max_experience_years` (see [Experience filter](#experience-filter)). Its `runtime:`
+section, `storage: sqlite` and `secrets: keychain`, keeps everything on this Mac: the jobs
+it has seen in `~/.role-radar/state.db`, and your alert settings in the Keychain. Git
+ignores `profile.yaml`, so keep a copy somewhere safe.
+
+**3. Choose companies.** Remove the ones you don't care about from `config/companies.yaml`
+and add your own: a name and the careers page URL ([Supported sources](#supported-sources)
+lists the job boards it reads). The checks come from your home internet connection, so a
+shorter list is kinder to the sites; the full list includes about 820 Workday boards.
+
+**4. Set up email alerts**, kept in the Keychain. With Gmail, create an
+[app password](https://myaccount.google.com/apppasswords) (it needs 2-Step Verification),
+then:
+
+```bash
+.venv/bin/role-radar secrets set EMAIL_TO you@gmail.com
+.venv/bin/role-radar secrets set SMTP_HOST smtp.gmail.com
+.venv/bin/role-radar secrets set SMTP_PORT 587
+.venv/bin/role-radar secrets set SMTP_USERNAME you@gmail.com
+.venv/bin/role-radar secrets set SMTP_PASSWORD        # asks for the app password, hidden
+.venv/bin/role-radar notifications test               # sends a test email
+```
+
+For Discord instead, or as well: `role-radar secrets set DISCORD_WEBHOOK_URL` (it asks for
+the webhook URL). `role-radar secrets` shows which settings are set, never their values.
+
+**5. Try it.** `.venv/bin/role-radar list-matches --company Stripe` prints what matches at
+one company right now, without saving or sending anything.
+
+**6. Open the menu bar app.** It needs Xcode or the Command Line Tools
+(`xcode-select --install`):
+
+```bash
+sh scripts/build_menubar.sh
+```
+
+The app starts the checker, which checks companies as they come due while the app is
+open. The first check of each company records the jobs already open without alerting
+(`notify_on_first_run: true` in `companies.yaml` alerts them too). After that, new
+matches collect in **Live Tracking** and go out by email every 10 minutes.
+
+**With an AI agent.** Point it at this section and tell it what you want, for example:
+"Set up Role Radar for me: I'm looking for data analyst and analytics engineer roles in
+Toronto or remote in Canada, with up to 3 years of experience; alerts to me@example.com."
+It can do all of this except typing your email password: run
+`role-radar secrets set SMTP_PASSWORD` yourself, so the password never goes into the chat.
+
 ## How it works
 
 ### The handoff
@@ -27,7 +110,7 @@ stopped:
 | Piece | Lives in | Holds |
 |---|---|---|
 | State | DynamoDB, one table | Seen jobs, check and digest schedules, delivery receipts, the lease, an alert log |
-| Companies config | S3 (`role-radar config push` uploads your local `companies.yaml`) | Companies, filters, settings |
+| Companies config | S3 (`role-radar config push` uploads your `companies.yaml` with your `profile.yaml` applied) | Companies, filters, settings |
 | Alert channel secrets | SSM Parameter Store (SecureString) | Discord webhook, SMTP settings |
 | Laptop runner | `role-radar start` (optionally started at login) | Works whenever it's running |
 | Lambda runner | [deploy/aws/template.yaml](deploy/aws/template.yaml), every 5 minutes | Works whenever the laptop isn't |
@@ -73,9 +156,11 @@ why each job matched or not.
 | `role_radar/schedule.py` | Which companies are due, and when each is next checked |
 | `role_radar/lease.py` | The lease that decides which runner may work, and fencing |
 | `role_radar/dynamo.py` | DynamoDB state store and lease (one table) |
+| `role_radar/sqlite.py` | SQLite state store: the same rows, in one file on this Mac |
 | `role_radar/storage.py` | `StateStore` interface + JSON and in-memory implementations |
-| `role_radar/config.py` | Loads and validates `companies.yaml` (JSON also accepted), including `runtime:` |
+| `role_radar/config.py` | Loads and validates `companies.yaml` (JSON also accepted), with `profile.yaml` applied |
 | `role_radar/backends.py` | Picks the store, lease, config source and secrets from `runtime:` |
+| `role_radar/keychain.py` | Alert settings in the macOS Keychain |
 | `role_radar/aws.py` | boto3 helpers: the config file in S3, secrets in SSM |
 | `role_radar/models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
 | `role_radar/scrapers/` | One class per ATS plus `generic.py`; registry in `scrapers/__init__.py` |
@@ -262,9 +347,11 @@ the lists every 5 seconds while it's open.
 
 ## Configuration
 
-Edit [config/companies.yaml](config/companies.yaml), then `role-radar config push` it once
-the AWS side is set up. Keys under `defaults.filters` apply to every company, and a
-company's own `filters` replace them **one key at a time**.
+The companies live in [config/companies.yaml](config/companies.yaml), and what you're
+looking for in `config/profile.yaml` (see [Run it on your Mac](#run-it-on-your-mac)). With
+AWS, `role-radar config push` uploads both after each change. The `filters` in your profile
+apply to every company, and a company's own `filters` replace them **one key at a time**.
+(Without a profile, `defaults.filters` in `companies.yaml` plays that part.)
 
 ```yaml
 - name: Continental Finance
@@ -352,20 +439,24 @@ Names can't start with `#`, because the table uses that prefix for its own rows.
 
 ### Backends: state, config and secrets
 
-The `runtime:` section of `companies.yaml` picks where things live, and environment
-variables override each key. That way one codebase serves the laptop, Lambda and tests.
+The `runtime:` section of your profile (of `companies.yaml`, without one) picks where
+things live, and environment variables override each key. That way one codebase serves
+the Mac, Lambda and tests.
 
 | Key | Env var | Values |
 |---|---|---|
-| `storage` | `ROLE_RADAR_STORAGE` | `json` (default): `state_file` on disk. `dynamodb`: the shared table |
-| `state_file` | `ROLE_RADAR_STATE_FILE` | JSON state path (default `seen_jobs.json`) |
+| `storage` | `ROLE_RADAR_STORAGE` | `sqlite`: this Mac only, in `state_file`. `dynamodb`: the table shared with Lambda. `json` (default): one file, for tests and dry runs |
+| `state_file` | `ROLE_RADAR_STATE_FILE` | The local state file (default `~/.role-radar/state.db` for sqlite, `seen_jobs.json` for json) |
 | `table` | `ROLE_RADAR_TABLE` | DynamoDB table name |
-| `config_url` | `ROLE_RADAR_CONFIG_URL` | `s3://bucket/key`. Companies and settings are read from there; the local file then only supplies `runtime:` |
-| `secrets` | `ROLE_RADAR_SECRETS` | `env` (default): environment variables. `ssm:/role-radar/`: SSM Parameter Store, fetched the first time an alert is sent |
+| `config_url` | `ROLE_RADAR_CONFIG_URL` | `s3://bucket/key`. Companies and settings are read from there; the local files then only supply `runtime:` |
+| `secrets` | `ROLE_RADAR_SECRETS` | `env` (default): environment variables. `keychain`: this Mac's Keychain (`role-radar secrets set NAME`). `ssm:/role-radar/`: SSM Parameter Store, fetched the first time an alert is sent |
 | `region`, `profile` | `AWS_REGION`, `AWS_PROFILE` | Which AWS region and `~/.aws` profile to use |
 
-The AWS backends need boto3: `pip install '.[aws]'`. The JSON store stays for tests,
-dry runs and AWS-free local use.
+The AWS backends need boto3: `pip install '.[aws]'`. The SQLite store keeps the same rows
+as the DynamoDB table below, in one file, so the checker and the menu bar app's commands
+(switches, skips, Send Now) can write at the same time. It needs no lease: one `start`
+runs per Mac, and `run --once` refuses to run beside it. The JSON store rewrites a single
+file and suits one process only: tests and dry runs.
 
 **DynamoDB layout** (one table, `pk` + `sk`):
 
@@ -399,7 +490,7 @@ Install the `role-radar` command. [pipx](https://pipx.pypa.io) keeps it in its o
 environment:
 
 ```bash
-pipx install '.[aws]'                 # from the project directory; drop [aws] for JSON-only use
+pipx install '.[aws]'                 # from the project directory; drop [aws] to run on your Mac only
 ```
 
 | Command | What it does |
@@ -411,9 +502,11 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar notifications test` | Sends a labeled test through the configured channels without changing job state. Add `--channel email` or `--channel discord` to test one. |
 | `role-radar run --once` | One pass over the due companies, then exits. Add `--all`, `--company NAME`, `--dry-run` (print alerts, save nothing, no lease), `--baseline` (record everything as seen, no alerts) or `--local-config` (read the local file instead of the pushed copy). |
 | `role-radar list-matches` | Prints every job matching right now. Reads no state, sends nothing. |
-| `role-radar config push` | Validates your local `companies.yaml` and uploads it to `runtime.config_url`. |
-| `role-radar migrate --from json:seen_jobs.json --to dynamodb:TABLE` | Copies state between stores (either direction). |
-| `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a launchd agent can't see your shell's environment variables. |
+| `role-radar config push` | Validates your `companies.yaml` with your `profile.yaml` applied and uploads the result, one file, to `runtime.config_url`. That's also your profile's backup. |
+| `role-radar config pull` | Writes `profile.yaml` back from what `config push` uploaded, for example on a new Mac: `role-radar config pull --url <ConfigUrl output>` with `AWS_PROFILE` set. Won't replace an existing profile without `--force`. |
+| `role-radar secrets` | Shows which alert settings are in the Keychain (`runtime.secrets: keychain`). `secrets set NAME [VALUE]` saves one: leave out the value for passwords, and it's asked for, hidden. `secrets delete NAME` removes one. |
+| `role-radar migrate --from sqlite:~/.role-radar/state.db --to dynamodb:TABLE` | Copies state between stores, in either direction: `sqlite:PATH`, `dynamodb:TABLE` or `json:PATH`. |
+| `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert settings in the Keychain or SSM, because a launchd agent can't see your shell's environment variables. |
 | `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` or `skip --all` keeps matches out of the alerts; `unskip` undoes a skip until the next digest; `send` sends the waiting matches now. `--json` is what the menu bar app reads. |
@@ -433,7 +526,7 @@ Exit codes: `0` ok · `1` every company failed, or an alert couldn't be delivere
 `2` bad config or usage · `3` the lease was lost mid-pass · `4` another runner holds
 the lease.
 
-## Run locally
+## Development
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -451,14 +544,15 @@ role-radar run --once                             # real pass over the due compa
 role-radar run --once --baseline                  # mark everything current as seen, no alerts
 ```
 
-With `secrets: env` and no notification settings, alerts go to stdout. With the default
-`runtime:` (JSON storage, secrets from the environment), no AWS account is needed. With
-secrets in SSM, no settings means alerts stay pending: they're retried, and on Lambda the
+With `secrets: env` and no notification settings, alerts go to stdout. With secrets in the
+Keychain or SSM, no settings means alerts stay pending: they're retried, and on Lambda the
 error alarm fires, rather than alerts vanishing into a log.
 
-## Deploy to AWS
+## Add AWS: keep checking while your Mac is off
 
-You need:
+This adds a Lambda that checks every 5 minutes whenever your Mac isn't, with the jobs
+it has seen in DynamoDB, your config in S3 and your alert settings in SSM, all within
+AWS's free tier. Set up [Run it on your Mac](#run-it-on-your-mac) first. You need:
 
 - An AWS account on the **Paid plan**. Accounts created on the Free plan close 6 months
   after sign-up, or when their credits run out, unless they're upgraded. The always-free
@@ -516,9 +610,9 @@ aws ssm put-parameter --profile admin --type SecureString --name /role-radar/DIS
 # SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM, EMAIL_TO, the same way.
 ```
 
-**3. Point your local config at the stack.** Copy the stack outputs
-(`sam list stack-outputs --stack-name role-radar --profile admin`) into the `runtime:`
-section of `config/companies.yaml`:
+**3. Point your profile at the stack.** Copy the stack outputs
+(`sam list stack-outputs --stack-name role-radar --profile admin`) into `config/profile.yaml`,
+replacing its Mac-only `runtime:` section:
 
 ```yaml
 runtime:
@@ -547,8 +641,8 @@ aws configure --profile role-radar    # paste the key pair; same region as the s
 do this first. Each company's first check records every job that's currently open;
 pick one:
 
-- Move existing state over, if you have any:
-  `role-radar migrate --from json:seen_jobs.json --to dynamodb:<TableName>`.
+- Move what your Mac has seen so far over, if it has been running on its own:
+  `role-radar migrate --from sqlite:~/.role-radar/state.db --to dynamodb:<TableName>`.
 - Record everything that's open now without alerting (recommended for many companies):
   `role-radar run --once --baseline --local-config`. `--local-config` reads your local
   file, since nothing has been pushed yet.
@@ -565,9 +659,9 @@ commands hold the lease while they work.
 **7. Push the config and run it:**
 
 ```bash
-role-radar config push         # Lambda starts checking from its next run
+role-radar config push         # companies.yaml + profile.yaml; Lambda starts checking from its next run
 role-radar start               # in a terminal; Ctrl+C to quit (Lambda takes over)
-role-radar login-item on       # or: in the background, run by the menu bar app (needs secrets in SSM, step 2)
+role-radar login-item on       # or: in the background, run by the menu bar app
 role-radar status              # who has the lease, last passes, due companies, alerts
 ```
 
@@ -668,9 +762,15 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   you: alerts are running late. Right after adding many companies it can fire while
   their baselines are saved; otherwise raise the Lambda's `MemorySize` or check fewer
   companies.
-- **Changing companies or filters.** Edit `config/companies.yaml`, then
-  `role-radar config push`. A running laptop app picks it up within 5 minutes, and Lambda
-  at its next run. `status` warns when your local file and the pushed copy differ.
+- **Changing companies or filters.** Edit `config/companies.yaml` (companies) or
+  `config/profile.yaml` (what you're looking for), then `role-radar config push`. A
+  running laptop app picks it up within 5 minutes, and Lambda at its next run. `status`
+  warns when your local files and the pushed copy differ.
+- **A new Mac.** Clone the repo and install it, set up the `role-radar` AWS profile
+  (`aws configure --profile role-radar`), then
+  `AWS_PROFILE=role-radar role-radar config pull --url <ConfigUrl output>` writes your
+  `profile.yaml` back from the last push. The jobs you've seen are in DynamoDB and your
+  alert settings in SSM, so nothing else needs restoring.
 - **Rotating a secret.** `aws ssm put-parameter --overwrite ...`. Both sides re-read the
   secrets on the next alert after a failed delivery, when they start fresh, and after
   five minutes of cached settings. This also picks up newly configured channels.
@@ -712,8 +812,8 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
 
 ## Security
 
-- Secrets never live in the repo or the config. They sit in SSM (or your local `.env`),
-  and are read only when an alert is sent.
+- Secrets never live in the repo or the config. They sit in the Keychain, in SSM, or in
+  your local `.env`, and are read only when an alert is sent.
 - The code never logs webhook URLs or credentials. `httpx` logs every request URL, so its
   logging is kept at WARNING. The same goes for botocore, whose debug output would
   include decrypted SSM values.

@@ -1,8 +1,14 @@
-"""Load and validate the companies file (YAML or JSON).
+"""Load and validate the companies file (YAML or JSON), with the profile next to it.
 
-The file has four sections: `settings` (how checks run), `defaults` (filters
-every company inherits), `companies`, and `runtime` (where state, config and
-secrets live: see RuntimeSettings).
+The companies file has four sections: `settings` (how checks run), `defaults`
+(filters every company inherits), `companies`, and `runtime` (where state,
+config and secrets live: see RuntimeSettings).
+
+The profile (profile.yaml beside the companies file, or $ROLE_RADAR_PROFILE)
+holds one person's own settings, kept out of git: `runtime`, `filters` (the
+roles, places and experience they want: defaults.filters, key by key) and
+optionally `settings` overrides. Applied over the companies file, its
+sections win. Without a profile, the companies file alone is the config.
 """
 
 from __future__ import annotations
@@ -122,12 +128,15 @@ class RuntimeSettings:
     the `runtime:` section of the local config file, the default below.
     """
 
-    storage: str = "json"  # json (state_file) | dynamodb (table)
-    state_file: str = "seen_jobs.json"
+    # sqlite: everything on this Mac (state_file, default ~/.role-radar/state.db);
+    # dynamodb: the AWS table, shared with Lambda; json: one file (tests, dry runs).
+    storage: str = "json"
+    state_file: str | None = None
     table: str | None = None
     # Where the companies config is read from: s3://bucket/key. Unset: the local file itself.
     config_url: str | None = None
-    secrets: str = "env"  # env (environment variables) | ssm:/path/ (Parameter Store)
+    # env (environment variables) | keychain (this Mac's Keychain) | ssm:/path/ (Parameter Store)
+    secrets: str = "env"
     region: str | None = None
     profile: str | None = None
 
@@ -144,18 +153,29 @@ class RuntimeSettings:
         return resolved
 
     def validate(self) -> None:
-        if self.storage not in ("json", "dynamodb"):
-            raise ValueError(f"runtime.storage must be 'json' or 'dynamodb', not {self.storage!r}")
+        if self.storage not in ("json", "sqlite", "dynamodb"):
+            raise ValueError(f"runtime.storage must be 'sqlite', 'dynamodb' or 'json', not {self.storage!r}")
         if self.storage == "dynamodb" and not self.table:
             raise ValueError("runtime.storage is dynamodb but no table is set (runtime.table or ROLE_RADAR_TABLE)")
-        if self.secrets != "env" and not (self.secrets.startswith("ssm:/") and self.secrets.endswith("/")):
-            raise ValueError(f"runtime.secrets must be 'env' or 'ssm:/path/', not {self.secrets!r}")
+        if self.secrets not in ("env", "keychain") and not (self.secrets.startswith("ssm:/") and self.secrets.endswith("/")):
+            raise ValueError(f"runtime.secrets must be 'env', 'keychain' or 'ssm:/path/', not {self.secrets!r}")
         if self.config_url and not self.config_url.startswith("s3://"):
             raise ValueError(f"runtime.config_url must be an s3:// URL, not {self.config_url!r}")
 
     @property
     def ssm_path(self) -> str | None:
         return self.secrets[len("ssm:") :] if self.secrets.startswith("ssm:") else None
+
+    @property
+    def state_path(self) -> Path:
+        """The local state file: state_file, else the default for the storage."""
+        if self.state_file:
+            return Path(self.state_file).expanduser()
+        if self.storage == "sqlite":
+            from role_radar.instance import home
+
+            return home() / "state.db"
+        return Path("seen_jobs.json")
 
 
 @dataclass
@@ -177,19 +197,87 @@ def _build(cls: type, data: dict[str, Any], where: str) -> Any:
 _YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
-def load_config(path: str | Path) -> AppConfig:
-    path = Path(path)
-    return parse_config(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
+PROFILE_FILE = "profile.yaml"
+PROFILE_SECTIONS = ("runtime", "filters", "settings")
 
 
-def load_runtime(path: str | Path) -> RuntimeSettings:
-    """Only the file's `runtime:` section, for commands that just need to know where state lives.
+def profile_path(config_path: str | Path) -> Path:
+    """Where the profile for a companies file lives: $ROLE_RADAR_PROFILE, else profile.yaml beside it."""
+    if os.environ.get("ROLE_RADAR_PROFILE"):
+        return Path(os.environ["ROLE_RADAR_PROFILE"]).expanduser()
+    return Path(config_path).with_name(PROFILE_FILE)
+
+
+def load_config(path: str | Path, profile: str | Path | None = None) -> AppConfig:
+    """The companies file at `path`, with `profile` applied if given and present."""
+    return parse_raw(combined(path, profile), str(path))
+
+
+def load_runtime(path: str | Path, profile: str | Path | None = None) -> RuntimeSettings:
+    """Only the `runtime:` section, for commands that just need to know where state lives.
 
     Skips building every company's filter, which takes seconds for thousands of companies.
     """
+    raw = combined(path, profile)
+    return _build(RuntimeSettings, dict(raw.get("runtime") or {}), "runtime")
+
+
+def combined(path: str | Path, profile: str | Path | None = None) -> dict[str, Any]:
+    """The companies file's contents with the profile's sections applied (what `config push` uploads)."""
     path = Path(path)
     raw = _read_raw(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
-    return _build(RuntimeSettings, dict(raw.get("runtime") or {}), "runtime")
+    return apply_profile(raw, read_profile(profile)) if profile else raw
+
+
+def read_profile(path: str | Path) -> dict[str, Any] | None:
+    """A profile's sections, or None if there's no such file."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    raw = yaml.load(path.read_text(encoding="utf-8"), Loader=_YAML_LOADER) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{path}: expected a mapping with {', '.join(PROFILE_SECTIONS)}")
+    unknown = set(raw) - set(PROFILE_SECTIONS)
+    if unknown:
+        raise ValueError(f"{path}: unknown sections {sorted(unknown)}; a profile has {', '.join(PROFILE_SECTIONS)}")
+    for name in PROFILE_SECTIONS:
+        if raw.get(name) is not None and not isinstance(raw[name], dict):
+            raise ValueError(f"{path}: `{name}` must be a mapping")
+    return raw
+
+
+def apply_profile(raw: dict[str, Any], profile: dict[str, Any] | None) -> dict[str, Any]:
+    """The companies file's contents with a profile applied.
+
+    Its runtime replaces the file's; its filters and settings replace the file's
+    defaults.filters and settings key by key (settings.http too).
+    """
+    if not profile:
+        return raw
+    out = dict(raw)
+    if profile.get("runtime") is not None:
+        out["runtime"] = dict(profile["runtime"])
+    if profile.get("filters"):
+        defaults = dict(out.get("defaults") or {})
+        defaults["filters"] = {**(defaults.get("filters") or {}), **profile["filters"]}
+        out["defaults"] = defaults
+    if profile.get("settings"):
+        settings = dict(out.get("settings") or {})
+        for key, value in profile["settings"].items():
+            both_maps = isinstance(value, dict) and isinstance(settings.get(key), dict)
+            settings[key] = {**settings[key], **value} if both_maps else value
+        out["settings"] = settings
+    return out
+
+
+def split_profile(raw: dict[str, Any]) -> dict[str, Any]:
+    """The profile part of combined contents (`config pull` restores a lost profile from the pushed copy)."""
+    profile: dict[str, Any] = {}
+    if raw.get("runtime"):
+        profile["runtime"] = raw["runtime"]
+    if (raw.get("defaults") or {}).get("filters"):
+        profile["filters"] = raw["defaults"]["filters"]
+    return profile
 
 
 def _read_raw(text: str, source: str, *, as_json: bool) -> dict[str, Any]:
@@ -201,8 +289,11 @@ def _read_raw(text: str, source: str, *, as_json: bool) -> dict[str, Any]:
 
 def parse_config(text: str, source: str = "config", *, as_json: bool = False) -> AppConfig:
     """Parse and validate a companies file's contents. `source` names it in errors."""
-    raw = _read_raw(text, source, as_json=as_json)
+    return parse_raw(_read_raw(text, source, as_json=as_json), source)
 
+
+def parse_raw(raw: dict[str, Any], source: str = "config") -> AppConfig:
+    """Validate a companies file's parsed contents (a profile already applied)."""
     settings_raw = dict(raw.get("settings") or {})
     http = _build(HttpSettings, settings_raw.pop("http", None) or {}, "settings.http")
     settings = _build(Settings, {**settings_raw, "http": http}, "settings")

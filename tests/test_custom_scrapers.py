@@ -209,7 +209,8 @@ def test_custom_source_detection(url, expected):
     ("EDG Manager", "Natick, United States", False),
 ])
 def test_config_program_titles_and_target_countries(title, location, expected):
-    config = load_config(Path(__file__).parent.parent / "config/companies.yaml")
+    config = load_config(Path(__file__).parent.parent / "config/companies.yaml",
+                         Path(__file__).parent.parent / "config/profile.example.yaml")
     filt = next(c.filter for c in config.companies if c.name == "Discord")
     assert filt.evaluate(job(title, location=location)).matched is expected
 

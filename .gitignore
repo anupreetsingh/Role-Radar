@@ -16,3 +16,5 @@ dist/
 seen_jobs.json
 samconfig.toml
 !.env.example
+# Each person's own settings (config/profile.example.yaml shows the format)
+config/profile.yaml

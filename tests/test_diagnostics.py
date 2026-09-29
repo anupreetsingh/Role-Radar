@@ -17,7 +17,8 @@ def deployment(table, monkeypatch):
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket="role-radar-config")
     s3.put_object(Bucket="role-radar-config", Key="companies.yaml",
-                  Body=b"companies: [{name: Acme, url: 'https://jobs.lever.co/acme'}]")
+                  Body=b"defaults: {filters: {include_keywords: [engineer]}}\n"
+                       b"companies: [{name: Acme, url: 'https://jobs.lever.co/acme'}]")
     boto3.client("ssm", region_name="us-east-1").put_parameter(
         Name="/role-radar/DISCORD_WEBHOOK_URL", Value="https://discord.invalid/private-token", Type="SecureString")
     runtime = RuntimeSettings(storage="dynamodb", table=table[1], config_url="s3://role-radar-config/companies.yaml",
