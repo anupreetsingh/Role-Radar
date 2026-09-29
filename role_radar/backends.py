@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from role_radar import aws
-from role_radar.config import AppConfig, RuntimeSettings, load_config, parse_config
+from role_radar.config import AppConfig, RuntimeSettings, load_runtime, parse_config
 from role_radar.lease import Lease, LocalLease
 from role_radar.notifications import Notifier, notifiers_from_env
 from role_radar.storage import JsonStateStore, StateStore
@@ -53,7 +53,7 @@ class AwsClients:
 def resolve_runtime(local_config: str | Path | None, env: Mapping[str, str] | None = None) -> RuntimeSettings:
     """The local file's `runtime:` section (if the file exists) with environment overrides applied."""
     path = Path(local_config) if local_config else None
-    base = load_config(path).runtime if path and path.exists() else RuntimeSettings()
+    base = load_runtime(path) if path and path.exists() else RuntimeSettings()
     return base.with_env(env)
 
 

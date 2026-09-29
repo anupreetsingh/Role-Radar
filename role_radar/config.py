@@ -173,16 +173,35 @@ def _build(cls: type, data: dict[str, Any], where: str) -> Any:
     return cls(**data)
 
 
+# libyaml's parser when PyYAML was built with it: ten times faster on a file of thousands of companies.
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def load_config(path: str | Path) -> AppConfig:
     path = Path(path)
     return parse_config(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
 
 
-def parse_config(text: str, source: str = "config", *, as_json: bool = False) -> AppConfig:
-    """Parse and validate a companies file's contents. `source` names it in errors."""
-    raw = json.loads(text) if as_json else yaml.safe_load(text)
+def load_runtime(path: str | Path) -> RuntimeSettings:
+    """Only the file's `runtime:` section, for commands that just need to know where state lives.
+
+    Skips building every company's filter, which takes seconds for thousands of companies.
+    """
+    path = Path(path)
+    raw = _read_raw(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
+    return _build(RuntimeSettings, dict(raw.get("runtime") or {}), "runtime")
+
+
+def _read_raw(text: str, source: str, *, as_json: bool) -> dict[str, Any]:
+    raw = json.loads(text) if as_json else yaml.load(text, Loader=_YAML_LOADER)
     if not isinstance(raw, dict) or not isinstance(raw.get("companies"), list):
         raise ValueError(f"{source}: expected a mapping with a 'companies' list")
+    return raw
+
+
+def parse_config(text: str, source: str = "config", *, as_json: bool = False) -> AppConfig:
+    """Parse and validate a companies file's contents. `source` names it in errors."""
+    raw = _read_raw(text, source, as_json=as_json)
 
     settings_raw = dict(raw.get("settings") or {})
     http = _build(HttpSettings, settings_raw.pop("http", None) or {}, "settings.http")
