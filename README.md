@@ -4,14 +4,57 @@ Watches company careers pages and collects new jobs matching your criteria into 
 every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
 the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
 
-There are two ways to run it:
+There are three ways to run it:
 
-- **On your Mac only.** Everything, from the jobs it has seen to your email settings, stays
-  on your Mac, and it checks while the menu bar app is open. No AWS account needed. See
-  [Run it on your Mac](#run-it-on-your-mac).
+- **Download the app.** Nothing to install: a Setup window asks what you're looking for,
+  helps you pick companies with ChatGPT or Claude, and sends alerts from your Gmail. See
+  [Get the app](#get-the-app).
+- **On your Mac only, from the code.** Everything, from the jobs it has seen to your email
+  settings, stays on your Mac, and it checks while the menu bar app is open. No AWS account
+  needed. See [Run it on your Mac](#run-it-on-your-mac).
 - **Your Mac plus AWS.** A Lambda takes over whenever your Mac is closed or asleep, with
   state in DynamoDB; it fits in AWS's free tier. See
   [Add AWS](#add-aws-keep-checking-while-your-mac-is-off).
+
+## Get the app
+
+For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
+
+1. Download `Role-Radar-<version>-apple-silicon.zip` from the
+   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest), open it, and
+   drag **Role Radar** into **Applications**.
+2. Open Role Radar. The app isn't signed with a paid Apple developer account, so macOS first
+   says it can't check it: click **Done**, then open **System Settings → Privacy & Security**,
+   scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
+3. The **Setup** window takes three steps:
+   - **What you're looking for:** job titles, words that rule a job out (like "senior"),
+     places, and the most years of experience a job may ask for.
+   - **Companies to watch:** **Copy Prompt**, paste it into ChatGPT or Claude, and paste the
+     whole answer back. Companies Role Radar already knows (about 4,800) use their verified job
+     boards; any others are checked once, and the ones it can't read are listed with a reason.
+   - **Email alerts:** your Gmail address and a Gmail
+     [app password](https://myaccount.google.com/apppasswords), a 16-letter password just for
+     Role Radar (it needs 2-Step Verification). It's kept in your Mac's Keychain. Alerts are
+     sent from your Gmail to yourself.
+4. **Start Checking.** Role Radar opens at login and checks while your Mac is on. New matches
+   collect in **Live Tracking** and go out by email every 10 minutes. **Settings…** in its menu
+   changes roles, companies or email.
+
+Its files live in `~/Library/Application Support/Role Radar`, and its log is
+`~/Library/Logs/com.roleradar.app.checker.log`.
+
+**Packaging a new version** (from the code, on an Apple Silicon Mac with uv and the Xcode
+Command Line Tools): bump `__version__` in `role_radar/__init__.py`, then
+
+```bash
+sh scripts/package_app.sh      # → dist/Role-Radar-<version>-apple-silicon.zip
+gh release create v<version> dist/Role-Radar-<version>-apple-silicon.zip --title "Role Radar <version>"
+```
+
+The script puts a Python (python-build-standalone, via uv) and Role Radar inside the app,
+with the companies in `config/companies.yaml` as its directory of known employers, and signs it
+ad hoc. The packaged app runs its checker as its own launchd agent,
+`com.roleradar.app.checker`, so it never touches one run from the code.
 
 ## Run it on your Mac
 
@@ -511,6 +554,8 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` or `skip --all` keeps matches out of the alerts; `unskip` undoes a skip until the next digest; `send` sends the waiting matches now. `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
+| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profile` (roles etc., JSON on stdin), `prompt` (the ChatGPT/Claude prompt), `companies` (add companies from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain). It only rewrites files it wrote itself. |
+| `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.zip`: the app with its own Python, for someone else's Mac (see [Get the app](#get-the-app)). |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies

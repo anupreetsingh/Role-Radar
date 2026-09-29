@@ -39,12 +39,23 @@ def read_all() -> dict[str, str]:
 
 
 def write(name: str, value: str | None = None) -> None:
-    """Set a setting. Without `value`, `security` asks for it on the terminal (twice, hidden), so it's never on a command line."""
+    """Set a setting, never putting its value on a command line (where other programs could see it).
+
+    Without `value`, `security` asks for it on the terminal, twice and hidden. With
+    one, it goes to `security`'s interactive mode on stdin, and is read back to check.
+    """
     if name not in NAMES:
         raise ValueError(f"unknown setting {name!r}; one of {', '.join(NAMES)}")
-    args = ["add-generic-password", "-U", "-s", SERVICE, "-a", name, "-l", f"Role Radar {name}", "-w"]
-    done = _security(*args, *([value] if value is not None else []), capture_output=value is not None)
-    if done.returncode:
+    if value is None:
+        done = _security("add-generic-password", "-U", "-s", SERVICE, "-a", name, "-l", f"Role Radar {name}", "-w")
+        if done.returncode:
+            raise RuntimeError(f"couldn't save {name} in the Keychain")
+        return
+    if not value or any(c in value for c in '"\\\n\r'):
+        raise ValueError(f"{name} can't be empty, or contain quotes, backslashes or line breaks")
+    command = f'add-generic-password -U -s {SERVICE} -a {name} -l "Role Radar {name}" -w "{value}"\n'
+    done = _security("-i", input=command, capture_output=True)
+    if done.returncode or read(name) != value:
         raise RuntimeError(f"couldn't save {name} in the Keychain" + (f": {done.stderr.strip()}" if done.stderr else ""))
 
 

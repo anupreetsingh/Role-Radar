@@ -1,3 +1,3 @@
 """Role Radar: watch company careers pages and alert once per new matching job."""
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"

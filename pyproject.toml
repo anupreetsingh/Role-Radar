@@ -28,6 +28,10 @@ version = { attr = "role_radar.__version__" }
 [tool.setuptools.packages.find]
 include = ["role_radar*"]
 
+[tool.setuptools.package-data]
+# directory.yaml (known employers' job boards) is written by scripts/package_app.sh
+role_radar = ["templates/*.yaml"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

@@ -8,6 +8,9 @@ current code. At login it starts with the app (the app's Open at Login).
 A launchd LaunchAgent without RunAtLoad or KeepAlive: launchd never starts it
 by itself, it only runs it with its own log and background priority when
 asked, so it outlives an app crash rather than dying with it.
+
+Its label is $ROLE_RADAR_AGENT (default com.roleradar.start), so the packaged
+app's checker is a separate agent, with its own log, from one run from the code.
 """
 
 from __future__ import annotations
@@ -22,17 +25,26 @@ LABEL = "com.roleradar.start"
 PASSED_ENV = ("AWS_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_CONFIG_FILE", "AWS_SHARED_CREDENTIALS_FILE", "ROLE_RADAR_HOME")
 
 
+def label() -> str:
+    return os.environ.get("ROLE_RADAR_AGENT") or LABEL
+
+
 def plist_path() -> Path:
-    return Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
+    return Path.home() / "Library" / "LaunchAgents" / f"{label()}.plist"
 
 
 def log_dir() -> Path:
     return Path.home() / "Library" / "Logs"
 
 
+def log_file() -> Path:
+    """The checker's log: role-radar.log, or <label>.log for another agent."""
+    return log_dir() / ("role-radar.log" if label() == LABEL else f"{label()}.log")
+
+
 def build_plist(program: list[str], env: dict[str, str], working_dir: Path) -> dict:
     return {
-        "Label": LABEL,
+        "Label": label(),
         "ProgramArguments": program,
         "RunAtLoad": False,  # the menu bar app starts it; deliberately no KeepAlive either
         "ExitTimeOut": 60,  # after SIGTERM, time to finish the companies in flight before launchd kills it
@@ -40,8 +52,8 @@ def build_plist(program: list[str], env: dict[str, str], working_dir: Path) -> d
         "WorkingDirectory": str(working_dir),
         "EnvironmentVariables": env,
         # The app writes its own rotating log (--log-file); this catches crashes only.
-        "StandardOutPath": str(log_dir() / "role-radar.out.log"),
-        "StandardErrorPath": str(log_dir() / "role-radar.out.log"),
+        "StandardOutPath": str(log_file().with_suffix(".out.log")),
+        "StandardErrorPath": str(log_file().with_suffix(".out.log")),
     }
 
 
@@ -58,9 +70,9 @@ def install(program: list[str], env: dict[str, str], working_dir: Path) -> Path:
     log_dir().mkdir(parents=True, exist_ok=True)
     with path.open("wb") as fh:
         plistlib.dump(build_plist(program, env, working_dir), fh)
-    _launchctl("bootout", f"{_domain()}/{LABEL}", check=False)  # reload if it was already on
+    _launchctl("bootout", f"{_domain()}/{label()}", check=False)  # reload if it was already on
     _launchctl("bootstrap", _domain(), str(path))
-    _launchctl("kickstart", f"{_domain()}/{LABEL}")
+    _launchctl("kickstart", f"{_domain()}/{label()}")
     return path
 
 
@@ -69,9 +81,9 @@ def start() -> bool:
     path = plist_path()
     if not path.exists():
         return False
-    if _launchctl("kickstart", f"{_domain()}/{LABEL}", check=False).returncode != 0:
+    if _launchctl("kickstart", f"{_domain()}/{label()}", check=False).returncode != 0:
         _launchctl("bootstrap", _domain(), str(path), check=False)  # not loaded (e.g. after logging in): load it
-        _launchctl("kickstart", f"{_domain()}/{LABEL}", check=False)
+        _launchctl("kickstart", f"{_domain()}/{label()}", check=False)
     return True
 
 
@@ -79,7 +91,7 @@ def uninstall() -> bool:
     """Unload the LaunchAgent (stopping the app if launchd started it) and delete it. False if it wasn't on."""
     path = plist_path()
     existed = path.exists()
-    _launchctl("bootout", f"{_domain()}/{LABEL}", check=False)
+    _launchctl("bootout", f"{_domain()}/{label()}", check=False)
     path.unlink(missing_ok=True)
     return existed
 

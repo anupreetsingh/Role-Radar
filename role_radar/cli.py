@@ -18,6 +18,8 @@
   role-radar config push         upload the companies file, with your profile applied, to runtime.config_url
   role-radar config pull         restore a lost profile.yaml from what `config push` uploaded
   role-radar secrets [set|delete NAME]
+  role-radar setup [init|show|profile|prompt|companies|email]
+                                 the packaged app's first-run setup (JSON on stdin and stdout)
                                  alert settings in this Mac's Keychain (runtime.secrets: keychain)
   role-radar migrate --from dynamodb:TABLE --to sqlite:PATH   (or json:PATH, either way)
   role-radar login-item on|off   set up the Mac's background checker (`role-radar start` under
@@ -336,6 +338,34 @@ def cmd_matches(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_setup(args: argparse.Namespace) -> int:
+    """What the packaged app's Setup window runs. Input on stdin (JSON, or the AI's answer), output JSON."""
+    from role_radar import onboarding
+
+    config = Path(args.config).expanduser() if args.config else default_config_path()
+    if not config:
+        raise ValueError("where? pass --config PATH (the companies file; the profile goes beside it)")
+    action = args.action or "show"
+    if action == "init":
+        onboarding.init(config)
+    elif action == "profile":
+        data = json.load(sys.stdin)
+        onboarding.save_profile(config, data.get("roles") or [], data.get("exclude") or [], data.get("locations") or [],
+                                data.get("max_experience_years"))
+    elif action == "prompt":
+        print(onboarding.prompt(config))
+        return 0
+    elif action == "companies":
+        report = onboarding.import_companies(config, sys.stdin.read(), replace=args.replace, check=not args.no_check)
+        print(json.dumps(report.as_dict()))
+        return 0
+    elif action == "email":
+        data = json.load(sys.stdin)
+        onboarding.save_email(data.get("address") or "", data.get("password") or "")
+    print(json.dumps(onboarding.show(config)))
+    return 0
+
+
 def _wait_for_start(timeout: float = 10.0) -> None:
     """Give a just-started `role-radar start` a moment to take its lock, so the state shown includes it."""
     deadline = time.monotonic() + timeout
@@ -518,7 +548,7 @@ def cmd_login_item(args: argparse.Namespace) -> int:
         print("Login item removed." if launchd.uninstall() else "The login item wasn't on.")
         return 0
     path = _install_login_item(context(args))
-    log_file = launchd.log_dir() / "role-radar.log"
+    log_file = launchd.log_file()
     print(
         f"Login item on ({path}). role-radar start is running now. The menu bar app starts it when it opens "
         f"and stops it when it quits.\nLog: {log_file}. `role-radar login-item off` removes it."
@@ -537,7 +567,7 @@ def _install_login_item(ctx: Context) -> Path:
             "NAME) or in SSM Parameter Store (runtime.secrets: ssm:/role-radar/)"
         )
     config_path = ctx.config_path.resolve()
-    log_file = launchd.log_dir() / "role-radar.log"
+    log_file = launchd.log_file()
     program = [sys.executable, "-m", "role_radar", "start", "--config", str(config_path), "--log-file", str(log_file)]
     return launchd.install(program, launchd.passed_env(), working_dir=config_path.parent)
 
@@ -676,6 +706,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all", action="store_true", help="skip (or unskip) every waiting match")
     p.add_argument("--json", action="store_true", help="print the lists as JSON (what the menu bar app reads)")
     p.set_defaults(func=cmd_matches)
+
+    p = sub.add_parser("setup", parents=[common], help="the packaged app's first-run setup (JSON in and out)")
+    p.add_argument("action", nargs="?", choices=["init", "show", "profile", "prompt", "companies", "email"],
+                   help="init: create the files; profile: save roles etc. (JSON on stdin); prompt: print the AI prompt; "
+                        "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin)")
+    p.add_argument("--replace", action="store_true", help="companies: replace the list instead of adding to it")
+    p.add_argument("--no-check", action="store_true", help="companies: don't read each new job board once first")
+    p.set_defaults(func=cmd_setup)
 
     p = sub.add_parser("ui", parents=[common], help="a local page with on/off switches for each runner")
     p.add_argument("--port", type=int, default=8765, help="port on 127.0.0.1 (default 8765; 0 picks a free one)")

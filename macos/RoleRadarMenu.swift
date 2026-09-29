@@ -2,7 +2,8 @@
 // and for the Discord and email alerts, and a Live Tracking window.
 //
 // Runners. Both on: the Mac checks while this app is open; Lambda covers when
-// it isn't. One on: only that runner checks. Both off: nothing checks.
+// it isn't. One on: only that runner checks. Both off: nothing checks. Without
+// AWS (runtime.storage sqlite) there's no Lambda: the Mac checks while it's open.
 // The Mac's checker (`role-radar start`, run by launchd) lives with this app:
 // the app starts it, restarts it within a minute if it stops, and stops it on
 // quit. Quitting and reopening the app restarts it on the current code.
@@ -14,7 +15,10 @@
 // records it instead, and until then it can be unskipped. Send Now sends the
 // waiting matches without waiting for the next alert time.
 // Every read and write goes through the role-radar CLI (`switch --json`,
-// `matches --json`), so the rules live in one place. Build with scripts/build_menubar.sh.
+// `matches --json`), so the rules live in one place. Build with scripts/build_menubar.sh
+// (it runs the project's code), or package it with scripts/package_app.sh: then the app
+// carries its own Python and keeps its files in ~/Library/Application Support/Role Radar,
+// and a Setup window (`role-radar setup`) asks for roles, companies and a Gmail account.
 
 import AppKit
 import Charts
@@ -93,6 +97,9 @@ struct RunnerState: Decodable {
     let next_digest: String?
     let waiting: Int?  // matches waiting to be sent, not counting skipped ones
     let round: RoundInfo?
+    let storage: String?  // "dynamodb" with AWS (the Mac and Lambda), "sqlite" on this Mac only
+
+    var hasLambda: Bool { (storage ?? "dynamodb") == "dynamodb" }
 
     /// The latest pass by a runner whose name starts with `prefix` ("laptop" or "lambda").
     func lastPass(_ prefix: String) -> Date? {
@@ -222,6 +229,52 @@ enum When {
     }
 }
 
+/// Where the app finds Python, its files and its checker: the project it was built from
+/// (build_menubar.sh), or in the packaged app (package_app.sh), everything inside it.
+enum Place {
+    static let info = Bundle.main.infoDictionary ?? [:]
+    static let packaged = info["RRPackaged"] as? Bool ?? false
+    static let support = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/Role Radar").path
+    static let agent = "com.roleradar.app.checker"  // the packaged app's own launchd agent
+    static let python: String = packaged
+        ? (Bundle.main.resourcePath ?? "") + "/python/bin/python3"
+        : info["RRPython"] as? String ?? ProcessInfo.processInfo.environment["RR_PYTHON"] ?? "python3"
+    static let workDir: String = packaged
+        ? support
+        : info["RRProjectDir"] as? String ?? ProcessInfo.processInfo.environment["RR_PROJECT_DIR"]
+            ?? FileManager.default.currentDirectoryPath
+    static let config = packaged ? support + "/companies.yaml" : workDir + "/config/companies.yaml"
+    /// The packaged app's state, lock and checker are its own, apart from a checker run from the code.
+    static let env: [String: String] = packaged ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent] : [:]
+    static let log = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Logs/" + (packaged ? agent + ".log" : "role-radar.log"))
+    /// Opened straight from Downloads, macOS runs a downloaded app from a hidden read-only copy
+    /// ("App Translocation"): the checker it sets up would break once that copy goes away.
+    static let translocated = packaged && Bundle.main.bundlePath.contains("/AppTranslocation/")
+}
+
+/// What `role-radar setup show` reports.
+struct SetupState: Decodable {
+    let roles: [String]
+    let exclude: [String]
+    let locations: [String]
+    let max_experience_years: Int?
+    let companies: Int
+    let email: String?
+    let email_ready: Bool
+    let ready: Bool
+}
+
+/// What `role-radar setup companies` reports.
+struct ImportReport: Decodable {
+    struct Added: Decodable { let name: String; let source: String; let jobs: Int? }
+    struct Skipped: Decodable { let name: String; let reason: String }
+    let added: [Added]
+    let skipped: [Skipped]
+    let total: Int
+}
+
 @MainActor
 final class Model: ObservableObject {
     @Published var state: RunnerState?
@@ -231,26 +284,28 @@ final class Model: ObservableObject {
     @Published var liveBusy: Set<String> = []  // match ids, "all" (Skip All) or "send" (Send Now) in flight
     @Published var liveError: String?
     private var liveActions = 0  // a refresh that started before the latest skip or send is out of date
-
-    nonisolated static let python: String = {
-        let info = Bundle.main.infoDictionary ?? [:]
-        return info["RRPython"] as? String ?? ProcessInfo.processInfo.environment["RR_PYTHON"] ?? "python3"
-    }()
-    nonisolated static let projectDir: String = {
-        let info = Bundle.main.infoDictionary ?? [:]
-        return info["RRProjectDir"] as? String ?? ProcessInfo.processInfo.environment["RR_PROJECT_DIR"]
-            ?? FileManager.default.currentDirectoryPath
-    }()
-    private let python = Model.python
-    private let projectDir = Model.projectDir
+    @Published var setup: SetupState?  // the packaged app's setup; nil when built from the code
+    @Published var wantsSetup = false  // opens the Setup window (the menu bar label watches it)
 
     init() {
         Task { [weak self] in
+            await self?.prepare()
             while let self {
                 await self.refresh()
                 try? await Task.sleep(for: .seconds(60))
             }
         }
+    }
+
+    /// The packaged app's first steps: trust its own files, create its files, and open Setup until it's done.
+    private func prepare() async {
+        guard Place.packaged else { return }
+        // Downloaded apps carry macOS's quarantine flag, which would stop launchd running the bundled
+        // Python. Once the app has been opened (Open Anyway), it clears the flag on itself.
+        Self.runQuietly("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Bundle.main.bundlePath])
+        _ = await setupCommand(["init"])
+        await loadSetup()
+        if !(setup?.ready ?? false) { wantsSetup = true }
     }
 
     var menuSymbol: String {
@@ -271,21 +326,60 @@ final class Model: ObservableObject {
         }
     }
 
+    /// The packaged app starts checking only once Setup is done (and it's in Applications); one built from the code always may.
+    var canStart: Bool { !Place.packaged || (!Place.translocated && (setup?.ready ?? false)) }
+
     /// Re-read the state, starting the Mac's checker first if it's switched on and not running.
     func refresh() async {
-        await run(["switch", "--json", "--start"])
+        await run(["switch", "--json"] + (canStart ? ["--start"] : []))
     }
 
     /// Ask the Mac's checker to finish the companies in flight and quit. Doesn't wait: the
     /// `role-radar stop` it launches outlives this app, and Lambda takes over once it's done.
     nonisolated static func stopChecker() {
+        runQuietly(Place.python, ["-m", "role_radar", "stop"], wait: false)
+    }
+
+    nonisolated static func runQuietly(_ program: String, _ args: [String], wait: Bool = true) {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "role_radar", "stop"]
-        process.currentDirectoryURL = URL(fileURLWithPath: projectDir)
+        process.executableURL = URL(fileURLWithPath: program)
+        process.arguments = args
+        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.fileExists(atPath: Place.workDir) ? Place.workDir : "/")
+        process.environment = ProcessInfo.processInfo.environment.merging(Place.env) { $1 }
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try? process.run()
+        if wait { process.waitUntilExit() }
+    }
+
+    // -- setup (the packaged app) --------------------------------------------------
+
+    func loadSetup() async {
+        if case .success(let data) = await setupCommand(["show"]) {
+            setup = try? JSONDecoder().decode(SetupState.self, from: data)
+        }
+    }
+
+    /// Run `role-radar setup ...`, updating `setup` from what it reports. Returns an error message, or nil.
+    func setupStep(_ args: [String], stdin: String? = nil) async -> String? {
+        switch await setupCommand(args, stdin: stdin) {
+        case .success(let data):
+            if let fresh = try? JSONDecoder().decode(SetupState.self, from: data) { setup = fresh }
+            return nil
+        case .failure(let message):
+            return message
+        }
+    }
+
+    func setupCommand(_ args: [String], stdin: String? = nil) async -> CLIResult {
+        await Self.cli(args: ["-m", "role_radar", "setup"] + args + ["--config", Place.config], stdin: stdin)
+    }
+
+    /// Setup is done: start checking now and at every login.
+    func startChecking() async {
+        try? SMAppService.mainApp.register()
+        await set("laptop", on: true)
+        wantsSetup = false
     }
 
     /// Flip a switch: "laptop" or "lambda" (runners), "discord" or "email" (alerts).
@@ -327,8 +421,7 @@ final class Model: ObservableObject {
     }
 
     private func runLive(_ args: [String], unless outdated: () -> Bool = { false }) async {
-        let config = projectDir + "/config/companies.yaml"
-        let result = await Self.cli(python: python, dir: projectDir, args: ["-m", "role_radar"] + args + ["--config", config])
+        let result = await Self.cli(args: ["-m", "role_radar"] + args + ["--config", Place.config])
         if outdated() { return }
         switch result {
         case .success(let data):
@@ -344,8 +437,7 @@ final class Model: ObservableObject {
     }
 
     private func run(_ args: [String]) async {
-        let config = projectDir + "/config/companies.yaml"
-        let result = await Self.cli(python: python, dir: projectDir, args: ["-m", "role_radar"] + args + ["--config", config])
+        let result = await Self.cli(args: ["-m", "role_radar"] + args + ["--config", Place.config])
         switch result {
         case .success(let data):
             do {
@@ -362,9 +454,7 @@ final class Model: ObservableObject {
 
     /// After a failed switch, re-read the real state so the toggles don't lie.
     private func refreshQuietly() async {
-        let config = projectDir + "/config/companies.yaml"
-        if case .success(let data) = await Self.cli(
-            python: python, dir: projectDir, args: ["-m", "role_radar", "switch", "--json", "--config", config]),
+        if case .success(let data) = await Self.cli(args: ["-m", "role_radar", "switch", "--json", "--config", Place.config]),
             let fresh = try? JSONDecoder().decode(RunnerState.self, from: data) {
             state = fresh
         }
@@ -372,24 +462,30 @@ final class Model: ObservableObject {
 
     enum CLIResult { case success(Data), failure(String) }
 
-    nonisolated static func cli(python: String, dir: String, args: [String]) async -> CLIResult {
+    nonisolated static func cli(args: [String], stdin: String? = nil) async -> CLIResult {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
-                process.executableURL = URL(fileURLWithPath: python)
+                process.executableURL = URL(fileURLWithPath: Place.python)
                 process.arguments = args
-                process.currentDirectoryURL = URL(fileURLWithPath: dir)
-                var env = ProcessInfo.processInfo.environment
+                try? FileManager.default.createDirectory(atPath: Place.workDir, withIntermediateDirectories: true)
+                process.currentDirectoryURL = URL(fileURLWithPath: Place.workDir)
+                var env = ProcessInfo.processInfo.environment.merging(Place.env) { $1 }
                 env["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
                 process.environment = env
-                let out = Pipe(), err = Pipe()
+                let out = Pipe(), err = Pipe(), input = Pipe()
                 process.standardOutput = out
                 process.standardError = err
+                process.standardInput = stdin == nil ? FileHandle.nullDevice : input
                 do {
                     try process.run()
                 } catch {
-                    continuation.resume(returning: .failure("Couldn't run \(python): \(error.localizedDescription)"))
+                    continuation.resume(returning: .failure("Couldn't run \(Place.python): \(error.localizedDescription)"))
                     return
+                }
+                if let stdin {
+                    input.fileHandleForWriting.write(Data(stdin.utf8))
+                    try? input.fileHandleForWriting.close()
                 }
                 let data = out.fileHandleForReading.readDataToEndOfFile()
                 let errText = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
@@ -646,6 +742,8 @@ struct Panel: View {
         return !s.switches.discord && !s.switches.email
     }
 
+    private var hasLambda: Bool { model.state?.hasLambda ?? true }
+
     private func alertDetail(_ name: String) -> String {
         guard let s = model.state else { return "" }
         if alertsOff { return "Off · new matches are saved for later" }
@@ -682,15 +780,18 @@ struct Panel: View {
                           busy: model.busy.contains("laptop"),
                           action: macNeedsStart ? ("Start", { Task { await model.set("laptop", on: true) } }) : nil
                 ) { on in Task { await model.set("laptop", on: on) } }
-                SwitchRow(title: "Lambda", symbol: "cloud", detail: lambdaDetail,
-                          isOn: model.state?.switches.lambda ?? false, active: model.state?.checking == "lambda",
-                          busy: model.busy.contains("lambda")) { on in Task { await model.set("lambda", on: on) } }
+                if hasLambda {
+                    SwitchRow(title: "Lambda", symbol: "cloud", detail: lambdaDetail,
+                              isOn: model.state?.switches.lambda ?? false, active: model.state?.checking == "lambda",
+                              busy: model.busy.contains("lambda")) { on in Task { await model.set("lambda", on: on) } }
+                }
             }
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
             .disabled(model.state == nil)
 
-            Text("Both on: the Mac checks while this app is open, Lambda covers when it isn't.")
+            Text(hasLambda ? "Both on: the Mac checks while this app is open, Lambda covers when it isn't."
+                           : "The Mac checks while this app is open. Everything stays on this Mac.")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -709,7 +810,22 @@ struct Panel: View {
                 .font(.system(size: 11)).foregroundStyle(alertsOff ? Color.orange : Color.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if model.state != nil {
+            if Place.packaged && !(model.setup?.ready ?? true) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Finish setting up: add the roles you want, companies to watch, and your Gmail.")
+                        .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        openWindow(id: SetupView.id)
+                        NSApp.activate()
+                    } label: {
+                        Label("Set Up Role Radar", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
+            } else if model.state != nil {
                 let health = Health(state: model.state, live: nil)
                 VStack(alignment: .leading, spacing: 8) {
                     health.round
@@ -742,13 +858,16 @@ struct Panel: View {
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
                 Spacer()
-                Button("Log") {
-                    let log = FileManager.default.homeDirectoryForCurrentUser
-                        .appendingPathComponent("Library/Logs/role-radar.log")
-                    NSWorkspace.shared.open(log)
+                if Place.packaged {
+                    Button("Settings…") {
+                        openWindow(id: SetupView.id)
+                        NSApp.activate()
+                    }
+                    .help("Roles, companies and email")
                 }
+                Button("Log") { NSWorkspace.shared.open(Place.log) }
                 Button("Quit") { NSApp.terminate(nil) }
-                    .help("Also stops the Mac's checker; Lambda takes over")
+                    .help(hasLambda ? "Also stops the Mac's checker; Lambda takes over" : "Also stops the Mac's checker")
             }
             .controlSize(.small)
         }
@@ -1045,6 +1164,317 @@ struct DotLabel: LabelStyle {
     }
 }
 
+/// The packaged app's Setup: what to look for, which companies to watch, and the Gmail account alerts use.
+struct SetupView: View {
+    static let id = "setup"
+    @ObservedObject var model: Model
+    @Environment(\.dismissWindow) private var dismissWindow
+
+    @State private var roles = ""
+    @State private var exclude = ""
+    @State private var locations = ""
+    @State private var checkYears = true
+    @State private var years = 2
+    @State private var answer = ""
+    @State private var replaceList = false
+    @State private var report: ImportReport?
+    @State private var address = ""
+    @State private var password = ""
+    @State private var busy: String?  // the step working right now
+    @State private var notes: [String: (text: String, ok: Bool)] = [:]  // each step's last result
+    @State private var filled = false
+
+    private var setup: SetupState? { model.setup }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                if Place.translocated {
+                    Label("Move Role Radar to your Applications folder first (drag it from Downloads onto Applications "
+                          + "in Finder), then open it from there.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13, weight: .medium)).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Set Up Role Radar").font(.system(size: 20, weight: .semibold))
+                    Text("Role Radar watches companies' job boards and emails you new jobs that match, within minutes of "
+                         + "them being posted. Three steps:")
+                        .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                step(1, "What you're looking for", done: !(setup?.roles.isEmpty ?? true)) { lookingFor }
+                step(2, "Companies to watch", done: (setup?.companies ?? 0) > 0) { companies }
+                step(3, "Email alerts (Gmail)", done: setup?.email_ready ?? false) { email }
+                footer
+            }
+            .padding(24)
+            .frame(maxWidth: 720, alignment: .leading)
+        }
+        .frame(minWidth: 600, minHeight: 560)
+        .task { await load() }
+    }
+
+    // -- step 1 ----------------------------------------------------------------------
+
+    private var lookingFor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            field("Job titles to look for, one per line. A job matches when its title contains one of them.",
+                  text: $roles, placeholder: "software engineer\ndata analyst", height: 84)
+            field("Words that rule a job out, one per line (looked for in the title).", text: $exclude, height: 64)
+            field("Places, one per line. Leave empty for anywhere; \"remote\" works too.",
+                  text: $locations, placeholder: "United States\nremote", height: 56)
+            HStack(spacing: 10) {
+                Toggle("Skip jobs asking for more than", isOn: $checkYears).toggleStyle(.checkbox)
+                Stepper("\(years) year\(years == 1 ? "" : "s") of experience", value: $years, in: 0...20)
+                    .disabled(!checkYears)
+            }
+            .font(.system(size: 12))
+            Text("It reads each new match's description once to check this.")
+                .font(.system(size: 11)).foregroundStyle(.secondary)
+            actionRow("profile", "Save") { await saveProfile() }
+        }
+    }
+
+    // -- step 2 ----------------------------------------------------------------------
+
+    private var companies: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Ask ChatGPT or Claude which companies hire for these roles. Copy the prompt, paste it into the chat, "
+                 + "then paste its whole answer below.")
+                .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            actionRow("prompt", "Copy Prompt", disabled: setup?.roles.isEmpty ?? true) { await copyPrompt() }
+            field("The AI's answer:", text: $answer, placeholder: "- name: Company Name\n  url: https://…", height: 130)
+            HStack(spacing: 12) {
+                actionRow("companies", "Add Companies", disabled: answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    await addCompanies()
+                }
+                Toggle("Replace my list", isOn: $replaceList).toggleStyle(.checkbox).font(.system(size: 12))
+            }
+            if busy == "companies" {
+                Text("Checking each new company's job board once. This can take a minute.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            if let report { reportView(report) }
+            HStack(spacing: 10) {
+                Text("Watching \(setup?.companies ?? 0) compan\((setup?.companies ?? 0) == 1 ? "y" : "ies").")
+                    .font(.system(size: 12))
+                Button("Edit List…") {
+                    NSWorkspace.shared.open([URL(fileURLWithPath: Place.config)],
+                                            withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
+                                            configuration: NSWorkspace.OpenConfiguration())
+                }
+                .controlSize(.small)
+                .help("Open the list in TextEdit: each company is a name and its job board's link")
+            }
+        }
+    }
+
+    private func reportView(_ report: ImportReport) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            let known = report.added.filter { $0.source == "known" }.count
+            Label("Added \(report.added.count) (\(known) it already knew, \(report.added.count - known) checked)"
+                  + (report.skipped.isEmpty ? "" : " · left out \(report.skipped.count)"),
+                  systemImage: report.added.isEmpty ? "exclamationmark.triangle" : "checkmark.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(report.added.isEmpty ? Color.orange : Color.green)
+            if !report.skipped.isEmpty {
+                DisclosureGroup("Left out") {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(Array(report.skipped.enumerated()), id: \.offset) { _, item in
+                            Text("\(item.name): \(item.reason)").font(.system(size: 11)).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Text("Ask the AI for those companies' Greenhouse, Lever, Ashby or Workday links, and add them again.")
+                            .font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .font(.system(size: 12))
+            }
+        }
+    }
+
+    // -- step 3 ----------------------------------------------------------------------
+
+    private var email: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Alerts come from your own Gmail, sent to yourself. Gmail needs an app password for this: a 16-letter "
+                 + "password just for Role Radar. Creating one needs 2-Step Verification on your Google account.")
+                .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Link("Create an app password ↗", destination: URL(string: "https://myaccount.google.com/apppasswords")!)
+                .font(.system(size: 12))
+            TextField("you@gmail.com", text: $address).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+            SecureField("App password (16 letters)", text: $password).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+            HStack(spacing: 12) {
+                actionRow("email", "Save", disabled: address.isEmpty || password.isEmpty) { await saveEmail() }
+                actionRow("test", "Send Test Email", disabled: !(setup?.email_ready ?? false)) { await sendTest() }
+            }
+            if let saved = setup?.email, setup?.email_ready ?? false {
+                Text("Alerts go to \(saved).").font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // -- footer ----------------------------------------------------------------------
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+            HStack(alignment: .center) {
+                Text(setup?.ready ?? false
+                     ? "All set. Role Radar checks while this Mac is on and the app is open, and it opens at login."
+                     : "Finish the three steps to start.")
+                    .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button(model.state?.checking == "laptop" ? "Done" : "Start Checking") {
+                    Task {
+                        await model.startChecking()
+                        dismissWindow(id: SetupView.id)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!(setup?.ready ?? false) || Place.translocated)
+            }
+        }
+    }
+
+    // -- pieces ----------------------------------------------------------------------
+
+    private func step<Content: View>(_ number: Int, _ title: String, done: Bool, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                    .font(.system(size: 18)).foregroundStyle(done ? Color.green : Color.secondary)
+                Text(title).font(.system(size: 15, weight: .semibold))
+            }
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.05)))
+    }
+
+    private func field(_ label: String, text: Binding<String>, placeholder: String = "", height: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+            TextEditor(text: text)
+                .font(.system(size: 12, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .frame(height: height)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3)))
+                .overlay(alignment: .topLeading) {
+                    if text.wrappedValue.isEmpty && !placeholder.isEmpty {
+                        Text(placeholder).font(.system(size: 12, design: .monospaced)).foregroundStyle(.tertiary)
+                            .padding(.horizontal, 11).padding(.vertical, 6).allowsHitTesting(false)
+                    }
+                }
+        }
+    }
+
+    private func actionRow(_ key: String, _ title: String, disabled: Bool = false,
+                           action: @escaping () async -> Void) -> some View {
+        HStack(spacing: 8) {
+            Button(title) { Task { busy = key; await action(); busy = nil } }
+                .disabled(disabled || busy != nil)
+            if busy == key {
+                ProgressView().controlSize(.small)
+            } else if let note = notes[key] {
+                Label(note.text, systemImage: note.ok ? "checkmark" : "exclamationmark.triangle")
+                    .font(.system(size: 11)).foregroundStyle(note.ok ? Color.green : Color.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private static func lines(_ text: String) -> [String] {
+        text.split(whereSeparator: { $0 == "\n" || $0 == "," }).map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func json(_ object: [String: Any]) -> String {
+        (try? JSONSerialization.data(withJSONObject: object)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+    }
+
+    // -- actions ----------------------------------------------------------------------
+
+    private func load() async {
+        await model.loadSetup()
+        guard !filled, let setup else { return }
+        roles = setup.roles.joined(separator: "\n")
+        exclude = setup.exclude.joined(separator: "\n")
+        locations = setup.locations.joined(separator: "\n")
+        checkYears = setup.max_experience_years != nil || setup.roles.isEmpty
+        years = setup.max_experience_years ?? 2
+        address = setup.email ?? ""
+        filled = true
+    }
+
+    private func saveProfile() async {
+        let data = json(["roles": Self.lines(roles), "exclude": Self.lines(exclude), "locations": Self.lines(locations),
+                         "max_experience_years": checkYears ? years as Any : NSNull()])
+        let problem = await model.setupStep(["profile"], stdin: data)
+        notes["profile"] = problem.map { ($0, false) } ?? ("Saved", true)
+    }
+
+    private func copyPrompt() async {
+        switch await model.setupCommand(["prompt"]) {
+        case .success(let data):
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(String(decoding: data, as: UTF8.self), forType: .string)
+            notes["prompt"] = ("Copied. Paste it into ChatGPT or Claude.", true)
+        case .failure(let message):
+            notes["prompt"] = (message, false)
+        }
+    }
+
+    private func addCompanies() async {
+        switch await model.setupCommand(["companies"] + (replaceList ? ["--replace"] : []), stdin: answer) {
+        case .success(let data):
+            report = try? JSONDecoder().decode(ImportReport.self, from: data)
+            notes["companies"] = nil
+            if report?.added.isEmpty == false { answer = "" }
+        case .failure(let message):
+            notes["companies"] = (message, false)
+        }
+        await model.loadSetup()
+    }
+
+    private func saveEmail() async {
+        let problem = await model.setupStep(["email"], stdin: json(["address": address, "password": password]))
+        notes["email"] = problem.map { ($0, false) } ?? ("Saved in your Mac's Keychain", true)
+        if problem == nil { password = "" }
+    }
+
+    private func sendTest() async {
+        let result = await Model.cli(args: ["-m", "role_radar", "notifications", "test", "--config", Place.config])
+        if case .failure(let message) = result {
+            notes["test"] = (message, false)
+        } else {
+            notes["test"] = ("Sent. Check your inbox.", true)
+        }
+    }
+}
+
+/// The menu bar icon. It also opens Setup on a packaged app's first launch: the label is the
+/// one view that exists from the start, and opening a window needs a view's environment.
+struct MenuLabel: View {
+    @ObservedObject var model: Model
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: model.menuSymbol)
+            .accessibilityLabel(model.menuLabel)
+            .onChange(of: model.wantsSetup) { _, wants in
+                if wants {
+                    openWindow(id: SetupView.id)
+                    NSApp.activate()
+                }
+            }
+    }
+}
+
 #if !PANEL_SNAPSHOT
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Quit (or logging out) stops the Mac's checker with the app.
@@ -1062,8 +1492,7 @@ struct RoleRadarMenuApp: App {
         MenuBarExtra {
             Panel(model: model)
         } label: {
-            Image(systemName: model.menuSymbol)
-                .accessibilityLabel(model.menuLabel)
+            MenuLabel(model: model)
         }
         .menuBarExtraStyle(.window)
 
@@ -1071,6 +1500,12 @@ struct RoleRadarMenuApp: App {
             LiveWindow(model: model)
         }
         .defaultSize(width: 1000, height: 680)
+
+        Window("Role Radar Setup", id: SetupView.id) {
+            SetupView(model: model)
+        }
+        .defaultSize(width: 680, height: 820)
+        .windowResizability(.contentMinSize)
     }
 }
 #endif
