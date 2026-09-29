@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]  # 77: the SPDX `license` string
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "role-radar"
 dynamic = ["version"]
 description = "Monitor company careers pages and alert on newly posted matching jobs"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.27,<1.0",

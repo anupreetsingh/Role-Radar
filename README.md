@@ -721,3 +721,7 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   can't ping your server.
 - The Lambda's role and the laptop's policy can only reach this table, the config object
   and the `/role-radar/` parameters.
+
+## License
+
+MIT: see [LICENSE](LICENSE).
