@@ -7,6 +7,9 @@
   #alerts       <time>#<company>#<uid>     log of sent alerts for `status`; expire via TTL
   #runs         <runner>                   each runner's last pass, for `status`
   #stats        <hour>#<runner>            a runner's activity counts for one UTC hour; expire via TTL
+  #digest       #digest / #request         the digest's schedule / the latest "Send now"
+  #queue        <company>#<uid>            a match waiting for the digest, for Live Tracking
+  #round        <runner>                   how far the runner's pass in progress has got
 
 Company names can't start with "#" (the config loader rejects them), so they
 never collide with the rows the store keeps for itself.
@@ -15,12 +18,19 @@ Reads are strongly consistent: straight after a handoff, the new runner must
 see everything the previous one wrote. Saving a company is a transaction that
 also checks the lease, so the save commits only while this runner still holds
 the lease with the epoch it acquired.
+
+The #queue rows are written in the same transaction as the job rows they
+mirror, so Live Tracking sees a match as soon as its company is saved. The
+user's skip is the one attribute only the app writes: saves update the other
+attributes and leave it alone.
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
+from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable, Iterator
@@ -30,8 +40,8 @@ from botocore.exceptions import ClientError
 
 from role_radar.lease import Lease, LeaseInfo, LeaseLost
 from role_radar.storage import (
-    STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState, SeenJob, StateStore,
-    compact, to_iso,
+    SKIPPED, SKIPPED_KEPT, STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState,
+    QueuedMatch, SeenJob, StateStore, compact, to_iso,
 )
 
 log = logging.getLogger(__name__)
@@ -43,6 +53,10 @@ RUNS = "#runs"
 DIGEST = "#digest"
 SWITCHES = "#switches"
 STATS = "#stats"
+QUEUE = "#queue"
+ROUND = "#round"
+REQUEST = "#request"  # sort key of the "Send now" row, next to the digest's schedule
+ROUND_TTL = 2 * 86400
 ALERT_TTL = 30 * 86400  # seconds an alert-log row lives (the table's TTL attribute is "ttl")
 MAX_TRANSACTION = 100  # DynamoDB's limit on actions per TransactWriteItems
 TRANSACTION_ATTEMPTS = 11
@@ -70,6 +84,11 @@ def _plain(item: dict[str, Any]) -> dict[str, Any]:
             value = int(value) if value == value.to_integral_value() else float(value)
         out[name] = value
     return out
+
+
+def _waiting(attrs: dict[str, Any] | None) -> bool:
+    """storage.waiting() for a stored job row."""
+    return bool(attrs and attrs.get("matched") and not attrs.get("notified_at") and not attrs.get("duplicate_of"))
 
 
 def _num(value: float) -> dict[str, str]:
@@ -295,11 +314,14 @@ class DynamoStateStore(StateStore):
         )
 
     def load_digest(self) -> DigestSchedule:
-        item = self.client.get_item(TableName=self.table, Key=_key(DIGEST, DIGEST), ConsistentRead=True).get("Item")
-        return DigestSchedule.from_dict(_plain(item)) if item else DigestSchedule()
+        rows = {item["sk"]: item for item in self._query(DIGEST)}
+        schedule = DigestSchedule.from_dict(rows.get(DIGEST, {}))
+        schedule.requested_at = rows.get(REQUEST, {}).get("requested_at")
+        return schedule
 
     def save_digest(self, schedule: DigestSchedule) -> None:
-        writes = [{"Put": {"TableName": self.table, "Item": _item(DIGEST, DIGEST, compact(schedule))}}]
+        attrs = {k: v for k, v in compact(schedule).items() if k != "requested_at"}  # the app's row, not ours
+        writes = [{"Put": {"TableName": self.table, "Item": _item(DIGEST, DIGEST, attrs)}}]
         epoch = self.lease.epoch if self.lease else None
         self._transact([self.lease.condition_check(epoch), *writes] if self.lease else writes, epoch)
 
@@ -314,7 +336,8 @@ class DynamoStateStore(StateStore):
         )
 
     def recent_alerts(self, limit: int = 10) -> list[dict[str, Any]]:
-        alerts = list(self._query(ALERTS, ScanIndexForward=False, Limit=limit))
+        # Eventually consistent: it's a log, and Live Tracking reads it every few seconds.
+        alerts = list(self._query(ALERTS, ScanIndexForward=False, Limit=limit, ConsistentRead=False))
         for alert in alerts:
             alert["notified_at"] = alert["sk"].split("#", 1)[0]
         return alerts
@@ -340,6 +363,7 @@ class DynamoStateStore(StateStore):
         ]
         writes += [{"Delete": {"TableName": self.table, "Key": _key(record.name, uid)}} for uid in loaded if uid not in current]
         writes += [self._alert_row(record, uid) for uid in record.alerted if record.jobs.get(uid)]
+        writes += self._queue_writes(record, current, loaded)
         writes.append({"Put": {"TableName": self.table, "Item": _item(SCHEDULE, record.name, compact(record.meta))}})
 
         epoch = self.lease.epoch if self.lease else None
@@ -364,11 +388,45 @@ class DynamoStateStore(StateStore):
             "title": job.title,
             "location": job.location,
             "url": job.url,
+            "first_seen": job.first_seen,
             "by": self.lease.holder if self.lease else None,
             "ttl": int(self.clock()) + ALERT_TTL,
         }
         sk = f"{job.notified_at}#{record.name}#{uid}"
         return {"Put": {"TableName": self.table, "Item": _item(ALERTS, sk, {k: v for k, v in attrs.items() if v})}}
+
+    def _queue_writes(self, record: CompanyRecord, current: dict[str, dict], loaded: dict[str, dict]) -> list[dict[str, Any]]:
+        """Keep the company's #queue rows in step with its job rows."""
+        writes = []
+        for uid in current.keys() | loaded.keys():
+            before, after = loaded.get(uid), current.get(uid)
+            if before == after:
+                continue
+            job = record.jobs.get(uid)
+            if job and _waiting(after):
+                writes.append({"Update": self._queue_update(record.name, uid, job)})
+            elif job and job.dropped_for == SKIPPED and _waiting(before):
+                writes.append({"Update": self._queue_update(record.name, uid, job, done=True)})
+            elif _waiting(before):
+                writes.append({"Delete": {"TableName": self.table, "Key": _key(QUEUE, f"{record.name}#{uid}")}})
+        return writes
+
+    def _queue_update(self, company: str, uid: str, job: SeenJob, done: bool = False) -> dict[str, Any]:
+        """Set a #queue row's fields, keeping when it joined the list and the user's skip."""
+        now = self.clock()
+        fields: dict[str, Any] = {"company": company, "uid": uid, "title": job.title, "url": job.url,
+                                  "first_seen": job.first_seen, "location": job.location}
+        if done:
+            fields |= {"done_at": _iso(now), "ttl": int(now + SKIPPED_KEPT.total_seconds())}
+        names = {f"#f{i}": name for i, name in enumerate(fields)} | {"#q": "queued_at"}
+        values = {f":f{i}": _serialize(v) for i, v in enumerate(fields.values()) if v is not None} | {":now": {"S": _iso(now)}}
+        sets = [f"#f{i} = :f{i}" for i, v in enumerate(fields.values()) if v is not None] + ["#q = if_not_exists(#q, :now)"]
+        removes = [f"#f{i}" for i, v in enumerate(fields.values()) if v is None]
+        return {
+            "TableName": self.table, "Key": _key(QUEUE, f"{company}#{uid}"),
+            "UpdateExpression": "SET " + ", ".join(sets) + (" REMOVE " + ", ".join(removes) if removes else ""),
+            "ExpressionAttributeNames": names, "ExpressionAttributeValues": values,
+        }
 
     def _transact(self, items: list[dict[str, Any]], epoch: int | None = None) -> None:
         # boto3 doesn't retry cancelled transactions, so throttling (common on a
@@ -418,6 +476,52 @@ class DynamoStateStore(StateStore):
         """Remember a runner's last pass for `status` (not fenced: it's informational)."""
         self.client.put_item(TableName=self.table, Item=_item(RUNS, runner, {k: v for k, v in summary.items() if v is not None}))
 
+    def record_round(self, runner: str, progress: dict[str, Any]) -> None:
+        """Not fenced: it's informational."""
+        attrs = {k: v for k, v in progress.items() if v is not None} | {"ttl": int(self.clock()) + ROUND_TTL}
+        self.client.put_item(TableName=self.table, Item=_item(ROUND, runner, attrs))
+
+    def load_rounds(self) -> dict[str, dict[str, Any]]:
+        return {item.pop("sk"): {k: v for k, v in item.items() if k not in ("pk", "ttl")}
+                for item in self._query(ROUND, ConsistentRead=False)}
+
+    # -- Live Tracking -----------------------------------------------------
+
+    def load_queue(self) -> list[QueuedMatch]:
+        now = int(self.clock())
+        return [QueuedMatch.from_dict(item) for item in self._query(QUEUE) if item.get("ttl", now) >= now]
+
+    def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
+        """Not fenced on the lease: a skip is the user's. Only a match still waiting can be (un)skipped."""
+        change = {"UpdateExpression": "SET #s = :now", "ExpressionAttributeValues": {":now": {"S": _iso(self.clock())}}} \
+            if skipped else {"UpdateExpression": "REMOVE #s"}
+        try:
+            self.client.update_item(
+                TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"), **change,
+                ConditionExpression="attribute_exists(pk) AND attribute_not_exists(#d)",
+                ExpressionAttributeNames={"#s": "skipped_at", "#d": "done_at"},
+            )
+        except ClientError as exc:
+            if _error_code(exc) == "ConditionalCheckFailedException":
+                return False
+            raise
+        return True
+
+    def request_digest(self) -> None:
+        self.client.put_item(TableName=self.table, Item=_item(DIGEST, REQUEST, {"requested_at": _iso(self.clock())}))
+
+    def repair_queue(self, add: list[QueuedMatch], remove: list[tuple[str, str]]) -> None:
+        """Rows a save would have written but didn't (matches from before #queue existed), and rows left behind."""
+        for match in add:
+            with contextlib.suppress(ClientError):  # it appeared meanwhile: the save's row is the better one
+                self.client.put_item(
+                    TableName=self.table, ConditionExpression="attribute_not_exists(pk)",
+                    Item=_item(QUEUE, f"{match.company}#{match.uid}", {k: v for k, v in asdict(match).items() if v is not None}
+                               | {"queued_at": _iso(self.clock())}),
+                )
+        for company, uid in remove:
+            self.client.delete_item(TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"))
+
     # -- whole state (migration) -------------------------------------------
 
     def load(self) -> MonitorState:
@@ -428,8 +532,12 @@ class DynamoStateStore(StateStore):
             for item in map(_plain, page.get("Items", [])):
                 if item["pk"] == SCHEDULE:
                     state.meta[item["sk"]] = CompanyMeta.from_dict(item)
-                elif item["pk"] == DIGEST:
+                elif item["pk"] == DIGEST and item["sk"] == DIGEST:
+                    requested = state.digest.requested_at
                     state.digest = DigestSchedule.from_dict(item)
+                    state.digest.requested_at = requested
+                elif item["pk"] == DIGEST and item["sk"] == REQUEST:
+                    state.digest.requested_at = item.get("requested_at")
                 elif item["pk"] == SWITCHES:
                     state.switches = {k: bool(v) for k, v in item.items() if k in SWITCH_NAMES}
                 elif not item["pk"].startswith("#"):

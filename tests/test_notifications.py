@@ -30,8 +30,10 @@ def test_small_discord_digest_links_every_job_in_one_message():
     payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
     assert within_discord_limits(payload)
     assert payload["content"] == "**Role Radar** — 21 new matching jobs — Acme, Beta"
-    assert all(f"[{j.title}]({j.url}) — Austin, TX" in text_of(payload) for j in jobs)
-    assert "__**Acme**__" in text_of(payload) and "__**Beta**__" in text_of(payload) and "more" not in text_of(payload)
+    assert all(f"[{j.title}]({j.url}) — **{j.company}** · Austin, TX" in text_of(payload) for j in jobs)
+    assert "more" not in text_of(payload)
+    lines = text_of(payload).splitlines()
+    assert "[Data Engineer]" in lines[-1]  # in the order given (a digest's newest first), not by company
 
 
 def test_large_discord_digest_fills_one_message_and_counts_the_rest():
@@ -48,7 +50,7 @@ def test_a_role_in_many_places_links_the_first_few():
     jobs = [job("Software Engineer", str(i), location=f"City {i}") for i in range(180)]
     payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
     assert within_discord_limits(payload)
-    assert "• **Software Engineer** — [City 0](https://acme.example/jobs/0) · [City 1](" in text_of(payload)
+    assert "• **Software Engineer** — **Acme** · [City 0](https://acme.example/jobs/0) · [City 1](" in text_of(payload)
     assert text_of(payload).count("](https://acme.example/jobs/") == 8
     assert "+172 more (in the email)" in text_of(payload) and "…and" not in text_of(payload)
 
@@ -59,7 +61,7 @@ def test_discord_without_email_sends_every_job_over_several_messages():
     assert len(payloads) > 1 and all(within_discord_limits(p) for p in payloads)
     text = "\n".join(text_of(p) for p in payloads)
     assert all(text.count(f"({j.url})") == 1 for j in jobs) and "email" not in text
-    assert all(text_of(p).startswith("__**Acme**__") for p in payloads)  # each message names the company
+    assert all(line.startswith("• ") and "**Acme**" in line for p in payloads for line in text_of(p).splitlines())
     assert [p["content"][-5:] for p in payloads[:2]] == [f"(1/{len(payloads)})", f"(2/{len(payloads)})"]
 
     many_places = [job("Software Engineer", str(i), location=f"City {i}") for i in range(180)]
@@ -81,7 +83,7 @@ def test_only_the_channels_switched_on_send():
 def test_discord_escapes_markdown_and_keeps_links_intact():
     jobs = [job("C++ Engineer [Senior] *Remote*", "1", location="Austin_TX", url="https://x.example/a job (1)")]
     payload = DiscordNotifier("https://discord.invalid/webhook").build_message(jobs)
-    assert "[C++ Engineer \\[Senior\\] \\*Remote\\*](https://x.example/a%20job%20%281%29) — Austin\\_TX" in text_of(payload)
+    assert "[C++ Engineer \\[Senior\\] \\*Remote\\*](https://x.example/a%20job%20%281%29) — **Acme** · Austin\\_TX" in text_of(payload)
 
 
 def test_discord_waits_for_confirmation_and_retries_rate_limit(monkeypatch):
@@ -129,6 +131,18 @@ def test_email_digest_lists_jobs_from_every_company():
     msg = EmailNotifier("smtp.invalid", 587, "from@example.com", ["to@example.com"]).build_message(jobs)
     assert "digest" in msg["Subject"]
     assert all(j.url in msg.get_content() and j.company in msg.get_content() for j in jobs)
+
+
+def test_email_digest_lists_roles_in_the_order_given_each_with_its_company():
+    jobs = [job("Backend Engineer", "2", company="Zeta", location="Remote"),  # newest
+            job("Software Engineer", "1", company="Acme", location="Austin, TX"),
+            job("Software Engineer", "3", company="Acme", location="Boston, MA")]
+    text = format_digest(jobs)
+    assert text.split("\n", 2)[1] == "3 new matching jobs — Zeta, Acme"
+    assert text.split("\n")[2:] == [
+        "", "Backend Engineer — Zeta", "Remote", "https://acme.example/jobs/2",
+        "", "Software Engineer — Acme", "Austin, TX | Boston, MA", "https://acme.example/jobs/1", "https://acme.example/jobs/3",
+    ]
 
 
 @pytest.mark.parametrize("extra,problem", [

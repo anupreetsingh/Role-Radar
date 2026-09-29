@@ -42,10 +42,12 @@ load config + every company's schedule → the companies that are due (schedule.
     → filter (filters.py)
     → diff vs. stored state (tracker.py): new / removed / returned
     → queue the new matches for the next digest
-    → save its jobs and next check time, in one transaction fenced on the lease
-  if the digest is due (even when no company was due):
-    collect pending matches across enabled companies → re-read the lease
-    → one digest per channel → save each channel's delivery receipts
+    → save its jobs, its Live Tracking rows and next check time, in one transaction fenced on the lease
+  every 15 s while companies are being checked, and once at the end (even when no company was due):
+    if the digest is due (or "Send now" was pressed), collect pending matches across
+    enabled companies, except companies being checked right then → record the skipped
+    ones instead of sending them → re-read the lease → one digest per channel
+    → save each channel's delivery receipts
 ```
 
 All HTTP goes through `http_client.py`. Each request checks robots.txt, waits until its
@@ -213,7 +215,8 @@ still due and get picked up next time.
 #### Notification digests
 
 `settings.digest_interval_minutes: 10` collects all new matching jobs across enabled
-companies into one email and one Discord message, grouped by company. In Discord each
+companies into one email and one Discord message, newest first (as Live Tracking lists them), each
+with its company; one role in several places is one entry. In Discord each
 job's title is a link to apply. A Discord message holds about 6,000 characters, roughly
 30-35 jobs; a longer digest shows what fits and says how many more are in the email.
 With email switched off (or not set up), Discord sends the rest in more messages instead.
@@ -231,8 +234,31 @@ receipts persist across restarts and handoffs. Failed channels retry at the next
 interval without repeating delivery to successful channels. Previously sent jobs
 are not replayed when digests are enabled.
 
+The digest doesn't wait for a round of checks to end: while one is running it looks
+every 15 seconds, and sends when it's due. A company being checked at that moment is
+left for the next digest, so its matches aren't sent twice.
+
 Set the interval to `0` (also the default when omitted) to send immediately after
 each company's check. Baselines and dry runs never send a digest.
+
+#### Live Tracking
+
+The menu bar app's **Live Tracking** window (or `role-radar matches`) lists the matches
+in three sections, newest first:
+
+- **Waiting to be sent.** A match appears as soon as its company's check is saved, not
+  when the round ends. With both alert channels off the list keeps growing; the first
+  digest after one is switched back on sends everything in it.
+- **Skipped.** **Skip** (or `role-radar matches skip COMPANY UID`, or **Skip All**)
+  keeps a match out of the alerts. The next digest records it as skipped instead of
+  sending it (`dropped_for: skipped in Live Tracking`); until then **Unskip** puts it
+  back. Applied skips stay listed for a week.
+- **Sent alerts.** Each alert that went out, newest first: when, and the jobs it held.
+
+**Send Now** (`role-radar matches send`) makes the digest due at once: the Mac sends
+within a minute, Lambda at its next run. The window also shows the round in progress
+(how many of the due companies are done), and the last 24 hours' activity. It reads
+the lists every 5 seconds while it's open.
 
 ## Configuration
 
@@ -348,9 +374,12 @@ dry runs and AWS-free local use.
 | company name | job uid | A seen job (the fields of `SeenJob`) |
 | `#schedule` | company name | `last_checked_at`, `next_check_at`, failure count |
 | `#digest` | `#digest` | `next_send_at`, `last_attempt_at`, `interval_minutes` |
+| `#digest` | `#request` | `requested_at`: the latest "Send now" |
 | `#lease` | `#lease` | Who may check companies now: `holder`, `epoch`, `expires_at` |
 | `#alerts` | time + company + uid | Log of sent alerts, which expires after 30 days via TTL |
 | `#runs` | runner | Each runner's last pass |
+| `#queue` | company + uid | A match waiting for the digest, for Live Tracking; `skipped_at` if skipped. Written with the company's save; an applied skip expires after 7 days via TTL |
+| `#round` | runner | The runner's latest round: `started_at`, `total`, `done`, `finished_at` |
 
 Reads are strongly consistent. Right after a handoff, the new runner must see everything
 the previous one wrote. Each save writes only the rows that changed.
@@ -360,7 +389,8 @@ To write another backend, subclass `storage.StateStore`. Runs use `load_schedule
 each company's check. `load_digest()` and `save_digest()` persist the shared digest
 schedule; its writes must use the same lease fence as company saves. Each schedule row
 also keeps `pending`, the company's matched jobs not yet sent, so the digest calls
-`load_company()` only for companies that have some. `load()` and
+`load_company()` only for companies that have some. `load_queue()`, `mark_skipped()`
+and `request_digest()` serve Live Tracking. `load()` and
 `save()` move a whole state at once, for migration.
 
 ## Commands
@@ -386,8 +416,9 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] f
 | `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert secrets in SSM, because a launchd agent can't see your shell's environment variables. |
 | `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
+| `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` or `skip --all` keeps matches out of the alerts; `unskip` undoes a skip until the next digest; `send` sends the waiting matches now. `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, and an Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), the day's checks, new jobs, new matches and alerts sent, the last pass, how many sites are failing, and how many matches are waiting to be sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
+| `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
 file is `$ROLE_RADAR_CONFIG_FILE`, else `./config/companies.yaml`, else

@@ -170,7 +170,8 @@ def test_company_roundtrip_writes_only_changed_rows(table):
     add_jobs(record, "Software Engineer", "Data Engineer")
     record.meta = CompanyMeta(last_checked_at="2026-09-01T00:00:00Z", next_check_at="2026-09-01T00:30:00Z")
     store.save_company(record)
-    assert counting.transactions == [["ConditionCheck", "Put", "Put", "Put"]]  # lease check, 2 jobs, schedule
+    # lease check, 2 jobs, their rows in Live Tracking's list (both are waiting to be sent), schedule
+    assert counting.transactions == [["ConditionCheck", "Put", "Put", "Update", "Update", "Put"]]
 
     again = store.load_company("Acme")
     assert again.jobs == record.jobs and again.meta == record.meta and not again.is_new
@@ -182,8 +183,9 @@ def test_company_roundtrip_writes_only_changed_rows(table):
 
     del again.jobs[next(iter(again.jobs))]
     store.save_company(again)
-    assert counting.transactions[-1] == ["ConditionCheck", "Delete", "Put"]
+    assert counting.transactions[-1] == ["ConditionCheck", "Delete", "Delete", "Put"]  # the job and its list row
     assert len(store.load_company("Acme").jobs) == 1
+    assert len(store.load_queue()) == 1
 
 
 def test_save_is_fenced_on_the_stored_lease(table):
@@ -223,9 +225,10 @@ def test_big_saves_are_split_with_the_schedule_last(table):
     add_jobs(record, *(f"Engineer {i}" for i in range(250)))
     record.meta = CompanyMeta(last_checked_at="2026-09-01T00:00:00Z")
     store.save_company(record)
-    assert [len(t) for t in counting.transactions] == [100, 100, 54]  # each led by the lease check
+    # 250 jobs, 250 rows in Live Tracking's list (all are waiting) and the schedule, 99 at a time
+    assert [len(t) for t in counting.transactions] == [100, 100, 100, 100, 100, 7]  # each led by the lease check
     assert all(t[0] == "ConditionCheck" for t in counting.transactions)
-    assert len(store.load_company("Megacorp").jobs) == 250
+    assert len(store.load_company("Megacorp").jobs) == 250 and len(store.load_queue()) == 250
 
 
 def test_alert_log_and_run_records(table):

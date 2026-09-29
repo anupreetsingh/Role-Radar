@@ -27,6 +27,9 @@ log = logging.getLogger(__name__)
 SCHEMA_VERSION = 4  # 2: schedules; 3: channel receipts; 4: digest cadence. Older files still load.
 ALERT_LOG_SIZE = 50  # alerts the JSON store remembers for `status`
 STATS_KEPT = timedelta(days=2)  # how long hourly activity counts are kept
+SKIPPED_KEPT = timedelta(days=7)  # how long Live Tracking keeps showing a skip the digest applied
+# Why a match skipped in Live Tracking was recorded without alerting (SeenJob.dropped_for).
+SKIPPED = "skipped in Live Tracking"
 
 
 def utcnow() -> datetime:
@@ -130,6 +133,12 @@ class DigestSchedule:
     next_send_at: str | None = None
     last_attempt_at: str | None = None
     interval_minutes: float = 0.0
+    # "Send now" in Live Tracking: the digest is due at once if this is later than last_attempt_at.
+    requested_at: str | None = None
+
+    @property
+    def requested(self) -> bool:
+        return bool(self.requested_at) and self.requested_at > (self.last_attempt_at or "")
 
     @classmethod
     def from_dict(cls, data: dict) -> DigestSchedule:
@@ -162,7 +171,32 @@ class CompanyRecord:
 
     def pending_count(self) -> int:
         """Matched jobs the digest hasn't delivered yet (the same test flush_digest uses)."""
-        return sum(1 for job in self.jobs.values() if job.matched and not job.notified_at and not job.duplicate_of)
+        return sum(1 for job in self.jobs.values() if waiting(job))
+
+
+def waiting(job: SeenJob) -> bool:
+    """A match the digest still has to send (or, if it was skipped, to record as skipped)."""
+    return job.matched and not job.notified_at and not job.duplicate_of
+
+
+@dataclass
+class QueuedMatch:
+    """A match waiting for the digest, as Live Tracking lists it."""
+
+    company: str
+    uid: str
+    title: str
+    url: str
+    first_seen: str
+    location: str | None = None
+    queued_at: str | None = None  # when it joined the list
+    skipped_at: str | None = None  # skipped in Live Tracking: the next digest records it without sending it
+    done_at: str | None = None  # the digest applied the skip: it won't be sent, and can't be unskipped
+
+    @classmethod
+    def from_dict(cls, data: dict) -> QueuedMatch:
+        names = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in names})
 
 
 @dataclass
@@ -179,6 +213,9 @@ class MonitorState:
     switches: dict[str, bool] = field(default_factory=dict)
     # Activity counts per runner per hour ("<hour>#<runner>" → counts), for `status` and the menu bar app.
     stats: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Matches skipped in Live Tracking ("<company>#<uid>" → when), and each runner's latest round.
+    skipped: dict[str, str] = field(default_factory=dict)
+    rounds: dict[str, dict] = field(default_factory=dict)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
         return self.companies.setdefault(company, {})
@@ -225,6 +262,10 @@ class MonitorState:
             data["switches"] = self.switches
         if self.stats:
             data["stats"] = self.stats
+        if self.skipped:
+            data["skipped"] = self.skipped
+        if self.rounds:
+            data["rounds"] = self.rounds
         return data
 
     @classmethod
@@ -237,7 +278,9 @@ class MonitorState:
         return cls(companies=companies, meta=meta, runs=dict(data.get("runs") or {}), alerts=list(data.get("alerts") or []),
                    digest=DigestSchedule.from_dict(data.get("digest") or {}),
                    switches={k: bool(v) for k, v in (data.get("switches") or {}).items()},
-                   stats={k: dict(v) for k, v in (data.get("stats") or {}).items()})
+                   stats={k: dict(v) for k, v in (data.get("stats") or {}).items()},
+                   skipped=dict(data.get("skipped") or {}),
+                   rounds={k: dict(v) for k, v in (data.get("rounds") or {}).items()})
 
 
 class StateStore(ABC):
@@ -294,6 +337,30 @@ class StateStore(ABC):
         """Every runner's hourly rows from hour `since` on: {"hour", "runner", and the counts}."""
         return []
 
+    def record_round(self, runner: str, progress: dict) -> None:
+        """How far `runner`'s pass in progress has got (started_at, total, done...). Default: not kept."""
+
+    def load_rounds(self) -> dict[str, dict]:
+        """runner → its latest round's progress."""
+        return {}
+
+    # -- Live Tracking ---------------------------------------------------------
+
+    def load_queue(self) -> list[QueuedMatch]:
+        """The matches waiting for the digest, and the skips it applied lately."""
+        return []
+
+    def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
+        """Skip a waiting match, or undo that. False if it isn't waiting any more (sent, or the skip applied)."""
+        raise NotImplementedError("This store does not support skipping matches")
+
+    def request_digest(self) -> None:
+        """Ask whoever checks next to send the waiting matches now, not at the next digest time."""
+        raise NotImplementedError("This store does not support digest scheduling")
+
+    def repair_queue(self, add: list[QueuedMatch], remove: list[tuple[str, str]]) -> None:
+        """Bring the stored list in line with the companies' state (the digest knows both). Default: derived, nothing to do."""
+
 
 class MemoryStateStore(StateStore):
     """Keeps the whole state in memory: for tests and dry runs. Thread-safe."""
@@ -342,7 +409,8 @@ class MemoryStateStore(StateStore):
             for uid in record.alerted:
                 job = record.jobs[uid]
                 state.alerts.append(
-                    {"company": record.name, "title": job.title, "location": job.location, "url": job.url, "notified_at": job.notified_at}
+                    {"company": record.name, "title": job.title, "location": job.location, "url": job.url,
+                     "notified_at": job.notified_at, "first_seen": job.first_seen}
                 )
             del state.alerts[:-ALERT_LOG_SIZE]
             record.alerted = []
@@ -385,6 +453,52 @@ class MemoryStateStore(StateStore):
                 if hour >= since:
                     rows.append({"hour": hour, "runner": runner, **counts})
             return rows
+
+    def record_round(self, runner: str, progress: dict) -> None:
+        with self._lock:
+            self._current().rounds[runner] = dict(progress)
+            self._persist()
+
+    def load_rounds(self) -> dict[str, dict]:
+        with self._lock:
+            return {runner: dict(p) for runner, p in self._current().rounds.items()}
+
+    def load_queue(self) -> list[QueuedMatch]:
+        """Worked out from the companies' state: waiting matches, and those the digest recorded as skipped."""
+        with self._lock:
+            state = self._current()
+            cutoff = to_iso(utcnow() - SKIPPED_KEPT)
+            out = []
+            for company, jobs in state.companies.items():
+                for uid, job in jobs.items():
+                    key = f"{company}#{uid}"
+                    if waiting(job):
+                        done = None
+                    elif job.dropped_for == SKIPPED and job.notified_at and job.notified_at >= cutoff:
+                        done = job.notified_at
+                    else:
+                        continue
+                    out.append(QueuedMatch(company, uid, job.title, job.url, job.first_seen, job.location,
+                                           skipped_at=state.skipped.get(key) or done, done_at=done))
+            return out
+
+    def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
+        with self._lock:
+            state = self._current()
+            job = state.companies.get(company, {}).get(uid)
+            if not job or not waiting(job):
+                return False
+            if skipped:
+                state.skipped[f"{company}#{uid}"] = to_iso(utcnow())
+            else:
+                state.skipped.pop(f"{company}#{uid}", None)
+            self._persist()
+            return True
+
+    def request_digest(self) -> None:
+        with self._lock:
+            self._current().digest.requested_at = to_iso(utcnow())
+            self._persist()
 
     def load(self) -> MonitorState:
         with self._lock:

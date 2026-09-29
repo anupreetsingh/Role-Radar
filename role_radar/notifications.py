@@ -1,6 +1,7 @@
 """Notification channels.
 
-All new jobs from one run go out as a single batch per channel. Jobs with the
+All new jobs from one run go out as a single batch per channel, in the order
+given: a digest lists the newest first, as Live Tracking does. Jobs with the
 same company + title (e.g. one role in several cities) are grouped into one
 entry so they don't read as duplicate alerts.
 
@@ -20,7 +21,6 @@ off, matches stay pending and go out in the first digest after one is back on.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
@@ -66,8 +66,9 @@ class JobGroup:
 
 
 def group_jobs(jobs: list[JobPosting]) -> list[JobGroup]:
+    """One entry per company + title, in the order the jobs come (a group where its first job is)."""
     groups: dict[tuple[str, str], JobGroup] = {}
-    for job in sorted(jobs, key=lambda j: (j.company.lower(), j.title.lower(), j.location or "")):
+    for job in jobs:
         key = (normalize_text(job.company), normalize_text(job.title))
         groups.setdefault(key, JobGroup(job.company, job.title, [])).jobs.append(job)
     return list(groups.values())
@@ -92,20 +93,17 @@ def format_group(group: JobGroup) -> str:
 
 
 def headline(jobs: list[JobPosting]) -> str:
-    companies = sorted({j.company for j in jobs})
+    companies = list(dict.fromkeys(j.company for j in jobs))
     shown = ", ".join(companies[:3]) + (f" +{len(companies) - 3} more" if len(companies) > 3 else "")
     return f"{len(jobs)} new matching job{'s' if len(jobs) != 1 else ''} — {shown}"
 
 
 def format_digest(jobs: list[JobPosting]) -> str:
+    """One entry per role, in the order given: title and company, places, link(s)."""
     lines = ["Role Radar — New jobs digest", headline(jobs)]
-    company = None
     for group in group_jobs(jobs):
-        if group.company != company:
-            company = group.company
-            lines += ["", company]
-        lines.append(f"- {group.title} — {' | '.join(group.locations)}")
-        lines.extend(f"  {url}" for url in dict.fromkeys(job.url for job in group.jobs))
+        lines += ["", f"{group.title} — {group.company}", " | ".join(group.locations)]
+        lines.extend(dict.fromkeys(job.url for job in group.jobs))
     return "\n".join(lines)
 
 
@@ -129,7 +127,7 @@ class ConsoleNotifier(Notifier):
 
 
 class DiscordNotifier(Notifier):
-    """The digest as one Discord message: every job a clickable link, grouped by company.
+    """The digest as one Discord message: every job a clickable link, with its company, in the order given.
 
     A message holds about 6,000 characters of embeds (roughly 40-60 jobs). A digest
     that doesn't fit shows what does and says how many more are in the email.
@@ -157,20 +155,17 @@ class DiscordNotifier(Notifier):
     def build_messages(self, jobs: list[JobPosting]) -> list[dict]:
         """The webhook payloads for one digest: one message, or with `every_job` as many as it takes."""
         pages: list[list[str]] = [[]]
-        size, company, shown = 0, None, 0
-        for group_company, group_lines, count in _discord_groups(jobs, every_job=self.every_job):
-            header = ["", f"__**{_md(group_company)}**__"]
-            block = group_lines if group_company == company else [*header, *group_lines]
-            cost = sum(len(text) + 1 for text in block)
+        size, shown = 0, 0
+        for line, count in _discord_lines(jobs, every_job=self.every_job):
+            cost = len(line) + 1
             if size + cost > self.MESSAGE_TEXT - 100 and self.every_job and pages[-1]:
-                pages.append([])  # a new message repeats the company's name
-                block, size = [*header, *group_lines], 0
-                cost = sum(len(text) + 1 for text in block)
-            if size + cost > self.MESSAGE_TEXT - 100:  # room for the "more" line; smaller groups may still fit
+                pages.append([])
+                size = 0
+            if size + cost > self.MESSAGE_TEXT - 100:  # room for the "more" line; smaller entries may still fit
                 continue
-            pages[-1] += block
+            pages[-1].append(line)
             size += cost
-            company, shown = group_company, shown + count
+            shown += count
         if shown < len(jobs):
             pages[-1] += ["", f"**…and {len(jobs) - shown} more.** That's all one Discord message holds; the email has every job."]
         title = f"**Role Radar** — {_md(headline(jobs))}"
@@ -199,14 +194,14 @@ class DiscordNotifier(Notifier):
 MAX_PLACES = 8  # location links shown for one role posted in many places
 
 
-def _discord_groups(jobs: list[JobPosting], *, every_job: bool = False):
-    """(company, lines, job count) for each job group: its title linking to the job, then
+def _discord_lines(jobs: list[JobPosting], *, every_job: bool = False):
+    """(line, job count) for each job group: its title linking to the job, its company, then
     its locations; a group whose locations have their own links links each location."""
     for group in group_jobs(jobs):
         urls = list(dict.fromkeys(j.url for j in group.jobs))
+        company = f"**{_md(_clip(group.company, 80))}**"
         if len(urls) == 1:
-            line = f"• {_link(group.title, urls[0])} — {_md(_clip(' | '.join(group.locations), 120))}"
-            yield group.company, [line], len(group.jobs)
+            yield f"• {_link(group.title, urls[0])} — {company} · {_md(_clip(' | '.join(group.locations), 120))}", len(group.jobs)
             continue
         links: dict[str, str] = {}
         for job in group.jobs:
@@ -214,7 +209,7 @@ def _discord_groups(jobs: list[JobPosting], *, every_job: bool = False):
         places = [_link(place, url) for url, place in list(links.items())[:MAX_PLACES]]
         if len(links) > MAX_PLACES:
             places.append(f"+{len(links) - MAX_PLACES} more" + ("" if every_job else " (in the email)"))
-        yield group.company, [f"• **{_md(_clip(group.title, 150))}** — {' · '.join(places)}"], len(group.jobs)
+        yield f"• **{_md(_clip(group.title, 150))}** — {company} · {' · '.join(places)}", len(group.jobs)
 
 
 def _chunks(lines: list[str], limit: int) -> list[str]:

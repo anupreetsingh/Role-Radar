@@ -4,21 +4,33 @@ The cadence and delivery receipts live in the state store, so a cold Lambda or
 laptop handoff cannot reset the interval. Empty intervals send nothing, and so
 do intervals while every alert channel is switched off: the matches stay
 queued for the first digest after one is switched back on.
+
+Live Tracking can change what the next digest does: "Send now" makes it due at
+once, and a match skipped there is recorded as notified, with the reason,
+instead of being sent. Until that digest the skip can be undone.
+
+A pass in progress also sends the digest when it's due (monitor.run_pass), so
+a company being checked right then is left for the next digest: `locks` holds
+each company's lock, taken by its check and by the digest while it has the
+company's state loaded.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Awaitable, Callable, Sequence
+from typing import Awaitable, Callable, MutableMapping, Sequence
 
 from role_radar.lease import Lease
 from role_radar.models import JobPosting
 from role_radar.notifications import Notifier, notify_all, switched_on
-from role_radar.storage import CompanyRecord, DigestSchedule, SeenJob, StateStore, alerts_off, from_iso, to_iso
+from role_radar.storage import (
+    SKIPPED, CompanyRecord, DigestSchedule, QueuedMatch, SeenJob, StateStore, alerts_off, from_iso, to_iso, waiting,
+)
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +41,7 @@ class DigestResult:
     attempted: bool = False
     jobs: int = 0
     completed: int = 0
+    skipped: int = 0  # matches skipped in Live Tracking, recorded without sending
     failed: bool = False
 
 
@@ -49,20 +62,26 @@ async def flush_digest(
     deadline: float | None = None,
     sent: dict[str, dict[str, str]] | None = None,
     receipts: dict[str, dict[str, dict[str, str]]] | None = None,
+    locks: MutableMapping[str, asyncio.Lock] | None = None,
+    save_lock: asyncio.Lock | None = None,
 ) -> DigestResult:
+    guard = save_lock or contextlib.nullcontext()
     schedule = await asyncio.to_thread(store.load_digest)
     if not schedule.next_send_at or schedule.interval_minutes != minutes:
-        schedule = DigestSchedule(next_send_at=to_iso(next_boundary(now, minutes)), interval_minutes=minutes)
+        schedule = DigestSchedule(next_send_at=to_iso(next_boundary(now, minutes)), interval_minutes=minutes,
+                                  last_attempt_at=schedule.last_attempt_at, requested_at=schedule.requested_at)
         lease.check()
-        await asyncio.to_thread(store.save_digest, schedule)
+        async with guard:
+            await asyncio.to_thread(store.save_digest, schedule)
     result = DigestResult(next_due=from_iso(schedule.next_send_at))
-    if now < result.next_due:
+    if now < result.next_due and not schedule.requested:
         return result
     switches = await asyncio.to_thread(store.load_switches)
     if alerts_off(switches):
         lease.check()
         schedule.next_send_at = to_iso(next_boundary(now, minutes))
-        await asyncio.to_thread(store.save_digest, schedule)
+        async with guard:
+            await asyncio.to_thread(store.save_digest, schedule)
         result.next_due = from_iso(schedule.next_send_at)
         log.info("Alerts are switched off; matches wait for the first digest after one is switched on")
         return result
@@ -74,6 +93,42 @@ async def flush_digest(
     metas = await asyncio.to_thread(store.load_schedule)
     carried = set(sent or {}) | set(receipts or {})
     names = [name for name in companies if name in carried or (name in metas and metas[name].pending)]
+    held: list[asyncio.Lock] = []
+    busy: set[str] = set()
+    if locks is not None:
+        for name in names:
+            lock = locks.setdefault(name, asyncio.Lock())
+            if lock.locked():  # being checked right now: its matches go in the next digest
+                busy.add(name)
+            else:
+                await lock.acquire()  # free, so this doesn't wait
+                held.append(lock)
+    try:
+        return await _send(store, [n for n in names if n not in busy], busy, notifiers, lease, now, minutes, save,
+                           schedule, switches, result, deadline=deadline, sent=sent, receipts=receipts, guard=guard)
+    finally:
+        for lock in held:
+            lock.release()
+
+
+async def _send(
+    store: StateStore,
+    names: list[str],
+    busy: set[str],
+    notifiers: Callable[[], Sequence[Notifier]],
+    lease: Lease,
+    now: datetime,
+    minutes: float,
+    save: Callable[[CompanyRecord], Awaitable[None]],
+    schedule: DigestSchedule,
+    switches: dict[str, bool],
+    result: DigestResult,
+    *,
+    deadline: float | None,
+    sent: dict[str, dict[str, str]] | None,
+    receipts: dict[str, dict[str, dict[str, str]]] | None,
+    guard: contextlib.AbstractAsyncContextManager,
+) -> DigestResult:
     limit = asyncio.Semaphore(8)
 
     async def load(name: str) -> CompanyRecord:
@@ -83,6 +138,7 @@ async def flush_digest(
     records = await asyncio.gather(*(load(name) for name in names))
     if deadline is not None and time.monotonic() + 120 >= deadline:
         return result  # leave this slot due for the next runner
+    listed = {(m.company, m.uid): m for m in await asyncio.to_thread(store.load_queue)}
     dirty: set[str] = set()
     queued: list[tuple[CompanyRecord, JobPosting, SeenJob]] = []
     for record in records:
@@ -96,11 +152,21 @@ async def flush_digest(
                 job.notified_at = stamp
                 record.alerted.append(uid)
                 dirty.add(record.name)
-            if job.matched and not job.notified_at and not job.duplicate_of:
-                posting = JobPosting(company=record.name, title=job.title, location=job.location,
-                                     url=job.url, source="digest")
-                posting._uid = uid
-                queued.append((record, posting, job))
+            if not waiting(job):
+                continue
+            mark = listed.get((record.name, uid))
+            if mark and mark.skipped_at:
+                job.notified_at, job.dropped_for = to_iso(now), SKIPPED
+                dirty.add(record.name)
+                result.skipped += 1
+                continue
+            posting = JobPosting(company=record.name, title=job.title, location=job.location,
+                                 url=job.url, source="digest")
+            posting._uid = uid
+            queued.append((record, posting, job))
+    await _repair_list(store, listed, records, queued, busy, now)
+    queued.sort(key=lambda item: (item[0].name.lower(), item[1].uid))
+    queued.sort(key=lambda item: item[2].first_seen, reverse=True)  # newest first; the same moment by company
 
     # Claim the interval before sending. An interrupted invocation must not send
     # a second digest in this interval; pending jobs are retried next interval.
@@ -108,7 +174,8 @@ async def flush_digest(
     await asyncio.to_thread(lease.verify)
     schedule.next_send_at = to_iso(next_boundary(now, minutes))
     schedule.last_attempt_at = to_iso(now)
-    await asyncio.to_thread(store.save_digest, schedule)
+    async with guard:
+        await asyncio.to_thread(store.save_digest, schedule)
     result.next_due = from_iso(schedule.next_send_at)
     result.jobs = len(queued)
 
@@ -121,6 +188,8 @@ async def flush_digest(
 
     if not queued:
         await persist()
+        if result.skipped:
+            log.info("Digest: nothing to send; %d skipped match(es) recorded", result.skipped)
         return result
     result.attempted = True
     try:
@@ -157,6 +226,37 @@ async def flush_digest(
         invalidate = getattr(notifiers, "invalidate", None)
         if invalidate:
             invalidate()
-    log.info("Digest: %d job(s), %d completed, pending delivery=%s, next at %s",
-             result.jobs, result.completed, result.failed, schedule.next_send_at)
+    log.info("Digest: %d job(s), %d completed, %d skipped, pending delivery=%s, next at %s",
+             result.jobs, result.completed, result.skipped, result.failed, schedule.next_send_at)
     return result
+
+
+async def _repair_list(
+    store: StateStore,
+    listed: dict[tuple[str, str], QueuedMatch],
+    records: Sequence[CompanyRecord],
+    queued: list[tuple[CompanyRecord, JobPosting, SeenJob]],
+    busy: set[str],
+    now: datetime,
+) -> None:
+    """Make Live Tracking's list match what's actually waiting.
+
+    Adds the matches it lacks (those from before the list existed) and drops rows
+    whose match is no longer waiting. A row that joined after `now` may belong to
+    a check that finished meanwhile, so it stays, as do those of companies still
+    being checked.
+    """
+    wanted = {(record.name, posting.uid) for record, posting, _ in queued}
+    skipping = {(r.name, uid) for r in records for uid, job in r.jobs.items() if job.dropped_for == SKIPPED}
+    add = [QueuedMatch(record.name, posting.uid, job.title, job.url, job.first_seen, job.location)
+           for record, posting, job in queued if (record.name, posting.uid) not in listed]
+    remove = [key for key, m in listed.items()
+              if key not in wanted and key not in skipping and not m.done_at and m.company not in busy
+              and (m.queued_at or "") < to_iso(now)]
+    if not add and not remove:
+        return
+    try:
+        await asyncio.to_thread(store.repair_queue, add, remove)
+        log.info("Live Tracking list: added %d waiting match(es), removed %d stale", len(add), len(remove))
+    except Exception as exc:  # the list is a view; the digest goes on
+        log.warning("Couldn't update the Live Tracking list (%s)", exc)

@@ -110,7 +110,8 @@ class Runner:
         config = await asyncio.to_thread(self.config)
         result = await run_pass(
             config, self.store, self.notifiers,
-            lease=self.lease, robots=self.robots, unsaved=self.unsaved, clock=self.now, **kwargs,
+            lease=self.lease, robots=self.robots, unsaved=self.unsaved, clock=self.now,
+            progress=lambda info: self.store.record_round(self.name, info), **kwargs,
         )  # fmt: skip
         if (result.checked or result.lease_lost or result.digest_attempted or result.digest_failed or record_idle) and not kwargs.get("dry_run"):
             try:

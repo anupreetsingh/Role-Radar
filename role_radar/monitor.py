@@ -10,7 +10,9 @@ Flow of a pass:
       → queue its new matches (or alert immediately if digests are disabled), to
         the alert channels switched on; with all of them off they stay queued
       → save its state and next check time straight away (fenced on the lease)
-  → if the shared digest is due, confirm the lease and send the queued matches
+  → meanwhile, every TICK seconds: report progress for Live Tracking, and send
+    the shared digest if it's due (leaving out companies being checked right then)
+  → at the end, send the digest if it's due
 
 If the lease turns out to be lost, the pass stops without saving or sending
 anything more. The companies it didn't finish are still due, so whoever holds
@@ -38,7 +40,9 @@ from role_radar.models import JobPosting
 from role_radar.notifications import ConsoleNotifier, Notifier, notify_all, switched_on
 from role_radar.schedule import after_check, due_companies, interval_for, next_due, next_quick, quick_due
 from role_radar.scrapers import BaseScraper, ats_name, scraper_class_for
-from role_radar.storage import CompanyMeta, CompanyRecord, MonitorState, SeenJob, StateStore, alerts_off, to_iso, utcnow
+from role_radar.storage import (
+    SKIPPED, CompanyMeta, CompanyRecord, MonitorState, QueuedMatch, SeenJob, StateStore, alerts_off, to_iso, utcnow,
+)
 from role_radar.tracker import CompanyDiff, dedupe, mark_notified, reconcile
 
 log = logging.getLogger("monitor")
@@ -54,6 +58,7 @@ SAVE_MARGIN = 120.0
 SAVE_RETRIES_AFTER_ALERTS = 4  # extra save attempts once alerts have gone out...
 SAVE_RETRY_BASE = 5.0  # ...5, 10, 20, 40 s apart
 UNSAVED_HOLD = 120.0  # a company whose save failed isn't retried for this long
+TICK = 15.0  # during a pass: how often to report progress and see whether the digest is due
 
 
 class Unsaved:
@@ -120,7 +125,7 @@ class PassResult:
     next_due: datetime | None = None
     finished_at: datetime | None = None
     nothing_configured: bool = False
-    digest_attempted: bool = False
+    digest_attempted: bool = False  # these four add up every digest the pass sent
     digest_jobs: int = 0
     digest_completed: int = 0
     digest_failed: bool = False
@@ -404,7 +409,9 @@ async def process_company(
                     log.info("[%s] alerts are switched off; %d match(es) wait until one is back on",
                              company.name, len(diff.to_notify))
                 else:
-                    outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run, switches)
+                    _apply_skips(diff, record, [] if dry_run else await asyncio.to_thread(store.load_queue), now)
+                    if diff.to_notify:
+                        outcome.delivered = await _alert(diff, state, record, notifiers, lease, dry_run, switches)
 
     pruned = state.prune(settings.retention_days, now)
     if pruned:
@@ -470,6 +477,17 @@ async def quick_check(
         async with save_lock or contextlib.nullcontext():
             await asyncio.to_thread(store.save_meta, company.name, meta)
     return CompanyOutcome(company.name, error=error, meta=meta, quick=True, listed=len(page or ()))
+
+
+def _apply_skips(diff: CompanyDiff, record: CompanyRecord, listed: list[QueuedMatch], now: datetime) -> None:
+    """Matches skipped in Live Tracking (without a digest, while alerts were off): record them instead of alerting."""
+    skipped = {m.uid for m in listed if m.company == record.name and m.skipped_at and not m.done_at}
+    for job in [j for j in diff.to_notify if j.uid in skipped]:
+        rec = record.jobs[job.uid]
+        rec.notified_at, rec.dropped_for = to_iso(now), SKIPPED
+        diff.suppressed.append((job, SKIPPED))
+        log.info("[%s] not alerting %r (%s): %s", diff.company, job.title, job.location, SKIPPED)
+    diff.to_notify = [j for j in diff.to_notify if j.uid not in skipped]
 
 
 def _skip_already_sent(diff: CompanyDiff, record: CompanyRecord, sent: dict[str, str]) -> None:
@@ -569,6 +587,7 @@ async def run_pass(
     robots: RobotsCache | None = None,
     unsaved: Unsaved | None = None,
     clock: Callable[[], datetime] = utcnow,
+    progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> PassResult:
     """Check the companies that are due (all of them with check_all, baseline or only).
 
@@ -576,7 +595,8 @@ async def run_pass(
     No new company starts once `should_stop()` (sync or async) returns true or
     `deadline` (time.monotonic) is near; companies already started finish and
     are saved. Saves are made one at a time, so this runner's transactions
-    don't conflict with each other on the lease they all check.
+    don't conflict with each other on the lease they all check. `progress` is
+    called (in a thread) with how far a pass with work to do has got.
     """
     settings = config.settings
     result = PassResult()
@@ -607,8 +627,18 @@ async def run_pass(
 
     channels = _channels(notifiers, dry_run)
     save_lock = asyncio.Lock()
+    locks: dict[str, asyncio.Lock] = {}  # per company: its check, or the digest while it has the company loaded
+    done = 0
 
     async def guarded(company: CompanyConfig, quick_meta: CompanyMeta | None = None) -> CompanyOutcome:
+        nonlocal done
+        async with locks.setdefault(company.name, asyncio.Lock()):
+            try:
+                return await check(company, quick_meta)
+            finally:
+                done += 1
+
+    async def check(company: CompanyConfig, quick_meta: CompanyMeta | None) -> CompanyOutcome:
         timeout = settings.company_timeout
         if deadline is not None:
             timeout = min(timeout, deadline - time.monotonic() - SAVE_MARGIN)
@@ -635,7 +665,29 @@ async def run_pass(
 
     work = [(c, schedule[c.name]) for c in quick] + [(c, None) for c in due]
     gates = _ats_gates([c for c, _ in work], settings)
+    round_info = {"started_at": to_iso(clock()), "total": len(work)}
+    finished = asyncio.Event()
 
+    async def report(**extra: Any) -> None:
+        if progress and not dry_run:
+            try:
+                await asyncio.to_thread(progress, {**round_info, "done": done, "updated_at": to_iso(clock()), **extra})
+            except Exception as exc:  # informational only
+                log.debug("Couldn't report progress: %s", exc)
+
+    async def tick() -> None:
+        """Until the companies are done: progress, and the digest when it's due (it isn't cancelled mid-send)."""
+        while not finished.is_set():
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(finished.wait(), TICK)
+            if finished.is_set() or result.lease_lost:
+                return
+            await report()
+            if not baseline and not dry_run:
+                await _digest(config, store, notifiers, lease, result, clock(), deadline, unsaved, locks, save_lock)
+
+    await report()
+    ticker = asyncio.create_task(tick())
     async with HttpClient(settings.http, robots=robots) as http:
         try:
             result.outcomes = await _bounded(
@@ -644,6 +696,9 @@ async def run_pass(
         except LeaseLost as exc:
             log.error("Stopped: %s. Unfinished companies are still due for whoever holds the lease.", exc)
             result.lease_lost = True
+        finally:
+            finished.set()
+            await ticker
 
     result.requests, result.bytes = http.stats.requests, http.stats.bytes
     schedule.update({o.company: o.meta for o in result.outcomes if o.meta})
@@ -655,6 +710,7 @@ async def run_pass(
     _health(result, config, schedule)
     result.seconds = time.monotonic() - started
     result.finished_at = clock()
+    await report(finished_at=to_iso(result.finished_at))
     _log_pass(result, len(work), http, dry_run)
     write_step_summary(result.outcomes, result.alerts)
     return result
@@ -677,6 +733,8 @@ async def _digest(
     now: datetime,
     deadline: float | None,
     unsaved: Unsaved | None,
+    locks: dict[str, asyncio.Lock] | None = None,
+    save_lock: asyncio.Lock | None = None,
 ) -> None:
     if not config.settings.digest_interval_minutes:
         return
@@ -684,18 +742,19 @@ async def _digest(
         return
 
     async def save(record: CompanyRecord) -> None:
-        await _save(store, record, lease, None, deadline, unsaved)
+        await _save(store, record, lease, save_lock, deadline, unsaved)
 
     try:
         digest = await flush_digest(
             store, [c.name for c in config.companies if c.enabled], _channels(notifiers, False), lease,
             now, config.settings.digest_interval_minutes, save, deadline=deadline,
             sent=unsaved.sent if unsaved else None, receipts=unsaved.channels if unsaved else None,
+            locks=locks, save_lock=save_lock,
         )
-        result.digest_attempted = digest.attempted
-        result.digest_jobs = digest.jobs
-        result.digest_completed = digest.completed
-        result.digest_failed = digest.failed
+        result.digest_attempted |= digest.attempted
+        result.digest_jobs += digest.jobs
+        result.digest_completed += digest.completed
+        result.digest_failed |= digest.failed
         if digest.next_due:
             result.next_due = min(result.next_due, digest.next_due) if result.next_due else digest.next_due
     except LeaseLost as exc:

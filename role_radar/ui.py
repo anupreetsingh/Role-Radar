@@ -3,7 +3,8 @@
 Serves on 127.0.0.1 only. The page reads and writes the same switches as
 `role-radar switch`, in the shared state store, so a change reaches a running
 laptop app within a minute and Lambda at its next run. `snapshot()` is also
-what the menu bar app reads (`role-radar switch --json`), alert switches included.
+what the menu bar app reads (`role-radar switch --json`), alert switches included,
+and `live()` what its Live Tracking window reads (`role-radar matches --json`).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from typing import Any, Callable
 
 from role_radar.backends import Backend
 from role_radar.storage import (
-    RUNNERS, SWITCHES, StateStore, alerts_off, hour_start, stats_hour, switch_on, to_iso, utcnow,
+    RUNNERS, SWITCHES, QueuedMatch, StateStore, alerts_off, from_iso, hour_start, stats_hour, switch_on, to_iso, utcnow,
 )
 
 log = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ WRITE_HEADER = "X-Role-Radar"
 
 ACTIVITY_HOURS = 24
 PASS_FIELDS = ("finished_at", "checked", "failed", "seconds", "failing", "pending")
+SENT_ROWS = 150  # alert log rows Live Tracking reads: the latest alerts, each with its jobs
+ROUND_STALE = timedelta(minutes=2)  # a round not updated for this long was cut short (the runner quit)
 
 
 def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: datetime | None = None) -> dict[str, Any]:
@@ -49,7 +52,64 @@ def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: dateti
         "latest_pass": {"runner": latest[0].split(":", 1)[0], **{k: latest[1].get(k) for k in PASS_FIELDS}} if latest else None,
         "next_digest": backend.store.load_digest().next_send_at,
         "alerts_off": alerts_off(stored),
+        "waiting": sum(1 for m in backend.store.load_queue() if not (m.skipped_at or m.done_at)),
+        "round": latest_round(backend.store.load_rounds(), now or utcnow()),
     }
+
+
+def live(store: StateStore, now: datetime | None = None) -> dict[str, Any]:
+    """Live Tracking: matches waiting to be sent (newest first), skipped, and the alerts sent; the round in progress."""
+    queue = store.load_queue()
+    digest = store.load_digest()
+    waiting = [m for m in queue if not (m.skipped_at or m.done_at)]
+    skipped = [m for m in queue if m.skipped_at or m.done_at]
+    return {
+        "waiting": [_match(m) for m in sorted(waiting, key=lambda m: (m.first_seen, m.company, m.uid), reverse=True)],
+        "skipped": [_match(m) for m in sorted(skipped, key=lambda m: m.done_at or m.skipped_at or "", reverse=True)],
+        "sent": sent_alerts(store.recent_alerts(SENT_ROWS), SENT_ROWS),
+        "round": latest_round(store.load_rounds(), now or utcnow()),
+        "next_digest": digest.next_send_at,
+        "send_requested": digest.requested,
+        "alerts_off": alerts_off(store.load_switches()),
+    }
+
+
+def sent_alerts(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    """The alert log (newest first) as alerts: when each went out, by whom, and its jobs by company.
+
+    A digest's jobs share one notified_at, and are listed newest first, as the
+    digest lists them (rows logged before first_seen was kept come last, by company).
+    When the log holds more than `limit` rows, the oldest alert read may be missing
+    jobs, so it's left out.
+    """
+    alerts: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        alert = alerts.setdefault(row["notified_at"], {"sent_at": row["notified_at"],
+                                                       "by": (row.get("by") or "").split(":", 1)[0] or None, "jobs": []})
+        alert["jobs"].append({k: row.get(k) for k in ("company", "title", "location", "url", "first_seen")})
+    out = list(alerts.values())
+    if len(rows) >= limit and len(out) > 1:
+        out.pop()
+    for alert in out:
+        alert["jobs"].sort(key=lambda job: ((job["company"] or "").lower(), (job["title"] or "").lower()))
+        alert["jobs"].sort(key=lambda job: job["first_seen"] or "", reverse=True)
+    return out
+
+
+def _match(m: QueuedMatch) -> dict[str, Any]:
+    return {"company": m.company, "uid": m.uid, "title": m.title, "location": m.location, "url": m.url,
+            "first_seen": m.first_seen, "skipped_at": m.skipped_at, "final": bool(m.done_at)}
+
+
+def latest_round(rounds: dict[str, dict[str, Any]], now: datetime) -> dict[str, Any] | None:
+    """The round updated last, by any runner. `stale`: it stopped reporting before it finished."""
+    if not rounds:
+        return None
+    runner, info = max(rounds.items(), key=lambda item: item[1].get("updated_at", ""))
+    updated = info.get("updated_at")
+    stale = not info.get("finished_at") and (not updated or now - from_iso(updated) > ROUND_STALE)
+    return {"runner": runner.split(":", 1)[0], **{k: info.get(k) for k in ("started_at", "updated_at", "finished_at", "total", "done")},
+            "stale": stale}
 
 
 def activity(store: StateStore, now: datetime) -> dict[str, Any]:
