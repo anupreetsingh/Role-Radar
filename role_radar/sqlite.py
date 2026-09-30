@@ -223,6 +223,15 @@ class SqliteStateStore(StateStore):
             self._put(db, QUEUE, f"{company}#{uid}", row)
         return True
 
+    def mark_send(self, company: str, uid: str) -> bool:
+        with self._tx() as db:
+            row = self._get(QUEUE, f"{company}#{uid}", db)
+            if not row or row.get("done_at") or row.get("skipped_at"):
+                return False
+            row["send_at"] = self._now()
+            self._put(db, QUEUE, f"{company}#{uid}", row)
+        return True
+
     def repair_queue(self, add: list[QueuedMatch], remove: list[tuple[str, str]]) -> None:
         with self._tx() as db:
             for match in add:

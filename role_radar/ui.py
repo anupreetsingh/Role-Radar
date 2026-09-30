@@ -101,7 +101,7 @@ def sent_alerts(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
 
 def _match(m: QueuedMatch) -> dict[str, Any]:
     return {"company": m.company, "uid": m.uid, "title": m.title, "location": m.location, "url": m.url,
-            "first_seen": m.first_seen, "skipped_at": m.skipped_at, "final": bool(m.done_at)}
+            "first_seen": m.first_seen, "skipped_at": m.skipped_at, "final": bool(m.done_at), "send_at": m.send_at}
 
 
 def latest_round(rounds: dict[str, dict[str, Any]], now: datetime) -> dict[str, Any] | None:

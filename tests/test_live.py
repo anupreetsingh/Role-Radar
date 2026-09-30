@@ -109,16 +109,40 @@ def test_with_alerts_off_the_list_grows_and_goes_out_once_one_is_back_on(monkeyp
     assert live["waiting"] == [] and [m["uid"] for m in live["skipped"]] == [skip["uid"]] and live["skipped"][0]["final"]
 
 
-def test_send_now_sends_the_waiting_matches_before_the_digest_time(monkeypatch, store_factory):
+def test_matches_sent_from_live_tracking_go_before_the_digest_time(monkeypatch, store_factory):
     cfg, notifier = companies("Acme"), RecordingNotifier()
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(0))
+    first, second = store_factory().load_queue()
+    assert store_factory().mark_send("Acme", first.uid)
     store_factory().request_digest()
     assert ui.live(store_factory())["send_requested"]
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(5))
-    assert len(notifier.batches) == 1 and len(notifier.batches[0]) == 2
+    assert [[j.uid for j in batch] for batch in notifier.batches] == [[first.uid]]  # only the one sent
     assert not ui.live(store_factory())["send_requested"]
+    assert [m["uid"] for m in ui.live(store_factory())["waiting"]] == [second.uid]
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(6))
     assert len(notifier.batches) == 1
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(30))  # the digest sends the rest
+    assert [[j.uid for j in batch] for batch in notifier.batches] == [[first.uid], [second.uid]]
+
+
+def test_with_alerts_off_matches_collect_and_only_those_sent_go_out(monkeypatch, store_factory):
+    cfg, notifier = companies("Acme", "Other"), RecordingNotifier()
+    store_factory().save_switch("discord", False)
+    store_factory().save_switch("email", False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(0))
+    send, clear, *rest = ui.live(store_factory())["waiting"]
+    assert store_factory().mark_send(send["company"], send["uid"])
+    assert store_factory().mark_skipped(clear["company"], clear["uid"], True)
+    assert not store_factory().mark_send(clear["company"], clear["uid"])  # cleared: not sendable
+    store_factory().request_digest()
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(5))
+    assert [[j.uid for j in batch] for batch in notifier.batches] == [[send["uid"]]]  # to every channel set up
+    live = ui.live(store_factory())
+    assert [m["uid"] for m in live["waiting"]] == [m["uid"] for m in rest] and live["alerts_off"]
+    assert [(m["uid"], m["final"]) for m in live["skipped"]] == [(clear["uid"], True)]  # recorded, alerts off
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(30))  # the digest time: nothing more
+    assert len(notifier.batches) == 1 and len(ui.live(store_factory())["waiting"]) == 2
 
 
 def test_the_digest_lists_the_newest_matches_first(monkeypatch):
@@ -223,6 +247,13 @@ def test_saves_keep_the_users_skip_and_the_send_now_row(table):
     store.save_company(record)
     (row,) = store.load_queue()
     assert row.location == "Remote" and row.skipped_at  # ...and the skip survives
+    assert not store.mark_send("Acme", first.uid)  # skipped: not sendable
+    assert store.mark_skipped("Acme", first.uid, False) and store.mark_send("Acme", first.uid)
+    record = store.load_company("Acme")
+    record.jobs[first.uid].location = "Austin, TX"
+    store.save_company(record)
+    (row,) = store.load_queue()
+    assert row.location == "Austin, TX" and row.send_at  # so does a send
 
     store.save_digest(DigestSchedule(next_send_at="2026-09-01T00:30:00Z", interval_minutes=30))
     store.request_digest()
@@ -262,6 +293,25 @@ def test_matches_command_lists_and_skips_before_alerts_go_out(config, capsys):  
     assert DEVELOPER in out and "Data Engineer" not in out  # alerts print here; the log goes to stderr
     assert cli.main(["matches", "skip", skip["company"], skip["uid"], *run]) == 0
     assert "Not waiting any more" in capsys.readouterr().err
+
+
+def test_matches_command_sends_and_clears_picked_matches(config, capsys):  # noqa: F811
+    run = ["--config", str(config)]
+    assert cli.main(["switch", "discord", "off", *run]) == 0
+    assert cli.main(["switch", "email", "off", *run]) == 0
+    assert cli.main(["run", "--once", *run]) == 0
+    capsys.readouterr()
+    assert cli.main(["matches", "--json", *run]) == 0
+    first, second = json.loads(capsys.readouterr().out)["waiting"]
+
+    assert cli.main(["matches", "send", "--pick", first["company"], first["uid"], "--json", *run]) == 0
+    live = json.loads(capsys.readouterr().out)
+    assert live["send_requested"] and {m["uid"]: bool(m["send_at"]) for m in live["waiting"]} == {
+        first["uid"]: True, second["uid"]: False}
+    assert cli.main(["matches", "skip", "--pick", second["company"], second["uid"],
+                     "--pick", first["company"], first["uid"], "--json", *run]) == 0
+    live = json.loads(capsys.readouterr().out)  # clearing one on its way out stops it: the skip wins
+    assert live["waiting"] == [] and {m["uid"] for m in live["skipped"]} == {first["uid"], second["uid"]}
 
 
 def test_matches_command_needs_a_match_to_skip(config):  # noqa: F811

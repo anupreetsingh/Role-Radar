@@ -496,6 +496,21 @@ class DynamoStateStore(StateStore):
             raise
         return True
 
+    def mark_send(self, company: str, uid: str) -> bool:
+        """Not fenced on the lease either: sending is the user's. Only a waiting match that isn't skipped."""
+        try:
+            self.client.update_item(
+                TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"), UpdateExpression="SET #t = :now",
+                ExpressionAttributeValues={":now": {"S": _iso(self.clock())}},
+                ConditionExpression="attribute_exists(pk) AND attribute_not_exists(#d) AND attribute_not_exists(#s)",
+                ExpressionAttributeNames={"#t": "send_at", "#d": "done_at", "#s": "skipped_at"},
+            )
+        except ClientError as exc:
+            if _error_code(exc) == "ConditionalCheckFailedException":
+                return False
+            raise
+        return True
+
     def request_digest(self) -> None:
         self.client.put_item(TableName=self.table, Item=_item(DIGEST, REQUEST, {"requested_at": _iso(self.clock())}))
 

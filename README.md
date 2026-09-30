@@ -379,22 +379,26 @@ each company's check. Baselines and dry runs never send a digest.
 
 #### Live Tracking
 
-The menu bar app's **Live Tracking** window (or `role-radar matches`) lists the matches
-in three sections, newest first:
+The menu bar app's **Live Tracking** window (or `role-radar matches`) is the stack of new
+jobs, so alerts are optional: open the app and the latest roles are on top. It has three
+sections, newest first:
 
-- **Waiting to be sent.** A match appears as soon as its company's check is saved, not
-  when the round ends. With both alert channels off the list keeps growing; the first
-  digest after one is switched back on sends everything in it.
-- **Skipped.** **Skip** (or `role-radar matches skip COMPANY UID`, or **Skip All**)
-  keeps a match out of the alerts. The next digest records it as skipped instead of
-  sending it (`dropped_for: skipped in Live Tracking`); until then **Unskip** puts it
-  back. Applied skips stay listed for a week.
+- **New jobs.** A match appears as soon as its company's check is saved, not when the
+  round ends. With alerts on, the digest sends them every 10 minutes and they leave the
+  stack; with both channels off (or none set up), the stack keeps growing, and the first
+  digest after one is switched on sends everything in it.
+- **Cleared.** Tick jobs and **Clear** them, or **Clear All** (`role-radar matches skip
+  COMPANY UID`, `--pick COMPANY UID` for each of several, or `--all`). The next digest time
+  records them as skipped instead of sending them (`dropped_for: skipped in Live
+  Tracking`), alerts on or off; until then **Put Back** returns one. Cleared jobs stay
+  listed for a week.
 - **Sent alerts.** Each alert that went out, newest first: when, and the jobs it held.
 
-**Send Now** (`role-radar matches send`) makes the digest due at once: the Mac sends
-within a minute, Lambda at its next run. The window also shows the round in progress
-(how many of the due companies are done), and the last 24 hours' activity. It reads
-the lists every 5 seconds while it's open.
+**Send** the ticked jobs, or **Send All** (`role-radar matches send`, with `--pick` or
+`--all`), to send them now, alerts on or off: to the channels switched on, or every one set
+up when both are off. The Mac sends within a minute, Lambda at its next run, and sent jobs
+leave the stack. The window also shows the round in progress (how many of the due companies
+are done), and the last 24 hours' activity. It reads the lists every 5 seconds while it's open.
 
 ## Configuration
 
@@ -520,7 +524,7 @@ file and suits one process only: tests and dry runs.
 | `#lease` | `#lease` | Who may check companies now: `holder`, `epoch`, `expires_at` |
 | `#alerts` | time + company + uid | Log of sent alerts, which expires after 30 days via TTL |
 | `#runs` | runner | Each runner's last pass |
-| `#queue` | company + uid | A match waiting for the digest, for Live Tracking; `skipped_at` if skipped. Written with the company's save; an applied skip expires after 7 days via TTL |
+| `#queue` | company + uid | A match waiting for the digest, for Live Tracking; `skipped_at` if cleared, `send_at` if sent from there. Written with the company's save; an applied skip expires after 7 days via TTL |
 | `#round` | runner | The runner's latest round: `started_at`, `total`, `done`, `finished_at` |
 
 Reads are strongly consistent. Right after a handoff, the new runner must see everything
@@ -560,7 +564,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert settings in the Keychain or SSM, because a launchd agent can't see your shell's environment variables. |
 | `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
-| `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` or `skip --all` keeps matches out of the alerts; `unskip` undoes a skip until the next digest; `send` sends the waiting matches now. `--json` is what the menu bar app reads. |
+| `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` undoes that until the next digest; `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
 | `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profile` (roles etc., JSON on stdin), `prompt` (the ChatGPT/Claude prompt), `companies` (add companies from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.zip`: the app with its own Python, for someone else's Mac (see [Get the app](#get-the-app)). |

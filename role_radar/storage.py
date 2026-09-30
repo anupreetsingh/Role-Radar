@@ -218,6 +218,7 @@ class QueuedMatch:
     queued_at: str | None = None  # when it joined the list
     skipped_at: str | None = None  # skipped in Live Tracking: the next digest records it without sending it
     done_at: str | None = None  # the digest applied the skip: it won't be sent, and can't be unskipped
+    send_at: str | None = None  # sent from Live Tracking: the next digest sends it, alerts on or off
 
     @classmethod
     def from_dict(cls, data: dict) -> QueuedMatch:
@@ -239,8 +240,9 @@ class MonitorState:
     switches: dict[str, bool] = field(default_factory=dict)
     # Activity counts per runner per hour ("<hour>#<runner>" → counts), for `status` and the menu bar app.
     stats: dict[str, dict[str, int]] = field(default_factory=dict)
-    # Matches skipped in Live Tracking ("<company>#<uid>" → when), and each runner's latest round.
+    # Matches skipped and sent in Live Tracking ("<company>#<uid>" → when), and each runner's latest round.
     skipped: dict[str, str] = field(default_factory=dict)
+    sending: dict[str, str] = field(default_factory=dict)
     rounds: dict[str, dict] = field(default_factory=dict)
 
     def jobs_for(self, company: str) -> dict[str, SeenJob]:
@@ -290,6 +292,8 @@ class MonitorState:
             data["stats"] = self.stats
         if self.skipped:
             data["skipped"] = self.skipped
+        if self.sending:
+            data["sending"] = self.sending
         if self.rounds:
             data["rounds"] = self.rounds
         return data
@@ -305,7 +309,7 @@ class MonitorState:
                    digest=DigestSchedule.from_dict(data.get("digest") or {}),
                    switches={k: bool(v) for k, v in (data.get("switches") or {}).items()},
                    stats={k: dict(v) for k, v in (data.get("stats") or {}).items()},
-                   skipped=dict(data.get("skipped") or {}),
+                   skipped=dict(data.get("skipped") or {}), sending=dict(data.get("sending") or {}),
                    rounds={k: dict(v) for k, v in (data.get("rounds") or {}).items()})
 
 
@@ -380,8 +384,12 @@ class StateStore(ABC):
         """Skip a waiting match, or undo that. False if it isn't waiting any more (sent, or the skip applied)."""
         raise NotImplementedError("This store does not support skipping matches")
 
+    def mark_send(self, company: str, uid: str) -> bool:
+        """Have the next digest send a waiting match, alerts on or off. False if it isn't waiting (or is skipped)."""
+        raise NotImplementedError("This store does not support sending matches")
+
     def request_digest(self) -> None:
-        """Ask whoever checks next to send the waiting matches now, not at the next digest time."""
+        """Ask whoever checks next to send the matches marked to go now, not at the next digest time."""
         raise NotImplementedError("This store does not support digest scheduling")
 
     def repair_queue(self, add: list[QueuedMatch], remove: list[tuple[str, str]]) -> None:
@@ -505,7 +513,8 @@ class MemoryStateStore(StateStore):
                     else:
                         continue
                     out.append(QueuedMatch(company, uid, job.title, job.url, job.first_seen, job.location,
-                                           skipped_at=state.skipped.get(key) or done, done_at=done))
+                                           skipped_at=state.skipped.get(key) or done, done_at=done,
+                                           send_at=None if done else state.sending.get(key)))
             return out
 
     def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
@@ -518,6 +527,16 @@ class MemoryStateStore(StateStore):
                 state.skipped[f"{company}#{uid}"] = to_iso(utcnow())
             else:
                 state.skipped.pop(f"{company}#{uid}", None)
+            self._persist()
+            return True
+
+    def mark_send(self, company: str, uid: str) -> bool:
+        with self._lock:
+            state = self._current()
+            job = state.companies.get(company, {}).get(uid)
+            if not job or not waiting(job) or f"{company}#{uid}" in state.skipped:
+                return False
+            state.sending[f"{company}#{uid}"] = to_iso(utcnow())
             self._persist()
             return True
 

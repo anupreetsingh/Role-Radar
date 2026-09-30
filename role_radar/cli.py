@@ -290,36 +290,39 @@ def cmd_switch(args: argparse.Namespace) -> int:
 
 
 def cmd_matches(args: argparse.Namespace) -> int:
-    """Live Tracking: list the matches, skip one (it's recorded, never sent) or undo that, or send the waiting ones now."""
+    """Live Tracking: list the matches, skip (clear) some (they're recorded, never sent) or undo that, or send some now."""
     from role_radar import ui
 
     ctx = context(args)
     store = open_backend(ctx.runtime, "matches", ctx.clients).store
-    if args.action in ("skip", "unskip"):
-        skip = args.action == "skip"
-        if args.all:
+    picked = [tuple(pick) for pick in args.pick or []] + ([(args.company, args.uid)] if args.company and args.uid else [])
+    if args.action in ("skip", "unskip", "send"):
+        skip = args.action != "unskip"
+        if args.all or (args.action == "send" and not picked):  # `send` alone sends them all, as before
             targets = [(m.company, m.uid) for m in store.load_queue() if not m.done_at and bool(m.skipped_at) != skip]
-        elif args.company and args.uid:
-            targets = [(args.company, args.uid)]
+        elif picked:
+            targets = picked
         else:
             raise ValueError(f"say which match, e.g. role-radar matches {args.action} Microsoft microsoft:eightfold:123 (or --all)")
-        gone = [f"{company}: {uid}" for company, uid in targets if not store.mark_skipped(company, uid, skip)]
+        if args.action == "send":
+            gone = [f"{company}: {uid}" for company, uid in targets if not store.mark_send(company, uid)]
+            store.request_digest()
+        else:
+            gone = [f"{company}: {uid}" for company, uid in targets if not store.mark_skipped(company, uid, skip)]
         if gone:
-            print(f"Not waiting any more (already sent, or the skip already applied): {', '.join(gone)}", file=sys.stderr)
-    elif args.action == "send":
-        store.request_digest()
-    elif args.company or args.all:
-        raise ValueError("say skip or unskip, e.g. role-radar matches skip COMPANY UID")
+            print(f"Not waiting any more (already sent, or skipped): {', '.join(gone)}", file=sys.stderr)
+    elif args.company or args.all or picked:
+        raise ValueError("say skip, unskip or send, e.g. role-radar matches skip COMPANY UID")
 
     state = ui.live(store)
     if args.json:
         print(json.dumps(state))
         return 0
     if args.action == "send":
-        print("Asked for the waiting matches to go out now: the Mac sends them within a minute"
+        print("Asked for those matches to go out now: the Mac sends them within a minute"
               + (", Lambda at its next run." if ctx.runtime.storage == "dynamodb" else "."))
     if state["alerts_off"]:
-        print("Both alert channels are off: waiting matches are sent once one is back on.")
+        print("Both alert channels are off: matches collect here until you send them, or switch one back on.")
     else:
         print(f"Next digest:    {when(state['next_digest'])}" + (" (sending now)" if state["send_requested"] else ""))
     for title, rows in (("Waiting to be sent", state["waiting"]), ("Skipped", state["skipped"])):
@@ -700,10 +703,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("matches", parents=[common], help="matches waiting to be sent, skipped and sent; skip one or send now")
     p.add_argument("action", nargs="?", choices=["skip", "unskip", "send"],
                    help="skip: record a waiting match without ever sending it (unskip undoes that until the next "
-                        "digest); send: send the waiting matches now, not at the next digest time")
+                        "digest); send: send matches now, alerts on or off (without a match, all that are waiting)")
     p.add_argument("company", nargs="?", help="the match's company, as listed")
     p.add_argument("uid", nargs="?", help="the match's id, as listed")
-    p.add_argument("--all", action="store_true", help="skip (or unskip) every waiting match")
+    p.add_argument("--pick", nargs=2, action="append", metavar=("COMPANY", "UID"),
+                   help="a match to skip, unskip or send; give it once for each")
+    p.add_argument("--all", action="store_true", help="skip, unskip or send every waiting match")
     p.add_argument("--json", action="store_true", help="print the lists as JSON (what the menu bar app reads)")
     p.set_defaults(func=cmd_matches)
 
