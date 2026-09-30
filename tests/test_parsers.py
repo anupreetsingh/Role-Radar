@@ -198,6 +198,87 @@ def test_rippling_fetches_description_when_details_were_not_needed():
     assert descriptions["a1"].startswith("<p>Requirements") and sum("/jobs/a1" in u for u in seen) == 1
 
 
+def scrape_smartrecruiters(*, groups=None, more=None, described=(), **options):
+    """`groups` and `more` map a page number to its HTML; a page not in them is empty.
+    By default there are two pages of groups, and Bengaluru's "Show more jobs" has one page."""
+    if groups is None:
+        groups = {"0": fixture_text("smartrecruiters_groups0.html"), "1": fixture_text("smartrecruiters_groups1.html")}
+    more = {"1": fixture_text("smartrecruiters_more1.html")} if more is None else more
+    pages = {"/Acme/api/groups": groups, "/Acme/api/more": more}
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.host == "jobs.smartrecruiters.com":
+            return httpx.Response(200, json=fixture_json("smartrecruiters_job.json"))
+        if request.url.path not in pages:
+            return httpx.Response(404)
+        return httpx.Response(200, text=pages[request.url.path].get(request.url.params["page"], ""))
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company(url="https://careers.smartrecruiters.com/Acme")
+            cfg.options = options
+            scraper = SCRAPERS["smartrecruiters"](cfg, http)
+            result = await scraper.fetch_jobs()
+            descriptions = {j.job_id: await scraper.fetch_description(j) for j in result.jobs if j.job_id in described}
+            return result, descriptions, seen
+
+    return asyncio.run(go())
+
+
+def test_smartrecruiters_reads_every_group_and_its_more_pages():
+    result, _, seen = scrape_smartrecruiters()
+    jobs = {j.job_id: j for j in result.jobs}
+    assert result.complete and len(jobs) == 6
+    swe = jobs["744000000000101"]
+    assert swe.title == "Software Engineer I" and swe.employment_type == "Full-time"
+    assert swe.url == "https://jobs.smartrecruiters.com/Acme/744000000000101-software-engineer-i"
+    assert swe.uid == "acme:smartrecruiters:744000000000101"
+    assert swe.location == "Austin, TX; Sydney, Australia"  # listed in both groups
+    assert jobs["744000000000102"].location == "Austin, TX (Remote)" and jobs["744000000000102"].employment_type == "Contract"
+    assert jobs["744000000000301"].title == "Site Reliability Engineer & SRE Lead"
+    assert {j.location for i, j in jobs.items() if i.startswith("7440000000002")} == {"Bengaluru, India", "Bengaluru, India (Remote)"}
+    assert [u.split(".com", 1)[1] for u in seen] == [
+        "/Acme/api/groups?page=0",
+        "/Acme/api/more?type=location&value=Bengaluru%2C%20IN&page=1",
+        "/Acme/api/more?type=location&value=Bengaluru%2C%20IN&page=2",
+        "/Acme/api/groups?page=1",
+        "/Acme/api/groups?page=2",
+    ]
+
+
+def test_smartrecruiters_listing_is_incomplete_when_cut_short():
+    short_group, _, _ = scrape_smartrecruiters(more={})  # "Show more jobs" gives nothing: 1 of Bengaluru's 3 jobs
+    assert not short_group.complete and len(short_group.jobs) == 4
+    page_cap, _, seen = scrape_smartrecruiters(max_pages=2)  # the empty page after the last wasn't reached
+    assert not page_cap.complete and len(page_cap.jobs) == 6 and "page=2" not in seen[-1]
+
+
+def test_smartrecruiters_stops_on_a_repeated_more_page():
+    repeat = fixture_text("smartrecruiters_more1.html")
+    result, _, seen = scrape_smartrecruiters(more={"1": repeat, "2": repeat, "3": repeat})
+    assert result.complete and sum("/api/more" in u for u in seen) == 2
+
+
+def test_smartrecruiters_empty_and_unrecognized_pages():
+    empty, _, _ = scrape_smartrecruiters(groups={})
+    assert empty.jobs == [] and empty.complete
+    with pytest.raises(ScraperError, match="missing"):
+        scrape_smartrecruiters(groups={"0": "<html><body>Something went wrong</body></html>"})
+    by_department = fixture_text("smartrecruiters_groups0.html").replace('data-type="location"', 'data-type="department"')
+    with pytest.raises(ScraperError, match="department"):
+        scrape_smartrecruiters(groups={"0": by_department})
+
+
+def test_smartrecruiters_description_is_the_role_not_the_company():
+    result, descriptions, seen = scrape_smartrecruiters(described={"744000000000101"})
+    assert descriptions == {"744000000000101": "<p>Build our booking APIs.</p><ul><li>0-2 years of experience with Python</li></ul>"}
+    swe = next(j for j in result.jobs if j.job_id == "744000000000101")
+    assert swe.date_posted == date(2026, 9, 21)
+    assert seen[-1] == swe.url
+
+
 def test_generic_json_ld():
     result = scrape("generic", "https://acme.example/careers", {"/careers": fixture_text("generic_jsonld.html")})
     (pe,) = result.jobs
@@ -243,6 +324,7 @@ def test_generic_empty_page_raises():
         ("https://jobs.ashbyhq.com/acme", "ashby"),
         ("https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite", "workday"),
         ("https://ats.rippling.com/en-US/acme/jobs", "rippling"),
+        ("https://careers.smartrecruiters.com/Acme", "smartrecruiters"),
         ("https://www.acme.com/careers", "generic"),
     ],
 )

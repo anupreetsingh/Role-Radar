@@ -37,6 +37,8 @@ DEFAULT_HOST_DELAYS = {
     "api.eu.lever.co": 0.3,
     "api.ashbyhq.com": 0.3,
     "ats.rippling.com": 0.5,
+    # careers. (listings) and jobs. (job pages) as one host.
+    "smartrecruiters.com": 0.5,
 }
 
 

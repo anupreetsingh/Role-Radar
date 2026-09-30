@@ -1,0 +1,18 @@
+{
+  "uuid": "e0965f6f-5501-4ac4-9310-996c110f366d",
+  "applyUrl": "https://jobs.smartrecruiters.com/Acme/744000000000101-software-engineer-i",
+  "jobTitle": "Software Engineer I",
+  "jobAdLocation": "Austin, TX, United States",
+  "employmentType": "Full-time",
+  "content": {
+    "sections": {
+      "companyDescription": {"title": "Company Description", "text": "<p>We have been building software for 25 years.</p>"},
+      "jobDescription": {"title": "Job Description", "text": "<p>Build our booking APIs.</p>"},
+      "qualifications": {"title": "Qualifications", "text": "<ul><li>0-2 years of experience with Python</li></ul>"},
+      "additionalInformation": {"title": "Additional Information", "text": "<p>Benefits.</p>"}
+    }
+  },
+  "company": {"name": "Acme"},
+  "isApplyAvailable": true,
+  "postedDate": "2026-09-21T15:04:05.000Z"
+}
