@@ -234,7 +234,7 @@ async def _screen_experience(company: CompanyConfig, scraper: BaseScraper, state
     for job, text in zip(todo, texts):
         rec = records[job.uid]
         rec.experience_checked = True
-        verdict = assess(text, company.filter.max_experience_years)
+        verdict = assess(text, company.filter.max_experience_years, company.filter.education)
         log.debug("[%s] %s: %s", company.name, job.title, verdict.reason)
         if not verdict.keep:
             rec.notified_at, rec.dropped_for = stamp, verdict.reason
@@ -339,7 +339,7 @@ async def check_company(
         notify=notify and (settings.notify_on_first_run or not first_run),
         max_alert_age_days=company.max_alert_age_days,
     )
-    if company.filter.max_experience_years is not None and diff.to_notify:
+    if (company.filter.max_experience_years is not None or company.filter.education) and diff.to_notify:
         await _screen_experience(company, scraper, state, diff, settings)
     changed = diff.new or diff.removed or diff.returned or diff.suppressed or diff.to_notify
     log.log(

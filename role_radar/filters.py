@@ -13,8 +13,9 @@ slashes and underscores ("back end" matches "Back-End"). A keyword prefixed
 with "re:" is used as a raw regular expression.
 
 Keywords never look at job descriptions. `max_experience_years` does, separately:
-a new match whose description asks for more years is recorded but not alerted
-(experience.py; monitor.py reads each new match's description once).
+a new match whose description asks for more years is recorded but not alerted, and
+`education` does the same for a higher degree than the person has (experience.py;
+monitor.py reads each new match's description once).
 """
 
 from __future__ import annotations
@@ -24,6 +25,9 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Collection
 
 from role_radar.models import JobPosting
+
+# Highest education, lowest first: no degree, a bachelor's, a master's, a PhD.
+EDUCATION = ("none", "bachelors", "masters", "phd")
 
 # The fields a rule can be applied to. Add an entry here to make a new field matchable.
 FIELD_GETTERS: dict[str, Callable[[JobPosting], str | None]] = {
@@ -62,8 +66,12 @@ class JobFilter:
     locations: list[str] = field(default_factory=list)
     employment_types: list[str] = field(default_factory=list)
     # Most years of experience a new match's description may ask for (a master's
-    # counts where the posting says it does). None: descriptions aren't read.
+    # counts where the posting says it does). None: descriptions aren't read for years.
     max_experience_years: int | None = None
+    # The person's highest education (EDUCATION): a new match whose description requires
+    # a higher degree isn't alerted, and "or a master's" paths count only for a master's or PhD.
+    # None: a master's is assumed, and degrees aren't checked.
+    education: str | None = None
 
     def __post_init__(self) -> None:
         for name in (*self.match_on, *self.exclude_on):
@@ -81,6 +89,8 @@ class JobFilter:
         years = self.max_experience_years
         if years is not None and (not isinstance(years, int) or isinstance(years, bool) or years < 0):
             raise ValueError("max_experience_years must be a whole number >= 0")
+        if self.education is not None and self.education not in EDUCATION:
+            raise ValueError(f"education must be one of {', '.join(EDUCATION)}, not {self.education!r}")
 
     @classmethod
     def from_config(cls, cfg: dict[str, Any] | None) -> JobFilter:
@@ -89,7 +99,8 @@ class JobFilter:
         unknown = set(cfg) - known
         if unknown:
             raise ValueError(f"Unknown filter options: {sorted(unknown)}")
-        return cls(**{k: v if k == "max_experience_years" else list(v) for k, v in cfg.items() if v is not None})
+        scalars = ("max_experience_years", "education")
+        return cls(**{k: v if k in scalars else list(v) for k, v in cfg.items() if v is not None})
 
     def fields_used(self) -> set[str]:
         """Job fields whose value can change this filter's verdict."""

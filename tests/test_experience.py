@@ -301,3 +301,30 @@ def test_matches_beyond_the_request_cap_wait_for_the_next_check():
 
     outcome, requested = greenhouse_check(state, ids=[2, 4], settings=Settings(max_detail_requests=1), max_experience_years=2)
     assert requested == [4] and [j.job_id for j in outcome.diff.to_notify] == ["2", "4"]
+
+
+@pytest.mark.parametrize("text, education, keep", [
+    ("Requirements:\n- Master's degree in Computer Science required.\n", "bachelors", False),
+    ("Requirements:\n- Master's degree in Computer Science required.\n", "masters", True),
+    ("Requirements:\n- Bachelor's or Master's degree in Computer Science.\n", "none", False),
+    ("Requirements:\n- BS in Computer Science or equivalent experience.\n", "none", True),
+    ("Requirements:\n- PhD in Machine Learning or a related field.\n", "masters", False),
+    ("Requirements:\n- PhD in Machine Learning or a related field.\n", "phd", True),
+    ("Requirements:\n- Currently pursuing a Bachelor's, Master's or PhD in Computer Science.\n", "bachelors", True),
+    ("Minimum qualifications:\n- BS/MS in Computer Science.\n", "none", False),
+    ("Preferred qualifications:\n- PhD in Computer Science.\n", "bachelors", True),
+    ("Qualifications:\n- Proficiency with MS Office and SQL.\n", "none", True),
+    ("We pay for our engineers' master's degrees.\n", "bachelors", True),
+])
+def test_education_drops_jobs_needing_a_higher_degree(text, education, keep):
+    assert assess(text, None, education).keep is keep
+
+
+def test_a_masters_path_counts_only_with_a_masters():
+    text = "Requirements:\n- 5+ years of experience, or a Master's degree with 2+ years of experience.\n"
+    assert assess(text, 2).keep  # no education given: a master's is assumed, as before
+    assert assess(text, 2, "masters").keep
+    verdict = assess(text, 2, "bachelors")
+    assert not verdict.keep and "5+ years" in verdict.reason
+    assert assess("Requirements:\n- 3+ years of experience, or a PhD.\n", 1, "phd").keep
+    assert not assess("Requirements:\n- 3+ years of experience, or a PhD.\n", 1, "masters").keep

@@ -8,6 +8,12 @@ A sentence needs the fewest years of its paths (any one will do); a path naming 
 master's degree and no years needs none, and a PhD-only path doesn't count. The job
 needs the most years of its sentences (all of them apply).
 
+With the person's education (filters.EDUCATION), a master's path counts only for a
+master's or PhD, and a PhD path counts for a PhD; without it, a master's is assumed.
+Then a sentence that requires a degree (the lowest one it names: "a Bachelor's or
+Master's" asks for a bachelor's) above theirs drops the job, unless the sentence
+accepts experience or an equivalent instead.
+
 Anything unclear keeps the job: a good job dropped by mistake is worse than an
 extra alert. So a description that can't be read, has no years, or says a master's
 may substitute for experience is kept.
@@ -18,6 +24,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from role_radar.filters import EDUCATION
 from role_radar.models import html_to_text
 
 NUMBER_WORDS = {
@@ -140,14 +147,24 @@ class ExperienceVerdict:
     years: int | None = None  # the most years a sentence required (None: no requirement found)
 
 
-def assess(description: str | None, max_years: int) -> ExperienceVerdict:
-    """Whether a job whose description is `description` (HTML or text) fits `max_years` of experience."""
+def assess(description: str | None, max_years: int | None, education: str | None = None) -> ExperienceVerdict:
+    """Whether a job whose description is `description` (HTML or text) fits `max_years` of experience
+    (None: any) and `education` (one of filters.EDUCATION; None: a master's, and degrees aren't checked)."""
     if not description or not description.strip():
         return ExperienceVerdict(True, "no description to read")
     text = html_to_text(description).replace("’", "'").replace("‘", "'")
+    sentences = _required_sentences(text)
+    if education is not None:
+        needed = [(level, sentence) for sentence in sentences if (level := _degree_needed(sentence)) is not None]
+        level, sentence = max(needed, default=(0, ""), key=lambda pair: pair[0])
+        if level > EDUCATION.index(education):
+            return ExperienceVerdict(False, f'needs a {_DEGREE_NAMES[level]}: "{_quote(sentence)}"')
+    if max_years is None:
+        return ExperienceVerdict(True, "any experience")
+    masters = education in (None, "masters", "phd")
     worst: tuple[int, str] | None = None
-    for sentence in _required_sentences(text):
-        years = _sentence_years(sentence)
+    for sentence in sentences:
+        years = _sentence_years(sentence, masters=masters, phd=education == "phd")
         if years is not None and (worst is None or years > worst[0]):
             worst = (years, sentence)
     if worst is None:
@@ -155,10 +172,48 @@ def assess(description: str | None, max_years: int) -> ExperienceVerdict:
     years, sentence = worst
     if years <= max_years:
         return ExperienceVerdict(True, f"needs {years} year{'' if years == 1 else 's'}", years)
-    if _SUBSTITUTE.search(text):
+    if masters and _SUBSTITUTE.search(text):
         return ExperienceVerdict(True, f"needs {years}+ years, but a master's may substitute", years)
-    quote = sentence if len(sentence) <= 160 else sentence[:157] + "..."
-    return ExperienceVerdict(False, f'needs {years}+ years: "{quote}"', years)
+    return ExperienceVerdict(False, f'needs {years}+ years: "{_quote(sentence)}"', years)
+
+
+def _quote(sentence: str) -> str:
+    return sentence if len(sentence) <= 160 else sentence[:157] + "..."
+
+
+_DEGREE_NAMES = {1: "bachelor's degree", 2: "master's degree", 3: "PhD"}
+# A sentence accepting something instead of the degree: "or equivalent experience", "or 4+ years".
+_DEGREE_ALTERNATIVE = re.compile(
+    rf"\b(?:equivalent|in\s+lieu|comparable|or\s+(?:relevant|related|practical|professional|industry|work|hands[\s-]on)\s+"
+    rf"(?:work\s+)?experience|or\s+(?:an?\s+)?{_NUM}\s*\+?\s*(?:years?|yrs?))",
+    re.I,
+)
+# Words that make a degree mentioned a requirement of the candidate's.
+_DEGREE_REQUIRED = re.compile(
+    r"\b(?:degree|required|requires?|must|minimum|pursuing|completed|completion|hold|holds|holding|possess"
+    r"|graduated?|graduating)\b|\bin\s+(?:a\s+|the\s+)?(?:related|relevant|technical|quantitative|computer|electrical"
+    r"|engineering|math|mathematics|statistics|physics|finance|accounting|economics|business|information)"
+    rf"|\b(?:field|discipline|major)\b|{_DEGREE}\s+(?:degree\s+)?(?:in|of)\b",
+    re.I,
+)
+
+
+def _degree_needed(sentence: str) -> int | None:
+    """The degree a requirement sentence asks for (1 bachelor's, 2 master's, 3 PhD: the lowest it names),
+    or None when it asks for none, is about the company, is a preference, or accepts experience instead."""
+    if _COMPANY.search(sentence) and not _CANDIDATE.search(sentence):
+        return None
+    if _PREFERRED.search(sentence) or _DEGREE_ALTERNATIVE.search(sentence) or not _DEGREE_REQUIRED.search(sentence):
+        return None
+    named = [level for level, pattern in ((1, BACHELORS), (2, MASTERS), (3, PHD)) if pattern.search(sentence)]
+    if not named:
+        return None
+    # A path with years and no degree ("5+ years of experience, or a Master's with 2+") needs no degree.
+    mentions = _mentions(sentence)
+    if mentions and any(path.years and not (path.masters or path.bachelors or PHD.search(path.text))
+                        for path in _paths(sentence, mentions)):
+        return None
+    return min(named)
 
 
 def _required_sentences(text: str) -> list[str]:
@@ -196,8 +251,9 @@ def _split_sentences(line: str) -> list[str]:
     return pieces
 
 
-def _sentence_years(sentence: str) -> int | None:
-    """Years the sentence requires: the fewest over its paths, or None if it requires none."""
+def _sentence_years(sentence: str, *, masters: bool = True, phd: bool = False) -> int | None:
+    """Years the sentence requires: the fewest over its paths, or None if it requires none.
+    A master's path counts only for someone with a `masters` (or PhD), a PhD path for a `phd`."""
     mentions = _mentions(sentence)
     if not mentions:
         return None
@@ -212,7 +268,11 @@ def _sentence_years(sentence: str) -> int | None:
     for i, path in enumerate(paths):
         if path.preferred:
             continue
-        if path.masters and path.years:
+        if path.phd_only and phd:
+            needs.append(0)
+        elif path.masters and not masters:
+            continue
+        elif path.masters and path.years:
             needs.append(path.masters_years)
         elif path.masters:
             # A master's with no years of its own is a path of its own ("3+ years, or a Master's";
