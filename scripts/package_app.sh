@@ -3,9 +3,9 @@
 # nothing to install, no AWS. Writes dist/Role-Radar-<version>-apple-silicon.zip.
 #
 # The app keeps its files in ~/Library/Application Support/Role Radar, opens a Setup window on
-# first launch (roles, companies via a ChatGPT/Claude prompt, a Gmail app password), and runs
+# first launch (a profession, its job titles and countries, a Gmail app password), and runs
 # its checker as its own launchd agent (com.roleradar.app.checker), apart from one run from
-# the code. Needs Xcode or the Command Line Tools (swiftc) and uv (for the Python build).
+# the code. Needs Xcode (swiftc, and actool for the icon) and uv (for the Python build).
 # It's signed ad hoc, not notarized: on first open, macOS asks to confirm in
 # System Settings → Privacy & Security → Open Anyway.
 set -eu
@@ -25,6 +25,13 @@ mkdir -p "$app/Contents/MacOS" "$resources"
 echo "Building the app for Apple Silicon..."
 swiftc -parse-as-library -swift-version 5 -O -target arm64-apple-macos14.0 \
     "$project/macos/RoleRadarMenu.swift" -o "$app/Contents/MacOS/RoleRadarMenu"
+# The icon (macos/AppIcon.icon, from Icon Composer): what macOS 26 draws, and AppIcon.icns for older macOS.
+if xcrun --find actool >/dev/null 2>&1; then
+    xcrun actool "$project/macos/AppIcon.icon" --compile "$resources" --platform macosx --minimum-deployment-target 14.0 \
+        --app-icon AppIcon --output-partial-info-plist "$build/icon.plist" >/dev/null
+else
+    echo "  no Xcode (actool): the app gets macOS's plain icon" >&2
+fi
 
 echo "Adding Python ($python_build) and Role Radar..."
 uv python install "$python_build" --install-dir "$build/pythons" >/dev/null
@@ -33,15 +40,23 @@ py="$resources/python/bin/python3"
 uv pip install --quiet --python "$py" --break-system-packages --no-cache "$project"
 site="$("$py" -I -c 'import role_radar, os; print(os.path.dirname(role_radar.__file__))')"  # -I: not the project's copy
 
-# Known employers and their verified job boards, so Setup trusts those over an AI's guess.
-"$py" - "$project/config/companies.yaml" "$site/templates/directory.yaml" <<'EOF'
+# Each profession's company list (config.profession_list): Tech is the companies file, the others sit
+# beside it. The app checks the picked profession's list, narrowed to the person's countries.
+mkdir -p "$site/lists"
+"$py" - "$project/config" "$site/lists" <<'EOF'
 import sys, yaml
-companies = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))["companies"]
-keep = [{k: v for k, v in c.items() if k != "filters"} for c in companies if c.get("enabled", True)]
-with open(sys.argv[2], "w", encoding="utf-8") as fh:
-    fh.write("# Known employers' job boards, from Role Radar's companies list: used by Setup.\n")
-    yaml.safe_dump({"companies": keep}, fh, sort_keys=False, allow_unicode=True, width=200)
-print(f"  directory: {len(keep)} known employers")
+from pathlib import Path
+source, target = Path(sys.argv[1]), Path(sys.argv[2])
+for profession, name in (("tech", "companies.yaml"), ("accounting", "accounting.yaml"), ("healthcare", "healthcare.yaml")):
+    if not (source / name).exists():
+        print(f"  {profession}: no list yet")
+        continue
+    companies = yaml.load((source / name).read_text(encoding="utf-8"), Loader=yaml.CSafeLoader)["companies"]
+    keep = [{k: v for k, v in c.items() if k != "filters"} for c in companies]
+    with open(target / f"{profession}.yaml", "w", encoding="utf-8") as fh:
+        fh.write(f"# Role Radar's {profession} companies, with the countries each posts jobs in; built from config/{name}.\n")
+        yaml.safe_dump({"companies": keep}, fh, sort_keys=False, allow_unicode=True, width=200)
+    print(f"  {profession}: {sum(c.get('enabled', True) for c in keep)} companies ({len(keep)} with those switched off)")
 EOF
 
 # Leave out what the app never uses, then compile everything once: Python never writes into the app.
@@ -62,6 +77,8 @@ cat > "$app/Contents/Info.plist" <<EOF
   <key>CFBundleDisplayName</key><string>Role Radar</string>
   <key>CFBundleIdentifier</key><string>com.roleradar.app</string>
   <key>CFBundleExecutable</key><string>RoleRadarMenu</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$version</string>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Role Radar's symbol: a dot between radio waves, as filled shapes (Liquid Glass reads fills, not strokes) -->
+  <path fill="#ffffff" d="M710.4 345.5 A259 259 0 0 1 710.4 678.5 A35 35 0 0 1 656.8 633.5 A189 189 0 0 0 656.8 390.5 A35 35 0 0 1 710.4 345.5 Z"/>
+  <path fill="#ffffff" d="M313.6 678.5 A259 259 0 0 1 313.6 345.5 A35 35 0 0 1 367.2 390.5 A189 189 0 0 0 367.2 633.5 A35 35 0 0 1 313.6 678.5 Z"/>
+  <path fill="#ffffff" d="M824.5 249.7 A408 408 0 0 1 824.5 774.3 A35 35 0 0 1 770.9 729.3 A338 338 0 0 0 770.9 294.7 A35 35 0 0 1 824.5 249.7 Z"/>
+  <path fill="#ffffff" d="M199.5 774.3 A408 408 0 0 1 199.5 249.7 A35 35 0 0 1 253.1 294.7 A338 338 0 0 0 253.1 729.3 A35 35 0 0 1 199.5 774.3 Z"/>
+  <circle cx="512" cy="512" r="75" fill="#ffffff"/>
+</svg>

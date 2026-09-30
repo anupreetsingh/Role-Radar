@@ -6,9 +6,9 @@ the work while `role-radar start` is running, and an AWS Lambda takes over whene
 
 There are three ways to run it:
 
-- **Download the app.** Nothing to install: a Setup window asks what you're looking for,
-  helps you pick companies with ChatGPT or Claude, and sends alerts from your Gmail. See
-  [Get the app](#get-the-app).
+- **Download the app.** Nothing to install: a Setup window asks your profession (Tech,
+  Accounting & Finance or Healthcare), the job titles and countries you want, and sends alerts
+  from your Gmail. See [Get the app](#get-the-app).
 - **On your Mac only, from the code.** Everything, from the jobs it has seen to your email
   settings, stays on your Mac, and it checks while the menu bar app is open. No AWS account
   needed. See [Run it on your Mac](#run-it-on-your-mac).
@@ -26,25 +26,35 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 2. Open Role Radar. The app isn't signed with a paid Apple developer account, so macOS first
    says it can't check it: click **Done**, then open **System Settings → Privacy & Security**,
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
-3. The **Setup** window takes three steps:
-   - **What you're looking for:** job titles, words that rule a job out (like "senior"),
-     places, and the most years of experience a job may ask for.
-   - **Companies to watch:** **Copy Prompt**, paste it into ChatGPT or Claude, and paste the
-     whole answer back. Companies Role Radar already knows (about 4,800) use their verified job
-     boards; any others are checked once, and the ones it can't read are listed with a reason.
-   - **Email alerts:** your Gmail address and a Gmail
+3. The **Setup** window walks through these pages:
+   - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
+     companies, built into the app and refreshed with each version (Tech's has about 4,800).
+   - **Countries** and **Companies:** the countries you want (United States, Canada, Australia,
+     India), and optionally cities. Only companies that post jobs in those countries are
+     checked, and jobs alert from anywhere in them, or only from your cities.
+   - **Roles:** target roles, the job titles to look for, and non-target roles, words that rule
+     a title out (Senior, Lead, Staff, Director...). Both are boxes grouped by kind, all ticked
+     to start with: untick any you don't want, or add your own.
+   - **Qualifications:** skip jobs asking for a number of years or more ("3+" still alerts for
+     no experience, 1+ and 2+), and your highest degree. Jobs that need a higher degree are
+     skipped. A degree can also count in place of experience: if you skip 3+ years and have a
+     Master's, a job asking for "3 years, or 1 year with a Master's" is still shown.
+   - **Alerts (optional):** new jobs always collect in **Live Tracking**, newest on top, so
+     you can just open the app to see them. To also get them sent every 10 minutes, set up
+     email, Discord or both. Email needs your Gmail address and a Gmail
      [app password](https://myaccount.google.com/apppasswords), a 16-letter password just for
-     Role Radar (it needs 2-Step Verification). It's kept in your Mac's Keychain. Alerts are
-     sent from your Gmail to yourself.
+     Role Radar (it needs 2-Step Verification); alerts are sent from your Gmail to yourself,
+     and to anyone you add (a friend, your school email), and each person sees only your
+     address. Discord needs a channel's webhook URL (the channel's settings → Integrations →
+     Webhooks). Both are kept in your Mac's Keychain.
 4. **Start Checking.** Role Radar opens at login and checks while your Mac is on. New matches
-   collect in **Live Tracking** and go out by email every 10 minutes. **Settings…** in its menu
-   changes roles, companies or email.
+   collect in **Live Tracking**, and go out every 10 minutes if alerts are set up.
+   **Settings…** in its menu changes the profession, titles, places or alerts.
 
 Its files live in `~/Library/Application Support/Role Radar`, and its log is
 `~/Library/Logs/com.roleradar.app.checker.log`.
 
-**Packaging a new version** (from the code, on an Apple Silicon Mac with uv and the Xcode
-Command Line Tools): bump `__version__` in `role_radar/__init__.py`, then
+**Packaging a new version** (from the code, on an Apple Silicon Mac with uv and Xcode): bump `__version__` in `role_radar/__init__.py`, then
 
 ```bash
 sh scripts/package_app.sh      # → dist/Role-Radar-<version>-apple-silicon.zip
@@ -52,9 +62,12 @@ gh release create v<version> dist/Role-Radar-<version>-apple-silicon.zip --title
 ```
 
 The script puts a Python (python-build-standalone, via uv) and Role Radar inside the app,
-with the companies in `config/companies.yaml` as its directory of known employers, and signs it
-ad hoc. The packaged app runs its checker as its own launchd agent,
-`com.roleradar.app.checker`, so it never touches one run from the code.
+with the companies in `config/companies.yaml` as its directory of known employers and the icon in
+`macos/AppIcon.icon` (open it in Xcode's Icon Composer to change it), and signs it ad hoc. The packaged app runs its checker as its own launchd agent,
+`com.roleradar.app.checker`, with its own files and Keychain items, so it never touches one
+run from the code. To try a build as someone new would, `KEEP_APP=dist sh scripts/package_app.sh`
+keeps a copy of the app in `dist/`, and `sh scripts/reset_app.sh` wipes the packaged app's
+setup so its next launch is a first run.
 
 ## Run it on your Mac
 
@@ -122,7 +135,7 @@ sh scripts/build_menubar.sh
 The app starts the checker, which checks companies as they come due while the app is
 open. The first check of each company records the jobs already open without alerting
 (`notify_on_first_run: true` in `companies.yaml` alerts them too). After that, new
-matches collect in **Live Tracking** and go out by email every 10 minutes.
+matches collect in **Live Tracking**, and go out every 10 minutes if alerts are set up.
 
 **With an AI agent.** Point it at this section and tell it what you want, for example:
 "Set up Role Radar for me: I'm looking for data analyst and analytics engineer roles in
@@ -260,6 +273,7 @@ alert again. The previous version behaved the same way.
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
+| SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
 | Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
 | MathWorks | Official RSS job feed, including EDG | no |
 | HRM Direct / ClearCompany | Public search-results table, including malformed job links | no |
@@ -273,7 +287,6 @@ alert again. The previous version behaved the same way.
 | amazon.jobs | `search.json`, newest first, by category | no |
 | Apple | Search pages' hydration JSON, newest first | no |
 | Google | First results page of each query (robots.txt disallows paging), newest first | no |
-| SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
 | Meta | `/jobsearch/sitemap.xml` for the job IDs | each new job's page once, for its title and location (up to 2 minutes of pages a check) |
 | TikTok | Public search API; the listing is filtered to US jobs locally | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
@@ -290,6 +303,13 @@ public feeds/APIs or supported HTML readers; a JavaScript landing page alone is 
 evidence that the source works. See [company coverage](docs/company-coverage.md) for
 the enabled employers, source limitations and expansion queue.
 
+Each company's `countries` lists where it posts jobs (US, CA, AU, IN), taken from its job
+locations by `scripts/tag_countries.py`. Set `settings.countries` in the profile (e.g.
+`[US, IN]`) to check only companies that post in one of those; companies without
+`countries`, such as ones you add yourself, are always checked. The filters' `locations`
+still decide which jobs alert. A company on a job site Role Radar can't read yet carries
+`platform:` and stays `enabled: false`.
+
 ### Job identity and new-job rules
 
 - **uid** = `company:ats:job_id`. If the ATS gives no job ID, it's a hash of the
@@ -303,13 +323,6 @@ the enabled employers, source limitations and expansion queue.
 |---|---|
 | New job | Recorded; alerted if it matches |
 | Existing job unchanged | Nothing |
-Each company's `countries` lists where it posts jobs (US, CA, AU, IN), taken from its job
-locations by `scripts/tag_countries.py`. Set `settings.countries` in the profile (e.g.
-`[US, IN]`) to check only companies that post in one of those; companies without
-`countries`, such as ones you add yourself, are always checked. The filters' `locations`
-still decide which jobs alert. A company on a job site Role Radar can't read yet carries
-`platform:` and stays `enabled: false`.
-
 | Job removed | `removed_at` set, but only if the listing was complete (a hit page cap or a heuristic parse never counts as removal) |
 | Removed job comes back with the same ID | Reactivated, no new alert |
 | Reposted with a new ID | A new job: alerted if it matches |
@@ -566,8 +579,9 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` undoes that until the next digest; `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profile` (roles etc., JSON on stdin), `prompt` (the ChatGPT/Claude prompt), `companies` (add companies from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain). It only rewrites files it wrote itself. |
+| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.zip`: the app with its own Python, for someone else's Mac (see [Get the app](#get-the-app)). |
+| `scripts/reset_app.sh` | Quits the packaged app and removes its checker, files, logs and Keychain items: its next launch is a first run. |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies
@@ -842,7 +856,7 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
 - The defaults allow 16 requests in flight overall, 40 companies in flight, and one
   request per second per host. The shared ATS APIs are exceptions:
   `boards-api.greenhouse.io` gets 0.25 s, `api.lever.co` / `api.ashbyhq.com` get
-  0.3 s, and `ats.rippling.com` gets 0.5 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
+  0.3 s, and `ats.rippling.com` and `smartrecruiters.com` get 0.5 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
   subdomains, and subdomains under a parent-domain key share one rate. An HTTP 429
   pauses every host sharing that rate for the Retry-After time (or 60 s). Most boards
   take one request, so a full round of 1,000 companies takes a few minutes, and the

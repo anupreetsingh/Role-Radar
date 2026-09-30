@@ -7,18 +7,20 @@
 // The Mac's checker (`role-radar start`, run by launchd) lives with this app:
 // the app starts it, restarts it within a minute if it stops, and stops it on
 // quit. Quitting and reopening the app restarts it on the current code.
-// Alerts. Each goes out only to the channels switched on. Both off: sites are
-// still checked and new matches saved, then sent once one is back on.
-// Live Tracking. Matches waiting to be sent (newest first), skipped and sent,
-// read every 5 seconds while the window is open; the round in progress; and
-// the last 24 hours' activity. A skipped match is never sent: the next alert
-// records it instead, and until then it can be unskipped. Send Now sends the
-// waiting matches without waiting for the next alert time.
+// Alerts are optional. Each goes out only to the channels switched on (a channel
+// that isn't set up stays off). Both off: sites are still checked, and new
+// matches collect in Live Tracking.
+// Live Tracking. The stack of new jobs (newest first), those cleared from it, and
+// the alerts sent, read every 5 seconds while the window is open; the round in
+// progress; and the last 24 hours' activity. Ticked jobs, or all of them, can be
+// cleared (never sent; undoable until the next digest records it, within minutes)
+// or sent now, alerts on or off.
 // Every read and write goes through the role-radar CLI (`switch --json`,
 // `matches --json`), so the rules live in one place. Build with scripts/build_menubar.sh
 // (it runs the project's code), or package it with scripts/package_app.sh: then the app
 // carries its own Python and keeps its files in ~/Library/Application Support/Role Radar,
-// and a Setup window (`role-radar setup`) asks for roles, companies and a Gmail account.
+// and a Setup window (`role-radar setup`) asks for a profession, job titles and places, and a Gmail account. It sits
+// in the Dock while one of its windows is open, and in the menu bar always.
 
 import AppKit
 import Charts
@@ -99,7 +101,7 @@ struct RunnerState: Decodable {
     let round: RoundInfo?
     let storage: String?  // "dynamodb" with AWS (the Mac and Lambda), "sqlite" on this Mac only
 
-    var hasLambda: Bool { (storage ?? "dynamodb") == "dynamodb" }
+    var hasLambda: Bool { !Place.packaged && (storage ?? "dynamodb") == "dynamodb" }
 
     /// The latest pass by a runner whose name starts with `prefix` ("laptop" or "lambda").
     func lastPass(_ prefix: String) -> Date? {
@@ -154,6 +156,7 @@ struct LiveState: Decodable {
         let first_seen: String
         var skipped_at: String?
         let final: Bool  // the skip was applied: it can't be undone
+        var send_at: String?  // sent from Live Tracking: on its way out
         var id: String { company + "#" + uid }
     }
 
@@ -193,9 +196,71 @@ struct LiveState: Decodable {
             waiting.sort { $0.first_seen > $1.first_seen }
         }
     }
+
+    /// Show a match as on its way out straight away, before the CLI confirms it.
+    mutating func setSending(_ id: String) {
+        if let i = waiting.firstIndex(where: { $0.id == id }) { waiting[i].send_at = When.iso.string(from: Date()) }
+    }
 }
 
 /// Times as the app shows them.
+/// How big the app's text is, as a multiple of each font's own size, for every window and the menu
+/// bar panel. It starts at `standard` whenever the app opens; A−/A+ in the windows' toolbars and
+/// ⌘= / ⌘− / ⌘0 change it until the app quits.
+enum TextSize {
+    static let key = "textScale"
+    static let standard = 1.15
+    static let range = 0.85...1.75
+
+    static var scale: Double { UserDefaults.standard.object(forKey: key) as? Double ?? standard }
+
+    static func change(by step: Double) {
+        let next = (scale + step).clamped(to: range)
+        UserDefaults.standard.set((next * 100).rounded() / 100, forKey: key)
+    }
+
+    static func reset() { UserDefaults.standard.removeObject(forKey: key) }
+
+    /// Buttons and switches a size up as the text grows (macOS draws each control size's text at a fixed size).
+    static func controls(_ scale: Double) -> ControlSize { scale >= 1.6 ? .large : scale >= 1.3 ? .regular : .small }
+}
+
+extension Comparable {
+    func clamped(to limits: ClosedRange<Self>) -> Self { min(max(self, limits.lowerBound), limits.upperBound) }
+}
+
+/// A system font at `size` points times the text size setting.
+struct ScaledFont: ViewModifier {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
+    let size: CGFloat
+    var weight: Font.Weight = .regular
+    var design: Font.Design = .default
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size * scale, weight: weight, design: design))
+    }
+}
+
+extension View {
+    func scaledFont(_ size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
+        modifier(ScaledFont(size: size, weight: weight, design: design))
+    }
+}
+
+/// Smaller and bigger text, for a window's toolbar.
+struct TextSizeButtons: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
+
+    var body: some View {
+        ControlGroup {
+            Button { TextSize.change(by: -0.1) } label: { Image(systemName: "textformat.size.smaller") }
+                .help("Smaller text (⌘−)").disabled(scale <= TextSize.range.lowerBound)
+            Button { TextSize.change(by: 0.1) } label: { Image(systemName: "textformat.size.larger") }
+                .help("Bigger text (⌘=)").disabled(scale >= TextSize.range.upperBound)
+        }
+    }
+}
+
 enum When {
     static let iso = ISO8601DateFormatter()
     private static let relative: RelativeDateTimeFormatter = {
@@ -245,8 +310,9 @@ enum Place {
         : info["RRProjectDir"] as? String ?? ProcessInfo.processInfo.environment["RR_PROJECT_DIR"]
             ?? FileManager.default.currentDirectoryPath
     static let config = packaged ? support + "/companies.yaml" : workDir + "/config/companies.yaml"
-    /// The packaged app's state, lock and checker are its own, apart from a checker run from the code.
-    static let env: [String: String] = packaged ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent] : [:]
+    /// The packaged app's state, lock, checker and Keychain items are its own, apart from a checker run from the code.
+    static let env: [String: String] = packaged
+        ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent, "ROLE_RADAR_KEYCHAIN": "com.roleradar.app"] : [:]
     static let log = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/" + (packaged ? agent + ".log" : "role-radar.log"))
     /// Opened straight from Downloads, macOS runs a downloaded app from a hidden read-only copy
@@ -254,25 +320,60 @@ enum Place {
     static let translocated = packaged && Bundle.main.bundlePath.contains("/AppTranslocation/")
 }
 
+/// The packaged app is in the Dock while one of its windows is open, so it opens and closes like any
+/// app: opening it (or clicking its Dock icon) shows Settings, and closing the last window leaves just
+/// the menu bar icon, still checking. Opened at login, it starts in the menu bar only.
+enum Dock {
+    static let openSettings = Notification.Name("RoleRadarOpenSettings")
+    static var launchedAtLogin = false
+    private static var windows = 0
+
+    static func windowOpened() {
+        guard Place.packaged else { return }
+        windows += 1
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate()
+    }
+
+    static func windowClosed() {
+        guard Place.packaged else { return }
+        windows = max(0, windows - 1)
+        if windows == 0 { NSApp.setActivationPolicy(.accessory) }
+    }
+}
+
 /// What `role-radar setup show` reports.
 struct SetupState: Decodable {
+    struct Profession: Decodable, Identifiable {
+        struct Group: Decodable { let name: String; let titles: [String] }
+        let id: String
+        let name: String
+        let about: String
+        let groups: [Group]  // job titles that alert
+        let skip_groups: [Group]?  // words that rule a title out
+    }
+    struct Country: Decodable { let code: String; let name: String }
+    let profession: String?
+    let professions: [Profession]?
     let roles: [String]
     let exclude: [String]
     let locations: [String]
+    let countries: [String]?
+    let country_options: [Country]?
+    let cities: [String]?
     let max_experience_years: Int?
-    let companies: Int
+    let education: String?  // none, bachelors, masters or phd
+    let companies: Int  // how many companies checks read: the profession's, in their countries, and their own
+    let companies_for: [String: Int]?  // the same for every combination of countries, keyed "US+IN"
+    let sample_for: [String: [String]]?  // a few of those companies' names
+    let companies_by_country: [String: Int]?
+    let companies_untagged: Int?  // companies whose job locations name no country: tracked for every country
+    let companies_off: Int?  // companies on job sites Role Radar can't read yet
     let email: String?
+    let also: [String]  // who else gets the alerts, besides `email`
     let email_ready: Bool
+    let discord_ready: Bool?  // a Discord webhook is saved
     let ready: Bool
-}
-
-/// What `role-radar setup companies` reports.
-struct ImportReport: Decodable {
-    struct Added: Decodable { let name: String; let source: String; let jobs: Int? }
-    struct Skipped: Decodable { let name: String; let reason: String }
-    let added: [Added]
-    let skipped: [Skipped]
-    let total: Int
 }
 
 @MainActor
@@ -285,6 +386,7 @@ final class Model: ObservableObject {
     @Published var liveError: String?
     private var liveActions = 0  // a refresh that started before the latest skip or send is out of date
     @Published var setup: SetupState?  // the packaged app's setup; nil when built from the code
+    @Published var setupError: String?  // why Setup couldn't read or save its files: always shown
     @Published var wantsSetup = false  // opens the Setup window (the menu bar label watches it)
 
     init() {
@@ -297,15 +399,16 @@ final class Model: ObservableObject {
         }
     }
 
-    /// The packaged app's first steps: trust its own files, create its files, and open Setup until it's done.
+    /// The packaged app's first steps: trust its own files, create its files, and open Setup until
+    /// it's done (or whenever someone opens the app, rather than it opening at login).
     private func prepare() async {
         guard Place.packaged else { return }
         // Downloaded apps carry macOS's quarantine flag, which would stop launchd running the bundled
         // Python. Once the app has been opened (Open Anyway), it clears the flag on itself.
         Self.runQuietly("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Bundle.main.bundlePath])
-        _ = await setupCommand(["init"])
+        if case .failure(let message) = await setupCommand(["init"]) { setupError = message }
         await loadSetup()
-        if !(setup?.ready ?? false) { wantsSetup = true }
+        if !(setup?.ready ?? false) || !Dock.launchedAtLogin { wantsSetup = true }
     }
 
     var menuSymbol: String {
@@ -332,6 +435,17 @@ final class Model: ObservableObject {
     /// Re-read the state, starting the Mac's checker first if it's switched on and not running.
     func refresh() async {
         await run(["switch", "--json"] + (canStart ? ["--start"] : []))
+        // A channel that isn't set up can't send: keep its switch off, so every view says so.
+        for name in ["discord", "email"] where state?.switches[name] == true && !channelReady(name) {
+            await run(["switch", name, "off", "--json"])
+        }
+    }
+
+    /// Whether an alert channel is set up: in the packaged app, saved in Setup. One built from the code
+    /// keeps its settings elsewhere (the Keychain or AWS), so its switches are always free.
+    func channelReady(_ name: String) -> Bool {
+        guard Place.packaged, let setup else { return true }
+        return name == "email" ? setup.email_ready : setup.discord_ready ?? false
     }
 
     /// Ask the Mac's checker to finish the companies in flight and quit. Doesn't wait: the
@@ -355,9 +469,26 @@ final class Model: ObservableObject {
     // -- setup (the packaged app) --------------------------------------------------
 
     func loadSetup() async {
-        if case .success(let data) = await setupCommand(["show"]) {
-            setup = try? JSONDecoder().decode(SetupState.self, from: data)
+        switch await setupCommand(["show"]) {
+        case .success(let data):
+            do {
+                setup = try JSONDecoder().decode(SetupState.self, from: data)
+                setupError = nil
+            } catch {
+                setupError = "Unexpected reply from role-radar: \(error.localizedDescription)"
+            }
+        case .failure(let message):
+            setupError = message
         }
+    }
+
+    /// Whether Lambda can check too: only with AWS, and never in the downloadable app.
+    var hasLambda: Bool { !Place.packaged && (state?.hasLambda ?? true) }
+
+    /// Try again after a failure: the state, and Setup's in the downloadable app.
+    func retry() async {
+        await refresh()
+        if Place.packaged { await loadSetup() }
     }
 
     /// Run `role-radar setup ...`, updating `setup` from what it reports. Returns an error message, or nil.
@@ -386,8 +517,8 @@ final class Model: ObservableObject {
     func set(_ name: String, on: Bool) async {
         busy.insert(name)
         state?.switches[name] = on
-        // --start: switching the Mac on also starts its checker if it isn't running.
-        await run(["switch", name, on ? "on" : "off", "--json", "--start"])
+        // --start: switching the Mac on also starts its checker if it isn't running (not during Setup).
+        await run(["switch", name, on ? "on" : "off", "--json"] + (canStart ? ["--start"] : []))
         busy.remove(name)
     }
 
@@ -405,20 +536,31 @@ final class Model: ObservableObject {
         liveBusy.remove(match.id)
     }
 
-    func skipAll() async {
+    /// Clear matches from the stack (nil: all of them): they're recorded, never sent.
+    func clear(_ matches: [LiveState.Match]?) async {
         liveActions += 1
-        liveBusy.insert("all")
-        for match in live?.waiting ?? [] { live?.setSkipped(match.id, true) }
-        await runLive(["matches", "skip", "--all", "--json"])
-        liveBusy.remove("all")
+        liveBusy.insert("clear")
+        for match in matches ?? live?.waiting ?? [] { live?.setSkipped(match.id, true) }
+        await runLive(["matches", "skip"] + Self.picks(matches) + ["--json"])
+        liveBusy.remove("clear")
     }
 
-    func sendNow() async {
+    /// Send matches now (nil: all of them), alerts on or off; once sent, they leave the stack.
+    func send(_ matches: [LiveState.Match]?) async {
         liveActions += 1
         liveBusy.insert("send")
-        await runLive(["matches", "send", "--json"])
+        for match in matches ?? live?.waiting ?? [] { live?.setSending(match.id) }
+        await runLive(["matches", "send"] + Self.picks(matches) + ["--json"])
         liveBusy.remove("send")
     }
+
+    private static func picks(_ matches: [LiveState.Match]?) -> [String] {
+        guard let matches else { return ["--all"] }
+        return matches.flatMap { ["--pick", $0.company, $0.uid] }
+    }
+
+    /// Whether alerts can be sent at all: email or Discord is set up.
+    var canAlert: Bool { channelReady("email") || channelReady("discord") }
 
     private func runLive(_ args: [String], unless outdated: () -> Bool = { false }) async {
         let result = await Self.cli(args: ["-m", "role_radar"] + args + ["--config", Place.config])
@@ -501,7 +643,51 @@ final class Model: ObservableObject {
     }
 }
 
+/// Something that went wrong, said plainly, with what to do about it: never a silent blank.
+struct Trouble: View {
+    let message: String
+    let retry: () async -> Void
+    @State private var trying = false
+
+    /// macOS refused access to a folder: for an app built from the code, the Downloads folder it runs from.
+    static func isPermission(_ message: String) -> Bool {
+        ["Operation not permitted", "PermissionError", "Permission denied"].contains { message.contains($0) }
+    }
+
+    private static let privacy = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")!
+
+    var body: some View {
+        let permission = Self.isPermission(message)
+        VStack(alignment: .leading, spacing: 8) {
+            Label(permission ? "macOS stopped Role Radar from reading its files" : "Role Radar hit a problem",
+                  systemImage: "exclamationmark.triangle.fill")
+                .scaledFont(12, weight: .semibold).foregroundStyle(.orange)
+            if permission {
+                Text("Open System Settings → Privacy & Security → Files and Folders, and turn on the folders listed "
+                     + "under Role Radar (for a copy built from the code, its Downloads Folder). Then try again.")
+                    .scaledFont(11).fixedSize(horizontal: false, vertical: true)
+            }
+            Text(message).scaledFont(11, design: .monospaced).foregroundStyle(.secondary)
+                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                if permission {
+                    Button("Open Privacy Settings") { NSWorkspace.shared.open(Self.privacy) }
+                }
+                Button(trying ? "Trying…" : "Try Again") {
+                    Task { trying = true; await retry(); trying = false }
+                }
+                .disabled(trying)
+            }
+            .controlSize(.small)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
+    }
+}
+
 struct SwitchRow: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
     let title: String
     let symbol: String
     let detail: String
@@ -509,30 +695,31 @@ struct SwitchRow: View {
     let active: Bool
     let busy: Bool
     var action: (title: String, run: () -> Void)? = nil
+    var locked = false  // can't be switched (a channel that isn't set up)
     let toggle: (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(13, weight: .semibold)
                 .foregroundStyle(isOn ? Color.white : Color.secondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 24 * scale, height: 24 * scale)
                 .background(Circle().fill(isOn ? (active ? Color.green : Color.accentColor) : Color.secondary.opacity(0.18)))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13, weight: .medium))
-                Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                Text(title).scaledFont(13, weight: .medium)
+                Text(detail).scaledFont(11).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             if busy {
                 ProgressView().controlSize(.small)
             } else if let action {
-                Button(action.title, action: action.run).controlSize(.small)
+                Button(action.title, action: action.run).scaledFont(11).controlSize(TextSize.controls(scale))
             }
             Toggle(title, isOn: Binding(get: { isOn }, set: toggle))
                 .toggleStyle(.switch)
                 .labelsHidden()
-                .controlSize(.small)
-                .disabled(busy)
+                .controlSize(TextSize.controls(scale))
+                .disabled(busy || locked)
         }
     }
 }
@@ -545,11 +732,13 @@ extension Color {
 
 /// Checks per hour for the last 24 hours (the Mac and Lambda stacked), and the day's totals.
 struct ActivityView: View {
+    @AppStorage(TextSize.key) private var textScale = TextSize.standard  // for the chart's axis labels
     let activity: RunnerState.Activity
+    var lambda = true  // Lambda checks too: its series and legend
     @Environment(\.colorScheme) private var scheme
     @State private var hovered: Date?
 
-    private static let runners = ["Mac", "Lambda"]
+    private var runners: [String] { lambda ? ["Mac", "Lambda"] : ["Mac"] }
 
     /// Categorical slots 1 and 2 of the chart palette, stepped for light or dark.
     private func color(_ runner: String) -> Color {
@@ -572,22 +761,22 @@ struct ActivityView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Text("Activity").font(.system(size: 12, weight: .semibold))
+                Text("Activity").scaledFont(12, weight: .semibold)
                 Spacer()
-                ForEach(Self.runners, id: \.self) { runner in
+                ForEach(runners, id: \.self) { runner in
                     HStack(spacing: 4) {
                         RoundedRectangle(cornerRadius: 2).fill(color(runner)).frame(width: 8, height: 8)
-                        Text(runner).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(runner).scaledFont(11).foregroundStyle(.secondary)
                     }
                 }
             }
             chart.frame(height: 90)
                 .overlay {
                     if activity.checked == 0 {
-                        Text("No checks in the last 24 hours").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text("No checks in the last 24 hours").scaledFont(11).foregroundStyle(.secondary)
                     }
                 }
-            Text(caption).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            Text(caption).scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
 
             HStack(alignment: .top, spacing: 0) {
                 stat(activity.checked, "checks")
@@ -602,7 +791,7 @@ struct ActivityView: View {
     private var chart: some View {
         Chart {
             ForEach(activity.hours) { hour in
-                ForEach(Self.runners, id: \.self) { runner in
+                ForEach(runners, id: \.self) { runner in
                     BarMark(x: .value("Hour", hour.date, unit: .hour),
                             y: .value("Checks", runner == "Mac" ? hour.mac : hour.lambda), width: .ratio(0.72))
                         .foregroundStyle(by: .value("Runner", runner))
@@ -610,18 +799,18 @@ struct ActivityView: View {
                 }
             }
         }
-        .chartForegroundStyleScale(domain: Self.runners, range: Self.runners.map(color))
+        .chartForegroundStyleScale(domain: runners, range: runners.map(color))
         .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(values: .stride(by: .hour, count: 6)) { _ in
                 AxisTick(stroke: StrokeStyle(lineWidth: 1)).foregroundStyle(Color.secondary.opacity(0.4))
-                AxisValueLabel(format: .dateTime.hour()).font(.system(size: 10)).foregroundStyle(Color.secondary)
+                AxisValueLabel(format: .dateTime.hour()).font(.system(size: 10 * textScale)).foregroundStyle(Color.secondary)
             }
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 2)) { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 1)).foregroundStyle(Color.secondary.opacity(0.18))
-                AxisValueLabel().font(.system(size: 10)).foregroundStyle(Color.secondary)
+                AxisValueLabel().font(.system(size: 10 * textScale)).foregroundStyle(Color.secondary)
             }
         }
         .chartOverlay { proxy in
@@ -648,22 +837,23 @@ struct ActivityView: View {
 
     private func stat(_ value: Int, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(value.formatted(.number.notation(.compactName))).font(.system(size: 15, weight: .semibold)).monospacedDigit()
-            Text(label).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(value.formatted(.number.notation(.compactName))).scaledFont(15, weight: .semibold).monospacedDigit()
+            Text(label).scaledFont(10).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 struct StatusLine: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
     let text: String
     let symbol: String
     var tint: Color = .secondary
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: symbol).font(.system(size: 10)).foregroundStyle(tint).frame(width: 12)
-            Text(text).font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Image(systemName: symbol).scaledFont(10).foregroundStyle(tint).frame(width: 14 * scale)
+            Text(text).scaledFont(11).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -681,10 +871,9 @@ struct Health {
 
     var waiting: StatusLine {
         let count = live?.waiting.count ?? state?.waiting ?? 0
-        let jobs = count == 0 ? "No matches waiting" : "\(count) match\(count == 1 ? "" : "es") waiting"
+        let jobs = count == 0 ? "No new jobs" : "\(count) new job\(count == 1 ? "" : "s")"
         if alertsOff {
-            return StatusLine(text: count == 0 ? "\(jobs) · alerts are off" : "\(jobs) · sent when an alert is switched back on",
-                              symbol: "tray.full", tint: .orange)
+            return StatusLine(text: jobs + " in Live Tracking · alerts are off", symbol: "tray.full")
         }
         if live?.send_requested == true { return StatusLine(text: "\(jobs) · sending now", symbol: "paperplane") }
         let next = When.date(live?.next_digest ?? state?.next_digest).map { " · next alert \(When.short($0))" } ?? ""
@@ -701,6 +890,7 @@ struct Health {
 }
 
 struct Panel: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
     @ObservedObject var model: Model
     @Environment(\.openWindow) private var openWindow
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
@@ -708,7 +898,7 @@ struct Panel: View {
     private func ago(_ date: Date?) -> String { When.ago(date) }
 
     private var headline: (String, Color) {
-        guard let s = model.state else { return ("Loading…", .secondary) }
+        guard let s = model.state else { return model.error == nil ? ("Loading…", .secondary) : ("Can't read the status", .orange) }
         switch s.checking {
         case "laptop": return ("The Mac is checking sites", .green)
         case "lambda": return ("Lambda is checking sites", .green)
@@ -742,35 +932,37 @@ struct Panel: View {
         return !s.switches.discord && !s.switches.email
     }
 
-    private var hasLambda: Bool { model.state?.hasLambda ?? true }
+    private var hasLambda: Bool { model.hasLambda }
 
     private func alertDetail(_ name: String) -> String {
         guard let s = model.state else { return "" }
-        if alertsOff { return "Off · new matches are saved for later" }
-        return s.switches[name] ? "New matches are sent here" : "Off"
+        return s.switches[name] ? "New jobs are sent here" : "Off"
     }
 
     private func alertRow(_ title: String, _ name: String, symbol: String) -> SwitchRow {
-        let on = model.state?.switches[name] ?? false
-        return SwitchRow(title: title, symbol: symbol, detail: alertDetail(name), isOn: on, active: on,
-                         busy: model.busy.contains(name)) { on in Task { await model.set(name, on: on) } }
+        let ready = model.channelReady(name)
+        let on = ready && model.state?.switches[name] ?? false
+        return SwitchRow(title: title, symbol: symbol, detail: ready ? alertDetail(name) : "Not set up · add it in Settings…",
+                         isOn: on, active: on, busy: model.busy.contains(name), locked: !ready && !on) { on in
+            Task { await model.set(name, on: on) }
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Role Radar").font(.system(size: 13, weight: .semibold))
+                Text("Role Radar").scaledFont(13, weight: .semibold)
                 Spacer()
                 Button {
                     Task { await model.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Image(systemName: "arrow.clockwise").scaledFont(12)
                 }
                 .buttonStyle(.borderless)
                 .help("Refresh")
             }
             Label(headline.0, systemImage: "circle.fill")
-                .font(.system(size: 12))
+                .scaledFont(12)
                 .foregroundStyle(headline.1)
                 .labelStyle(DotLabel())
 
@@ -792,10 +984,10 @@ struct Panel: View {
 
             Text(hasLambda ? "Both on: the Mac checks while this app is open, Lambda covers when it isn't."
                            : "The Mac checks while this app is open. Everything stays on this Mac.")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .scaledFont(11).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Alerts").font(.system(size: 12, weight: .semibold))
+            Text("Alerts").scaledFont(12, weight: .semibold)
             VStack(spacing: 10) {
                 alertRow("Discord", "discord", symbol: "bubble.left.and.bubble.right")
                 alertRow("Email", "email", symbol: "envelope")
@@ -805,20 +997,20 @@ struct Panel: View {
             .disabled(model.state == nil)
 
             Text(alertsOff
-                 ? "Both off: sites are still checked. New matches are sent when you switch one back on."
-                 : "Only the channels switched on get new matches.")
-                .font(.system(size: 11)).foregroundStyle(alertsOff ? Color.orange : Color.secondary)
+                 ? "Alerts are optional. Off, new jobs collect in Live Tracking, newest on top."
+                 : "New jobs go to the alerts switched on, every 10 minutes.")
+                .scaledFont(11).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if Place.packaged && !(model.setup?.ready ?? true) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Finish setting up: add the roles you want, companies to watch, and your Gmail.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text("Finish setting up: pick your profession, countries and the roles you want.")
+                        .scaledFont(11).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button {
                         openWindow(id: SetupView.id)
                         NSApp.activate()
                     } label: {
-                        Label("Set Up Role Radar", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
+                        Label("Set Up Role Radar", systemImage: "wand.and.stars").scaledFont(13).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -836,7 +1028,7 @@ struct Panel: View {
                         NSApp.activate()
                     } label: {
                         Label("Live Tracking", systemImage: "list.bullet.rectangle.portrait")
-                            .frame(maxWidth: .infinity)
+                            .scaledFont(13).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -847,17 +1039,16 @@ struct Panel: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
             }
 
-            if let error = model.error {
-                Text(error).font(.system(size: 11)).foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
+            if let error = model.error ?? model.setupError {
+                Trouble(message: error) { await model.retry() }
             }
 
             Divider()
             HStack {
                 Toggle("Open at Login", isOn: Binding(get: { openAtLogin }, set: setOpenAtLogin))
                     .toggleStyle(.checkbox)
-                    .font(.system(size: 12))
-                Spacer()
+                    .fixedSize()
+                Spacer(minLength: 8)
                 if Place.packaged {
                     Button("Settings…") {
                         openWindow(id: SetupView.id)
@@ -869,10 +1060,11 @@ struct Panel: View {
                 Button("Quit") { NSApp.terminate(nil) }
                     .help(hasLambda ? "Also stops the Mac's checker; Lambda takes over" : "Also stops the Mac's checker")
             }
-            .controlSize(.small)
+            .scaledFont(12)
+            .controlSize(TextSize.controls(scale))
         }
         .padding(14)
-        .frame(width: 310)
+        .frame(width: max(330, 290 * scale))  // wider as the text grows, so lines don't wrap into a column
         .task { await model.refresh() }
     }
 
@@ -897,6 +1089,10 @@ struct MatchRow: View {
     var dimmed = false
     var action: (title: String, help: String, run: () -> Void)? = nil
     var busy = false
+    var picked: Binding<Bool>? = nil  // a tick box, for acting on several at once
+    var symbol: String? = nil  // shown where the tick box would be, e.g. while it's being sent
+    var note: String? = nil  // e.g. "Sending…"
+    var menu: [(title: String, run: () -> Void)] = []  // more for its right-click menu
     @State private var hovering = false
 
     private var link: URL? { url.flatMap(URL.init(string:)) }
@@ -907,20 +1103,25 @@ struct MatchRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
+            if let picked {
+                Toggle("Select", isOn: picked).toggleStyle(.checkbox).labelsHidden()
+            } else if let symbol {
+                Image(systemName: symbol).scaledFont(11).foregroundStyle(.secondary).frame(width: 16)
+            }
             Button(action: open) {
                 HStack(alignment: .center, spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                        Text(title).scaledFont(13, weight: .medium).lineLimit(2)
                             .foregroundStyle(hovering ? Color.accentColor : Color.primary)
                         Text([company, location].compactMap { $0 }.joined(separator: " · "))
-                            .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                            .scaledFont(11).foregroundStyle(.secondary).lineLimit(1)
                         if !when.isEmpty {
-                            Text(when).font(.system(size: 11)).foregroundStyle(.tertiary).monospacedDigit()
+                            Text(when).scaledFont(11).foregroundStyle(.tertiary).monospacedDigit()
                         }
                     }
                     Spacer(minLength: 8)
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.accentColor)
+                        .scaledFont(11, weight: .semibold).foregroundStyle(Color.accentColor)
                         .opacity(hovering ? 1 : 0)
                 }
                 .padding(.vertical, 5).padding(.horizontal, 6)
@@ -937,6 +1138,8 @@ struct MatchRow: View {
 
             if busy {
                 ProgressView().controlSize(.small).frame(width: 58)
+            } else if let note {
+                Text(note).scaledFont(11).foregroundStyle(.secondary)
             } else if let action {
                 Button(action.title, action: action.run).controlSize(.small).frame(minWidth: 58).help(action.help)
             }
@@ -949,6 +1152,10 @@ struct MatchRow: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(url ?? "", forType: .string)
                 }
+            }
+            if !menu.isEmpty {
+                Divider()
+                ForEach(Array(menu.enumerated()), id: \.offset) { _, item in Button(item.title, action: item.run) }
             }
         }
     }
@@ -970,11 +1177,13 @@ struct LinkCursor: ViewModifier {
     }
 }
 
-/// The bigger window: the round in progress, alerts, activity, and the matches waiting, skipped and sent.
+/// The bigger window: the round in progress, alerts, activity, and the stack of new jobs (newest on top),
+/// those cleared from it, and the alerts sent.
 struct LiveWindow: View {
     static let id = "live"
     @ObservedObject var model: Model
     @State private var opened: Set<String> = []  // sent alerts unfolded: each starts folded
+    @State private var selected: Set<String> = []  // new jobs ticked, to clear or send together
 
     private var live: LiveState? { model.live }
 
@@ -999,7 +1208,7 @@ struct LiveWindow: View {
         let health = Health(state: model.state, live: live)
         return VStack(alignment: .leading, spacing: 14) {
             card {
-                Text("Now").font(.system(size: 12, weight: .semibold))
+                Text("Now").scaledFont(12, weight: .semibold)
                 health.round
                 if let fraction = live?.round?.fraction {
                     ProgressView(value: fraction).controlSize(.small)
@@ -1007,40 +1216,28 @@ struct LiveWindow: View {
                 health.failing
             }
             card {
-                Text("Alerts").font(.system(size: 12, weight: .semibold))
+                Text("Alerts").scaledFont(12, weight: .semibold)
                 health.waiting
-                Button {
-                    Task { await model.sendNow() }
-                } label: {
-                    Label(live?.send_requested == true ? "Sending…" : "Send Now", systemImage: "paperplane")
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(!canSend)
-                .help(sendHelp)
-                Text(sendHelp).font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(alertsHelp).scaledFont(11).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if let activity = model.state?.activity {
-                card { ActivityView(activity: activity) }
+                card { ActivityView(activity: activity, lambda: model.hasLambda) }
             }
             if let error = model.liveError ?? model.error {
-                Text(error).font(.system(size: 11)).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+                Trouble(message: error) { await model.retry(); await model.refreshLive() }
             }
         }
     }
 
-    private var canSend: Bool {
-        guard let live else { return false }
-        return !live.alerts_off && !live.waiting.isEmpty && !live.send_requested && !model.liveBusy.contains("send")
-    }
-
-    private var sendHelp: String {
+    private var alertsHelp: String {
         guard let live else { return "" }
-        if live.alerts_off { return "Switch Discord or email on to send the waiting matches." }
         if live.send_requested {
-            return model.state?.checking == "lambda" ? "Lambda sends them at its next run (within 5 minutes)."
-                                                     : "The Mac sends them within a minute."
+            return model.state?.checking == "lambda" ? "Sending: Lambda sends them at its next run (within 5 minutes)."
+                                                     : "Sending: the Mac sends them within a minute."
         }
-        return "Sends the waiting matches now, not at the next alert time. Skipped ones are never sent."
+        if !model.canAlert { return "No alerts set up: new jobs collect here. To send them, set up email or Discord in Settings." }
+        if live.alerts_off { return "Alerts are off: new jobs collect here until you send or clear them." }
+        return "New jobs go out every 10 minutes. Send some sooner, or clear the ones you don't want."
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
@@ -1056,49 +1253,48 @@ struct LiveWindow: View {
         if let live {
             List {
                 if live.alerts_off {
-                    Label("Alerts are off: matches collect here, newest on top, and go out when you switch Discord or email back on.",
-                          systemImage: "bell.slash")
-                        .font(.system(size: 12)).foregroundStyle(.orange)
+                    Label(model.canAlert ? "Alerts are off: new jobs collect here, newest on top. Clear the ones "
+                                           + "you've seen, or send some."
+                                         : "New jobs collect here, newest on top. Clear the ones you've seen.",
+                          systemImage: "tray.full")
+                        .scaledFont(12).foregroundStyle(.secondary)
                         .padding(.vertical, 4)
                 }
                 Section {
                     if live.waiting.isEmpty {
-                        Text("Nothing waiting. New matches appear here as soon as their company is checked.")
-                            .font(.system(size: 12)).foregroundStyle(.secondary).padding(.vertical, 4)
+                        Text("No new jobs. They appear here as soon as their company is checked.")
+                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
                     }
                     ForEach(live.waiting) { match in
+                        let sending = match.send_at != nil
                         MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                                 when: "Found " + When.stamp(match.first_seen),
-                                 action: ("Skip", "Don't send this one", { Task { await model.skip(match, true) } }),
-                                 busy: model.liveBusy.contains(match.id) || model.liveBusy.contains("all"))
+                                 when: "Found " + When.stamp(match.first_seen), busy: model.liveBusy.contains(match.id),
+                                 picked: sending ? nil : ticked(match.id), symbol: sending ? "paperplane" : nil,
+                                 note: sending ? "Sending…" : nil,
+                                 menu: sending ? [] : rowMenu(match))
                     }
                 } header: {
-                    header("Waiting to be sent", live.waiting.count) {
-                        Button("Skip All") { Task { await model.skipAll() } }
-                            .controlSize(.small)
-                            .disabled(live.waiting.isEmpty || model.liveBusy.contains("all"))
-                            .help("Don't send any of the matches waiting now")
-                    }
+                    header("New jobs", live.waiting.count) { stackButtons(live) }
                 }
                 Section {
                     if live.skipped.isEmpty {
-                        Text("Skipped matches are never sent. You can unskip one until the next alert goes out.")
-                            .font(.system(size: 12)).foregroundStyle(.secondary).padding(.vertical, 4)
+                        Text("Cleared jobs are never sent. You can put one back for a few minutes.")
+                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
                     }
                     ForEach(live.skipped) { match in
                         MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                                 when: "Skipped " + When.stamp(match.skipped_at) + (match.final ? " · won't be sent" : ""),
+                                 when: "Cleared " + When.stamp(match.skipped_at),
                                  dimmed: true,
-                                 action: match.final ? nil : ("Unskip", "Send this one with the next alert",
+                                 action: match.final ? nil : ("Put Back", "Return it to New jobs",
                                                               { Task { await model.skip(match, false) } }),
                                  busy: model.liveBusy.contains(match.id))
                     }
                 } header: {
-                    header("Skipped", live.skipped.count) { EmptyView() }
+                    header("Cleared", live.skipped.count) { EmptyView() }
                 }
                 Section {
                     if live.sent.isEmpty {
-                        Text("No alerts sent lately.").font(.system(size: 12)).foregroundStyle(.secondary).padding(.vertical, 4)
+                        Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
                     }
                     ForEach(live.sent) { alert in
                         DisclosureGroup(isExpanded: expanded(alert.id)) {
@@ -1127,6 +1323,44 @@ struct LiveWindow: View {
         }
     }
 
+    private func ticked(_ id: String) -> Binding<Bool> {
+        Binding(get: { selected.contains(id) },
+                set: { on in if on { selected.insert(id) } else { selected.remove(id) } })
+    }
+
+    /// Clear or send the ticked jobs, or all of them when none are ticked.
+    private func stackButtons(_ live: LiveState) -> some View {
+        let open = live.waiting.filter { $0.send_at == nil }
+        let chosen = open.filter { selected.contains($0.id) }
+        let targets = chosen.isEmpty ? nil : chosen
+        let busy = model.liveBusy.contains("clear") || model.liveBusy.contains("send")
+        return HStack(spacing: 6) {
+            if !chosen.isEmpty {
+                Button("Deselect") { selected = [] }
+            }
+            Button(chosen.isEmpty ? "Clear All" : "Clear \(chosen.count) Selected") {
+                selected = []
+                Task { await model.clear(targets) }
+            }
+            .disabled(open.isEmpty || busy)
+            .help("Take them off the stack. Cleared jobs are never sent.")
+            Button(chosen.isEmpty ? "Send All" : "Send \(chosen.count) Selected") {
+                selected = []
+                Task { await model.send(targets) }
+            }
+            .disabled(open.isEmpty || busy || !model.canAlert)
+            .help(model.canAlert ? "Send them by email or Discord now; once sent, they leave the stack."
+                                 : "Set up email or Discord in Settings to send jobs.")
+        }
+        .controlSize(.small)
+    }
+
+    private func rowMenu(_ match: LiveState.Match) -> [(title: String, run: () -> Void)] {
+        var items: [(title: String, run: () -> Void)] = [("Clear", { Task { await model.clear([match]) } })]
+        if model.canAlert { items.append(("Send Now", { Task { await model.send([match]) } })) }
+        return items
+    }
+
     private func expanded(_ id: String) -> Binding<Bool> {
         Binding(get: { opened.contains(id) },
                 set: { open in if open { opened.insert(id) } else { opened.remove(id) } })
@@ -1137,18 +1371,18 @@ struct LiveWindow: View {
         let jobs = "\(alert.jobs.count) job\(alert.jobs.count == 1 ? "" : "s")"
         let by = alert.by == "lambda" ? "Lambda" : (alert.by == nil ? nil : "the Mac")
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "paperplane.fill").font(.system(size: 11)).foregroundStyle(.secondary)
-            Text(sent.map(When.full) ?? alert.sent_at).font(.system(size: 13, weight: .semibold)).monospacedDigit()
+            Image(systemName: "paperplane.fill").scaledFont(11).foregroundStyle(.secondary)
+            Text(sent.map(When.full) ?? alert.sent_at).scaledFont(13, weight: .semibold).monospacedDigit()
             Text([jobs, by.map { "sent by \($0)" }, sent.map { When.ago($0) }].compactMap { $0 }.joined(separator: " · "))
-                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .scaledFont(11).foregroundStyle(.secondary)
         }
         .padding(.vertical, 3)
     }
 
     private func header<Trailing: View>(_ title: String, _ count: Int, @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack {
-            Text(title).font(.system(size: 12, weight: .semibold))
-            Text(count.formatted()).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+            Text(title).scaledFont(12, weight: .semibold)
+            Text(count.formatted()).scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
             Spacer()
             trailing()
         }
@@ -1158,158 +1392,438 @@ struct LiveWindow: View {
 struct DotLabel: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 6) {
-            configuration.icon.font(.system(size: 7))
+            configuration.icon.scaledFont(7)
             configuration.title.foregroundStyle(.primary)
         }
     }
 }
 
-/// The packaged app's Setup: what to look for, which companies to watch, and the Gmail account alerts use.
+/// The packaged app's Setup, in three pages: the person's profession (which brings its company list
+/// and job titles), the titles, places and experience they want, and the Gmail account alerts use.
 struct SetupView: View {
     static let id = "setup"
     @ObservedObject var model: Model
     @Environment(\.dismissWindow) private var dismissWindow
 
-    @State private var roles = ""
-    @State private var exclude = ""
-    @State private var locations = ""
+    @State private var page = 0  // 0 profession, 1 titles and places, 2 email alerts
+    @State private var picked: Set<String> = []  // ticked titles
+    @State private var ownTitles: [String] = []  // titles they added, beyond the profession's
+    @State private var newTitle = ""
+    @State private var adding = false  // the "add a title" field is showing
+    @FocusState private var titleFocused: Bool
+    @State private var skipped: Set<String> = []  // ticked non-target words
+    @State private var ownSkips: [String] = []  // non-target words they added
+    @State private var newSkip = ""
+    @State private var addingSkip = false
+    @FocusState private var skipFocused: Bool
+    @State private var countries: Set<String> = []
+    @State private var cities = ""
+    @State private var education = "bachelors"
     @State private var checkYears = true
-    @State private var years = 2
-    @State private var answer = ""
-    @State private var replaceList = false
-    @State private var report: ImportReport?
+    @State private var skipFrom = 3  // jobs asking for this many years or more are skipped
     @State private var address = ""
     @State private var password = ""
-    @State private var busy: String?  // the step working right now
-    @State private var notes: [String: (text: String, ok: Bool)] = [:]  // each step's last result
+    @State private var also = ""
+    @State private var webhook = ""
+    @State private var busy: String?  // the action working right now
+    @State private var choosing: String?  // the profession being saved, shown as picked meanwhile
+    @State private var notes: [String: (text: String, ok: Bool)] = [:]  // each action's last result
     @State private var filled = false
+    @State private var saved = ""  // the profile pages' answers as last saved, to tell when they've changed
 
     private var setup: SetupState? { model.setup }
+    private var profession: SetupState.Profession? { setup?.professions?.first { $0.id == setup?.profession } }
+    private static let pages = ["Profession", "Countries", "Companies", "Roles", "Qualifications", "Alerts"]
+    private static let degrees = [("none", "No degree yet"), ("bachelors", "Bachelor's"), ("masters", "Master's"), ("phd", "PhD")]
+    private static let last = pages.count - 1
+    private static let symbols = ["tech": "laptopcomputer", "accounting": "chart.bar.doc.horizontal", "healthcare": "stethoscope"]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
                 if Place.translocated {
                     Label("Move Role Radar to your Applications folder first (drag it from Downloads onto Applications "
                           + "in Finder), then open it from there.", systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 13, weight: .medium)).foregroundStyle(.orange)
+                        .scaledFont(13, weight: .medium).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Set Up Role Radar").font(.system(size: 20, weight: .semibold))
-                    Text("Role Radar watches companies' job boards and emails you new jobs that match, within minutes of "
-                         + "them being posted. Three steps:")
-                        .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
-                step(1, "What you're looking for", done: !(setup?.roles.isEmpty ?? true)) { lookingFor }
-                step(2, "Companies to watch", done: (setup?.companies ?? 0) > 0) { companies }
-                step(3, "Email alerts (Gmail)", done: setup?.email_ready ?? false) { email }
-                footer
+                Text("Set Up Role Radar").scaledFont(20, weight: .semibold)
+                pageMarkers
             }
-            .padding(24)
-            .frame(maxWidth: 720, alignment: .leading)
+            .padding([.horizontal, .top], 24).padding(.bottom, 14)
+            Divider()
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 0).id("top")
+                        if let error = model.setupError {
+                            Trouble(message: error) {
+                                await model.loadSetup()
+                                await load()
+                            }
+                            .padding([.horizontal, .top], 24)
+                        }
+                        Group {
+                            if setup == nil {
+                                // Never a blank page: loading, or (above) why it couldn't load.
+                                if model.setupError == nil {
+                                    ProgressView("Loading…").frame(maxWidth: .infinity).padding(.top, 60)
+                                }
+                            } else {
+                                switch page {
+                                case 0: professionPage
+                                case 1: countriesPage
+                                case 2: companiesPage
+                                case 3: rolesPage
+                                case 4: qualificationsPage
+                                default: alertsPage
+                                }
+                            }
+                        }
+                        .padding(24)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)  // the page uses the window's width
+                }
+                // Each page opens at its top with no field focused: macOS would otherwise put the cursor
+                // in a text field as the window becomes key, which on the titles page scrolls to the bottom.
+                .onChange(of: page) { _, _ in toTop(scroll) }
+                .onChange(of: filled) { _, _ in toTop(scroll, settle: [0, 0.3, 0.8]) }
+            }
+            Divider()
+            footer.padding(.horizontal, 24).padding(.vertical, 14)
         }
-        .frame(minWidth: 600, minHeight: 560)
+        .frame(minWidth: 640, minHeight: 600)
         .task { await load() }
-    }
-
-    // -- step 1 ----------------------------------------------------------------------
-
-    private var lookingFor: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            field("Job titles to look for, one per line. A job matches when its title contains one of them.",
-                  text: $roles, placeholder: "software engineer\ndata analyst", height: 84)
-            field("Words that rule a job out, one per line (looked for in the title).", text: $exclude, height: 64)
-            field("Places, one per line. Leave empty for anywhere; \"remote\" works too.",
-                  text: $locations, placeholder: "United States\nremote", height: 56)
-            HStack(spacing: 10) {
-                Toggle("Skip jobs asking for more than", isOn: $checkYears).toggleStyle(.checkbox)
-                Stepper("\(years) year\(years == 1 ? "" : "s") of experience", value: $years, in: 0...20)
-                    .disabled(!checkYears)
-            }
-            .font(.system(size: 12))
-            Text("It reads each new match's description once to check this.")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
-            actionRow("profile", "Save") { await saveProfile() }
+        .onDisappear {
+            // Closing the window keeps what was changed, as leaving the page does.
+            guard filled, fingerprint != saved else { return }
+            let data = json(profileData())
+            Task { _ = await model.setupStep(["profile"], stdin: data) }
         }
     }
 
-    // -- step 2 ----------------------------------------------------------------------
+    private func toTop(_ scroll: ScrollViewProxy, settle: [Double] = [0, 0.3]) {
+        for delay in settle {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                NSApp.windows.first { $0.title == "Role Radar Setup" }?.makeFirstResponder(nil)
+                scroll.scrollTo("top", anchor: .top)
+            }
+        }
+    }
 
-    private var companies: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Ask ChatGPT or Claude which companies hire for these roles. Copy the prompt, paste it into the chat, "
-                 + "then paste its whole answer below.")
-                .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            actionRow("prompt", "Copy Prompt", disabled: setup?.roles.isEmpty ?? true) { await copyPrompt() }
-            field("The AI's answer:", text: $answer, placeholder: "- name: Company Name\n  url: https://…", height: 130)
-            HStack(spacing: 12) {
-                actionRow("companies", "Add Companies", disabled: answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
-                    await addCompanies()
+    private var pageMarkers: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(Self.pages.enumerated()), id: \.offset) { index, name in
+                let saved = !(setup?.countries ?? []).isEmpty
+                let done = [setup?.profession != nil, saved, saved, saved && !(setup?.roles.isEmpty ?? true),
+                            setup?.education != nil, alertsReady][index]
+                Button { Task { await go(to: index) } } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: done ? "checkmark.circle.fill" : "\(index + 1).circle")
+                            .foregroundStyle(done ? Color.green : index == page ? Color.accentColor : Color.secondary)
+                        Text(name).fontWeight(index == page ? .semibold : .regular)
+                            .foregroundStyle(index == page ? Color.primary : Color.secondary)
+                    }
+                    .scaledFont(12)
                 }
-                Toggle("Replace my list", isOn: $replaceList).toggleStyle(.checkbox).font(.system(size: 12))
+                .buttonStyle(.plain)
+                .focusable(false)  // Back and Next move between pages from the keyboard
+                .disabled(busy != nil || (index > 0 && setup?.profession == nil))
+                if index < Self.pages.count - 1 {
+                    Image(systemName: "chevron.right").scaledFont(9).foregroundStyle(.tertiary)
+                }
             }
-            if busy == "companies" {
-                Text("Checking each new company's job board once. This can take a minute.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+        }
+    }
+
+    // -- page 1: profession -------------------------------------------------------------
+
+    private var professionPage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("What's your profession?").scaledFont(15, weight: .semibold)
+                Text("Role Radar watches the job boards of companies that hire in your profession, and emails you "
+                     + "new jobs that match within minutes of them being posted.")
+                    .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            if let report { reportView(report) }
-            HStack(spacing: 10) {
-                Text("Watching \(setup?.companies ?? 0) compan\((setup?.companies ?? 0) == 1 ? "y" : "ies").")
-                    .font(.system(size: 12))
-                Button("Edit List…") {
-                    NSWorkspace.shared.open([URL(fileURLWithPath: Place.config)],
-                                            withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
-                                            configuration: NSWorkspace.OpenConfiguration())
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(setup?.professions ?? []) { option in professionCard(option) }
+            }
+            .fixedSize(horizontal: false, vertical: true)  // the cards share the tallest one's height
+            if let note = notes["profession"], !note.ok {
+                Label(note.text, systemImage: "exclamationmark.triangle").scaledFont(11).foregroundStyle(.red)
+            } else if let profession, choosing == nil {
+                Label("\(profession.name): \(profession.groups.reduce(0) { $0 + $1.titles.count }) job titles to choose "
+                      + "from, and its companies. Next, pick your countries and titles.", systemImage: "checkmark.circle.fill")
+                    .scaledFont(12).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func professionCard(_ option: SetupState.Profession) -> some View {
+        ProfessionCard(option: option, symbol: Self.symbols[option.id] ?? "briefcase",
+                       chosen: (choosing ?? setup?.profession) == option.id,
+                       saving: choosing == option.id, disabled: busy != nil || choosing != nil) {
+            Task { await pick(option.id) }
+        }
+    }
+
+    // -- page 2: countries ------------------------------------------------------------------
+
+    private var pickedKey: String { (setup?.country_options ?? []).map(\.code).filter(countries.contains).joined(separator: "+") }
+    private var trackedCount: Int? { countries.isEmpty ? nil : setup?.companies_for?[pickedKey] }
+    private var countryNames: String {
+        let names = (setup?.country_options ?? []).filter { countries.contains($0.code) }.map(\.name)
+        return names.count <= 1 ? names.first ?? "" : names.dropLast().joined(separator: ", ") + " and " + names.last!
+    }
+
+    private var countriesPage: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            section("Where do you want to work?", "Role Radar tracks the companies that post jobs in the countries you pick.") {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(setup?.country_options ?? [], id: \.code) { country in
+                        Toggle(isOn: Binding(get: { countries.contains(country.code) },
+                                             set: { on in if on { countries.insert(country.code) } else { countries.remove(country.code) } })) {
+                            HStack(spacing: 8) {
+                                Text(country.name).scaledFont(14)
+                                if let n = setup?.companies_by_country?[country.code], n > 0 {
+                                    Text("\(n) companies").scaledFont(12).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                    }
+                }
+                if let trackedCount {
+                    Label("\(trackedCount) companies post jobs in \(countryNames).", systemImage: "building.2")
+                        .scaledFont(13, weight: .medium).foregroundStyle(trackedCount == 0 ? Color.orange : Color.primary)
+                }
+            }
+            section("Cities (optional)", "Alerts only for jobs in these cities, e.g. Bengaluru, Hyderabad. With none, jobs "
+                    + "anywhere in your countries alert you. Jobs listed only as \"Remote\" always do.") {
+                TextField("Cities, separated by commas", text: $cities).textFieldStyle(.roundedBorder).frame(maxWidth: 460)
+            }
+        }
+    }
+
+    // -- page 3: the companies tracked ------------------------------------------------------
+
+    private var companiesPage: some View {
+        let count = trackedCount ?? setup?.companies ?? 0
+        return VStack(alignment: .leading, spacing: 18) {
+            if count == 0 {
+                section("No \(profession?.name ?? "") companies yet", "Role Radar doesn't have a list of \(profession?.name ?? "") "
+                        + "employers yet. A later version adds them, and checking starts then.") { EmptyView() }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(count) companies will be tracked").scaledFont(22, weight: .semibold)
+                    Text("Role Radar checks every one of their job boards from this Mac while it's on: most every 20 "
+                         + "minutes, Workday boards every 6 hours. You'll hear about new jobs that match your roles "
+                         + "within minutes of them being posted.")
+                        .scaledFont(13).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                section("By country", nil) {
+                    ForEach((setup?.country_options ?? []).filter { countries.contains($0.code) }, id: \.code) { country in
+                        HStack {
+                            Text(country.name).scaledFont(13)
+                            Spacer().frame(width: 16)
+                            Text("\(setup?.companies_by_country?[country.code] ?? 0) companies post jobs here")
+                                .scaledFont(13).foregroundStyle(.secondary)
+                        }
+                    }
+                    if let untagged = setup?.companies_untagged, untagged > 0 {
+                        Text("Also \(untagged) whose job listings don't name a country, so they're tracked for every country.")
+                            .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if let names = setup?.sample_for?[pickedKey], !names.isEmpty {
+                    section("Including", nil) {
+                        Text(names.joined(separator: ", ") + ", and more.")
+                            .scaledFont(13).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if let off = setup?.companies_off, off > 0 {
+                    Text("\(off) more, such as Atlassian, Canva and Flipkart, use job sites Role Radar can't read yet; "
+                         + "they'll be tracked once it can.")
+                        .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // -- page 4: roles ------------------------------------------------------------------------
+
+    private var rolesPage: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            section("Target roles", "A job alerts you when its title contains one of the ticked titles. "
+                    + "Untick any you don't want.") {
+                HStack(spacing: 8) {
+                    Button("Tick All") { picked = Set(offered + ownTitles) }.controlSize(.small)
+                    Button("Untick All") { picked = [] }.controlSize(.small)
+                    Text("\(picked.count) ticked").scaledFont(11).foregroundStyle(.secondary)
+                }
+                ForEach(profession?.groups ?? [], id: \.name) { group in
+                    chips(group.name, group.titles, $picked)
+                }
+                if !ownTitles.isEmpty { chips("Your own", ownTitles, $picked) }
+                adder("A title of your own", "Add a Title…", text: $newTitle, open: $adding, focus: $titleFocused) {
+                    add(&newTitle, offered: offered, own: &ownTitles, to: &picked)
+                }
+            }
+            section("Non-target roles", "A job whose title contains a ticked word never alerts you, even when it "
+                    + "matches a target role. Untick any you want, such as Senior or Lead if you have the experience.") {
+                ForEach(profession?.skip_groups ?? [], id: \.name) { group in
+                    chips(group.name, group.titles, $skipped)
+                }
+                if !ownSkips.isEmpty { chips("Your own", ownSkips, $skipped) }
+                adder("A word of your own", "Add a Word…", text: $newSkip, open: $addingSkip, focus: $skipFocused) {
+                    add(&newSkip, offered: offeredSkips, own: &ownSkips, to: &skipped)
+                }
+            }
+        }
+    }
+
+    // -- page 5: qualifications ------------------------------------------------------------------
+
+    private var qualificationsPage: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            section("Experience", "Role Radar reads each new match's description once, and skips jobs asking for "
+                    + "more experience than you have.") {
+                HStack(spacing: 10) {
+                    Toggle("Skip jobs asking for", isOn: $checkYears).toggleStyle(.checkbox)
+                    Stepper("\(skipFrom)+ years of experience", value: $skipFrom, in: 1...20)
+                        .disabled(!checkYears)
+                }
+                .scaledFont(13)
+                Text(checkYears ? "You'll still hear about jobs asking for \(Self.stillAlert(skipFrom)), and jobs "
+                     + "that don't say." : "Jobs alert you whatever experience they ask for.")
+                    .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            section("Education", "Your highest degree, or the one you'll have when you start. Jobs that need a "
+                    + "higher degree are skipped.") {
+                Picker("Education", selection: $education) {
+                    ForEach(Self.degrees, id: \.0) { value, label in Text(label).tag(value) }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+                .scaledFont(13)
+                Text("A degree can also count in place of experience: if you skip 3+ years and have a Master's, "
+                     + "a job asking for \"3 years, or 1 year with a Master's\" is still shown.")
+                    .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// What someone skipping jobs that ask for `from`+ years still hears about.
+    private static func stillAlert(_ from: Int) -> String {
+        switch from {
+        case 1: return "no experience"
+        case 2: return "no experience or 1+ year"
+        case 3: return "no experience, 1+ or 2+ years"
+        default: return "anything from no experience up to \(from - 1)+ years"
+        }
+    }
+
+    private var offered: [String] { profession?.groups.flatMap(\.titles) ?? [] }
+    private var offeredSkips: [String] { profession?.skip_groups?.flatMap(\.titles) ?? [] }
+
+    private func chips(_ name: String, _ titles: [String], _ ticked: Binding<Set<String>>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(name).scaledFont(11, weight: .medium).foregroundStyle(.secondary)
+            FlowLayout(spacing: 6) {
+                ForEach(titles, id: \.self) { title in
+                    Chip(text: title, on: ticked.wrappedValue.contains(title)) {
+                        if ticked.wrappedValue.contains(title) {
+                            ticked.wrappedValue.remove(title)
+                        } else {
+                            ticked.wrappedValue.insert(title)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A button that opens a field for adding one of their own: a field only once asked for, so opening
+    /// the page never focuses (and scrolls to) it.
+    private func adder(_ placeholder: String, _ button: String, text: Binding<String>, open: Binding<Bool>,
+                       focus: FocusState<Bool>.Binding, add: @escaping () -> Void) -> some View {
+        Group {
+            if open.wrappedValue {
+                HStack(spacing: 8) {
+                    TextField(placeholder, text: text).textFieldStyle(.roundedBorder).frame(maxWidth: 280)
+                        .focused(focus)
+                        .onSubmit(add)
+                    Button("Add", action: add).disabled(text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("Done") { open.wrappedValue = false; text.wrappedValue = "" }
+                }
+            } else {
+                Button(button) {
+                    open.wrappedValue = true
+                    DispatchQueue.main.async { focus.wrappedValue = true }
                 }
                 .controlSize(.small)
-                .help("Open the list in TextEdit: each company is a name and its job board's link")
             }
         }
     }
 
-    private func reportView(_ report: ImportReport) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            let known = report.added.filter { $0.source == "known" }.count
-            Label("Added \(report.added.count) (\(known) it already knew, \(report.added.count - known) checked)"
-                  + (report.skipped.isEmpty ? "" : " · left out \(report.skipped.count)"),
-                  systemImage: report.added.isEmpty ? "exclamationmark.triangle" : "checkmark.circle")
-                .font(.system(size: 12))
-                .foregroundStyle(report.added.isEmpty ? Color.orange : Color.green)
-            if !report.skipped.isEmpty {
-                DisclosureGroup("Left out") {
-                    VStack(alignment: .leading, spacing: 3) {
-                        ForEach(Array(report.skipped.enumerated()), id: \.offset) { _, item in
-                            Text("\(item.name): \(item.reason)").font(.system(size: 11)).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Text("Ask the AI for those companies' Greenhouse, Lever, Ashby or Workday links, and add them again.")
-                            .font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 2)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .font(.system(size: 12))
-            }
+    /// Tick what was typed: the box already offered under any capitalization, or a new one of their own.
+    private func add(_ text: inout String, offered: [String], own: inout [String], to ticked: inout Set<String>) {
+        let word = text.trimmingCharacters(in: .whitespaces)
+        guard !word.isEmpty else { return }
+        if let known = (offered + own).first(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) {
+            ticked.insert(known)
+        } else {
+            own.append(word)
+            ticked.insert(word)
         }
+        text = ""
     }
 
-    // -- step 3 ----------------------------------------------------------------------
+    // -- page 6: alerts -------------------------------------------------------------------
 
-    private var email: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Alerts come from your own Gmail, sent to yourself. Gmail needs an app password for this: a 16-letter "
-                 + "password just for Role Radar. Creating one needs 2-Step Verification on your Google account.")
-                .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Link("Create an app password ↗", destination: URL(string: "https://myaccount.google.com/apppasswords")!)
-                .font(.system(size: 12))
-            TextField("you@gmail.com", text: $address).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
-            SecureField("App password (16 letters)", text: $password).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
-            HStack(spacing: 12) {
+    /// At least one way to send alerts is set up.
+    private var alertsReady: Bool { (setup?.email_ready ?? false) || (setup?.discord_ready ?? false) }
+
+    private var alertsPage: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Text("Alerts are optional. New jobs always collect in Live Tracking, newest on top, so you can just open "
+                 + "the app to see them. Set up email, Discord or both to also get them sent every 10 minutes.")
+                .scaledFont(13).fixedSize(horizontal: false, vertical: true)
+            section("Email (Gmail)", "Alerts come from your own Gmail, sent to yourself and anyone you add. Gmail needs "
+                    + "an app password for this: a 16-letter password just for Role Radar. Creating one needs 2-Step "
+                    + "Verification on your Google account.") {
+                Link("Create an app password ↗", destination: URL(string: "https://myaccount.google.com/apppasswords")!)
+                    .scaledFont(12)
+                TextField("you@gmail.com", text: $address).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+                SecureField("App password (16 letters)", text: $password).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
                 actionRow("email", "Save", disabled: address.isEmpty || password.isEmpty) { await saveEmail() }
-                actionRow("test", "Send Test Email", disabled: !(setup?.email_ready ?? false)) { await sendTest() }
+                if let saved = setup?.email, setup?.email_ready ?? false {
+                    field("Also send alerts to (a friend, your school email), one per line. Each person sees only "
+                          + "your address.", text: $also, placeholder: "friend@example.com", height: 56)
+                    HStack(spacing: 12) {
+                        actionRow("also", "Save List") { await saveAlso() }
+                        actionRow("test-email", "Send Test Email") { await sendTest("email") }
+                    }
+                    let others = setup?.also.count ?? 0
+                    Text("Alerts go to \(saved)" + (others == 0 ? "." : " and \(others) other\(others == 1 ? "" : "s")."))
+                        .scaledFont(11).foregroundStyle(.secondary)
+                }
             }
-            if let saved = setup?.email, setup?.email_ready ?? false {
-                Text("Alerts go to \(saved).").font(.system(size: 11)).foregroundStyle(.secondary)
+            section("Discord", "Alerts go to a channel in your Discord server. In Discord, open the channel's "
+                    + "settings, then Integrations → Webhooks → New Webhook → Copy Webhook URL, and paste it here.") {
+                SecureField(setup?.discord_ready ?? false ? "Saved. Paste a new one to change it."
+                            : "https://discord.com/api/webhooks/...", text: $webhook)
+                    .textFieldStyle(.roundedBorder).frame(maxWidth: 420)
+                HStack(spacing: 12) {
+                    actionRow("discord", "Save", disabled: webhook.trimmingCharacters(in: .whitespaces).isEmpty) {
+                        await saveDiscord()
+                    }
+                    if setup?.discord_ready ?? false {
+                        actionRow("test-discord", "Send Test Message") { await sendTest("discord") }
+                    }
+                }
             }
         }
     }
@@ -1317,14 +1831,29 @@ struct SetupView: View {
     // -- footer ----------------------------------------------------------------------
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Divider()
-            HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 10) {
+            if page > 0 {
+                Button("Back") { Task { await go(to: page - 1) } }.disabled(busy != nil)
+            }
+            if let note = notes["page"], !note.ok {
+                Label(note.text, systemImage: "exclamationmark.triangle").scaledFont(11).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if page == Self.last {
                 Text(setup?.ready ?? false
                      ? "All set. Role Radar checks while this Mac is on and the app is open, and it opens at login."
-                     : "Finish the three steps to start.")
-                    .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Spacer()
+                     : "Pick your countries and roles to finish.")
+                    .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if busy == "page" { ProgressView().controlSize(.small) }
+            if page < Self.last {
+                Button("Next") { Task { await next() } }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(busy != nil || setup?.profession == nil || (page == 1 && countries.isEmpty)
+                              || (page == 3 && picked.isEmpty))
+            } else {
                 Button(model.state?.checking == "laptop" ? "Done" : "Start Checking") {
                     Task {
                         await model.startChecking()
@@ -1340,25 +1869,21 @@ struct SetupView: View {
 
     // -- pieces ----------------------------------------------------------------------
 
-    private func step<Content: View>(_ number: Int, _ title: String, done: Bool, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
-                    .font(.system(size: 18)).foregroundStyle(done ? Color.green : Color.secondary)
-                Text(title).font(.system(size: 15, weight: .semibold))
+    private func section<Content: View>(_ title: String, _ about: String?, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).scaledFont(15, weight: .semibold)
+            if let about {
+                Text(about).scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             content()
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.05)))
     }
 
     private func field(_ label: String, text: Binding<String>, placeholder: String = "", height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+            Text(label).scaledFont(12).fixedSize(horizontal: false, vertical: true)
             TextEditor(text: text)
-                .font(.system(size: 12, design: .monospaced))
+                .scaledFont(12, design: .monospaced)
                 .scrollContentBackground(.hidden)
                 .padding(6)
                 .frame(height: height)
@@ -1366,7 +1891,7 @@ struct SetupView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3)))
                 .overlay(alignment: .topLeading) {
                     if text.wrappedValue.isEmpty && !placeholder.isEmpty {
-                        Text(placeholder).font(.system(size: 12, design: .monospaced)).foregroundStyle(.tertiary)
+                        Text(placeholder).scaledFont(12, design: .monospaced).foregroundStyle(.tertiary)
                             .padding(.horizontal, 11).padding(.vertical, 6).allowsHitTesting(false)
                     }
                 }
@@ -1382,7 +1907,7 @@ struct SetupView: View {
                 ProgressView().controlSize(.small)
             } else if let note = notes[key] {
                 Label(note.text, systemImage: note.ok ? "checkmark" : "exclamationmark.triangle")
-                    .font(.system(size: 11)).foregroundStyle(note.ok ? Color.green : Color.red)
+                    .scaledFont(11).foregroundStyle(note.ok ? Color.green : Color.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1394,7 +1919,27 @@ struct SetupView: View {
     }
 
     private func json(_ object: [String: Any]) -> String {
-        (try? JSONSerialization.data(withJSONObject: object)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+        (try? JSONSerialization.data(withJSONObject: object, options: .sortedKeys)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+    }
+
+    /// The countries, roles and qualifications pages' answers, for `setup profile`. Education goes once
+    /// its page is open: until then the saved one (or none) stands.
+    private func profileData() -> [String: Any] {
+        var data: [String: Any] = [
+            "roles": offered.filter(picked.contains) + ownTitles.filter(picked.contains),
+            "exclude": offeredSkips.filter(skipped.contains) + ownSkips.filter(skipped.contains),
+            "locations": Self.lines(cities), "countries": countries.sorted(),
+            "max_experience_years": checkYears ? skipFrom - 1 as Any : NSNull(),
+        ]
+        if page == 4 { data["education"] = education }
+        return data
+    }
+
+    /// The answers as they stand, whatever the page, to compare with `saved`.
+    private var fingerprint: String {
+        var data = profileData()
+        data["education"] = education
+        return json(data)
     }
 
     // -- actions ----------------------------------------------------------------------
@@ -1402,57 +1947,227 @@ struct SetupView: View {
     private func load() async {
         await model.loadSetup()
         guard !filled, let setup else { return }
-        roles = setup.roles.joined(separator: "\n")
-        exclude = setup.exclude.joined(separator: "\n")
-        locations = setup.locations.joined(separator: "\n")
-        checkYears = setup.max_experience_years != nil || setup.roles.isEmpty
-        years = setup.max_experience_years ?? 2
+        fillTitles()
+        countries = Set(setup.countries ?? [])
+        cities = (setup.cities ?? []).joined(separator: ", ")
+        checkYears = setup.max_experience_years != nil || (setup.countries ?? []).isEmpty  // on until page 2 is saved
+        skipFrom = (setup.max_experience_years ?? 2) + 1
         address = setup.email ?? ""
+        also = setup.also.joined(separator: "\n")
+        education = setup.education ?? "bachelors"
+        saved = fingerprint
+        // Open where there's something left to do.
+        page = setup.profession == nil ? 0
+            : (setup.countries ?? []).isEmpty ? 1
+            : setup.roles.isEmpty ? 3
+            : setup.education == nil ? 4
+            : 0
         filled = true
     }
 
-    private func saveProfile() async {
-        let data = json(["roles": Self.lines(roles), "exclude": Self.lines(exclude), "locations": Self.lines(locations),
-                         "max_experience_years": checkYears ? years as Any : NSNull()])
-        let problem = await model.setupStep(["profile"], stdin: data)
-        notes["profile"] = problem.map { ($0, false) } ?? ("Saved", true)
+    /// The boxes from what's saved, target and non-target: the profession's ticked where saved, and their own after.
+    private func fillTitles() {
+        guard let setup else { return }
+        (picked, ownTitles) = Self.boxes(setup.roles, offered: offered)
+        (skipped, ownSkips) = Self.boxes(setup.exclude, offered: offeredSkips)
     }
 
-    private func copyPrompt() async {
-        switch await model.setupCommand(["prompt"]) {
-        case .success(let data):
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(String(decoding: data, as: UTF8.self), forType: .string)
-            notes["prompt"] = ("Copied. Paste it into ChatGPT or Claude.", true)
-        case .failure(let message):
-            notes["prompt"] = (message, false)
+    private static func boxes(_ saved: [String], offered: [String]) -> (ticked: Set<String>, own: [String]) {
+        var ticked = Set<String>(), own: [String] = []
+        for word in saved {
+            if let known = offered.first(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) {
+                ticked.insert(known)
+            } else {
+                own.append(word)
+                ticked.insert(word)
+            }
+        }
+        return (ticked, own)
+    }
+
+    /// Show the choice straight away, save it, and stay on the page: Next moves on.
+    private func pick(_ id: String) async {
+        guard id != setup?.profession else { return }
+        choosing = id
+        let problem = await model.setupStep(["profession"], stdin: json(["profession": id]))
+        choosing = nil
+        notes["profession"] = problem.map { ($0, false) }
+        if problem == nil {
+            fillTitles()
+            saved = fingerprint  // a new profession brings its own boxes, saved already
         }
     }
 
-    private func addCompanies() async {
-        switch await model.setupCommand(["companies"] + (replaceList ? ["--replace"] : []), stdin: answer) {
-        case .success(let data):
-            report = try? JSONDecoder().decode(ImportReport.self, from: data)
-            notes["companies"] = nil
-            if report?.added.isEmpty == false { answer = "" }
-        case .failure(let message):
-            notes["companies"] = (message, false)
+    private func next() async { await go(to: page + 1, always: true) }
+
+    /// Move to another page. Leaving the countries, roles or qualifications page saves it first: always
+    /// with Next, and with Back or a page's name whenever something changed, so no change is lost.
+    private func go(to target: Int, always: Bool = false) async {
+        notes["page"] = nil
+        if fingerprint != saved || (always && [1, 3, 4].contains(page)) {
+            busy = "page"
+            let problem = await model.setupStep(["profile"], stdin: json(profileData()))
+            busy = nil
+            if let problem {
+                notes["page"] = (problem, false)
+                return
+            }
+            saved = fingerprint
         }
-        await model.loadSetup()
+        page = target
     }
 
     private func saveEmail() async {
         let problem = await model.setupStep(["email"], stdin: json(["address": address, "password": password]))
         notes["email"] = problem.map { ($0, false) } ?? ("Saved in your Mac's Keychain", true)
-        if problem == nil { password = "" }
+        if problem == nil {
+            password = ""
+            await model.set("email", on: true)  // set up, so alerts go there
+        }
     }
 
-    private func sendTest() async {
-        let result = await Model.cli(args: ["-m", "role_radar", "notifications", "test", "--config", Place.config])
+    private func saveDiscord() async {
+        let problem = await model.setupStep(["discord"], stdin: json(["webhook": webhook]))
+        notes["discord"] = problem.map { ($0, false) } ?? ("Saved in your Mac's Keychain", true)
+        if problem == nil {
+            webhook = ""
+            await model.set("discord", on: true)
+        }
+    }
+
+    private func saveAlso() async {
+        let problem = await model.setupStep(["recipients"], stdin: json(["also": Self.lines(also)]))
+        notes["also"] = problem.map { ($0, false) } ?? ("Saved", true)
+    }
+
+    private func sendTest(_ channel: String) async {
+        let result = await Model.cli(args: ["-m", "role_radar", "notifications", "test", "--channel", channel,
+                                            "--config", Place.config])
         if case .failure(let message) = result {
-            notes["test"] = (message, false)
+            notes["test-" + channel] = (message, false)
         } else {
-            notes["test"] = ("Sent. Check your inbox.", true)
+            notes["test-" + channel] = (channel == "email" ? "Sent. Check your inbox." : "Sent. Check the channel.", true)
+        }
+    }
+}
+
+/// A profession on Setup's first page: it lights up under the pointer, dips when pressed, and
+/// shows a tick (a spinner while saving) once picked.
+struct ProfessionCard: View {
+    let option: SetupState.Profession
+    let symbol: String
+    let chosen: Bool
+    let saving: Bool
+    let disabled: Bool
+    let pick: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: pick) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: symbol).scaledFont(26)
+                        .foregroundStyle(chosen || hovering ? Color.accentColor : Color.secondary)
+                        .frame(height: 34, alignment: .bottomLeading)
+                    Spacer()
+                    if saving {
+                        ProgressView().controlSize(.small)
+                    } else if chosen {
+                        Image(systemName: "checkmark.circle.fill").scaledFont(18).foregroundStyle(Color.accentColor)
+                    }
+                }
+                Text(option.name).scaledFont(15, weight: .semibold)
+                Text(option.about).scaledFont(12).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(CardPress(chosen: chosen, hovering: hovering))
+        .disabled(disabled && !chosen)
+        .onHover { hovering = $0 }
+        .modifier(LinkCursor(active: !disabled))
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(.easeOut(duration: 0.12), value: chosen)
+    }
+}
+
+/// The card's look: picked (accent outline), under the pointer (raised), pressed (dipped).
+struct CardPress: ButtonStyle {
+    let chosen: Bool
+    let hovering: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(RoundedRectangle(cornerRadius: 12).fill(
+                chosen ? Color.accentColor.opacity(0.12)
+                    : configuration.isPressed ? Color.primary.opacity(0.12)
+                    : hovering ? Color.primary.opacity(0.08) : Color.primary.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(
+                chosen ? Color.accentColor : hovering ? Color.accentColor.opacity(0.5) : Color.secondary.opacity(0.25),
+                lineWidth: chosen ? 2 : hovering ? 1.5 : 1))
+            .shadow(color: .black.opacity(hovering && !configuration.isPressed ? 0.18 : 0), radius: 6, y: 2)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+}
+
+/// A job title box on Setup's second page: ticked, it's one of the titles searched for.
+struct Chip: View {
+    let text: String
+    let on: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 4) {
+                if on { Image(systemName: "checkmark").scaledFont(9, weight: .bold) }
+                Text(text)
+            }
+            .scaledFont(12)
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .foregroundStyle(on ? Color.white : Color.primary)
+            .background(Capsule().fill(on ? Color.accentColor : Color.primary.opacity(0.05)))
+            .overlay(Capsule().stroke(on ? Color.clear : Color.secondary.opacity(0.35)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Lays its views out left to right, starting a new row when one would overflow.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, row: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width {
+                x = 0
+                y += row + spacing
+                row = 0
+            }
+            x += size.width + spacing
+            row = max(row, size.height)
+            widest = max(widest, x - spacing)
+        }
+        return CGSize(width: proposal.width ?? widest, height: y + row)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, row: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += row + spacing
+                row = 0
+            }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            row = max(row, size.height)
         }
     }
 }
@@ -1472,11 +2187,28 @@ struct MenuLabel: View {
                     NSApp.activate()
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: Dock.openSettings)) { _ in
+                openWindow(id: SetupView.id)
+                NSApp.activate()
+            }
     }
 }
 
 #if !PANEL_SNAPSHOT
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        TextSize.reset()  // every opening starts at the standard size
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        Dock.launchedAtLogin = event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    }
+
+    /// Opening the packaged app while it runs (Finder, Spotlight, its Dock icon) shows Settings.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if Place.packaged { NotificationCenter.default.post(name: Dock.openSettings, object: nil) }
+        return false
+    }
+
     /// Quit (or logging out) stops the Mac's checker with the app.
     func applicationWillTerminate(_ notification: Notification) {
         Model.stopChecker()
@@ -1498,14 +2230,28 @@ struct RoleRadarMenuApp: App {
 
         Window("Live Tracking", id: LiveWindow.id) {
             LiveWindow(model: model)
+                .toolbar { TextSizeButtons() }
+                .onAppear(perform: Dock.windowOpened)
+                .onDisappear(perform: Dock.windowClosed)
         }
         .defaultSize(width: 1000, height: 680)
 
         Window("Role Radar Setup", id: SetupView.id) {
             SetupView(model: model)
+                .toolbar { TextSizeButtons() }
+                .onAppear(perform: Dock.windowOpened)
+                .onDisappear(perform: Dock.windowClosed)
         }
-        .defaultSize(width: 680, height: 820)
+        .defaultSize(width: 760, height: 860)
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Bigger Text") { TextSize.change(by: 0.1) }.keyboardShortcut("=")
+                Button("Smaller Text") { TextSize.change(by: -0.1) }.keyboardShortcut("-")
+                Button("Standard Text Size") { TextSize.reset() }.keyboardShortcut("0")
+                Divider()
+            }
+        }
     }
 }
 #endif
