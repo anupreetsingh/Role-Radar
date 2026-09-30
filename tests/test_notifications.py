@@ -180,6 +180,7 @@ def test_smtp_partial_recipient_refusal_is_a_failure(monkeypatch):
     with pytest.raises(RuntimeError, match="refused 1 recipient"):
         asyncio.run(notifier.send([job()]))
     assert server.send_message.call_args.kwargs["to_addrs"] == ["a@example.com", "b@example.com"]
+    assert server.send_message.call_args.args[0]["To"] == "a@example.com"  # b never sees a's address, nor a b's
 
 
 def test_transport_errors_do_not_log_webhook_secrets(monkeypatch, caplog):

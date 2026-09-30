@@ -269,7 +269,7 @@ class EmailNotifier(Notifier):
         msg = EmailMessage()
         msg["Subject"] = f"[Role Radar digest] {headline(jobs)}"
         msg["From"] = self.sender
-        msg["To"] = ", ".join(self.recipients)
+        msg["To"] = self.recipients[0]  # the rest get it too, without seeing each other's addresses (like Bcc)
         msg.set_content(format_digest(jobs))
         return msg
 
