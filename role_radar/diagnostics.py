@@ -110,7 +110,7 @@ def diagnose(runtime: RuntimeSettings, path: Path | None, clients: AwsClients, s
     def config() -> str:
         source = ConfigSource(runtime, path, clients)
         loaded = source.load()
-        count = sum(c.enabled for c in loaded.companies)
+        count = sum(c.checked for c in loaded.companies)
         if not count:
             raise DiagnosticError("No companies enabled.")
         if runtime.config_url and path and combined(path, profile_path(path)) != yaml.safe_load(source.read_text()):

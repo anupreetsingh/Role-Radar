@@ -600,7 +600,7 @@ async def run_pass(
     """
     settings = config.settings
     result = PassResult()
-    companies = [c for c in config.companies if c.enabled and (not only or c.name.lower() in only)]
+    companies = [c for c in config.companies if c.checked and (not only or c.name.lower() in only)]
     result.enabled = len(companies)
     if not companies:
         log.error("No companies to check")
@@ -718,7 +718,7 @@ async def run_pass(
 
 def _health(result: PassResult, config: AppConfig, schedule: dict[str, CompanyMeta]) -> None:
     """Failing companies and matches waiting to be sent, from the schedule as this pass left it."""
-    metas = [schedule[c.name] for c in config.companies if c.enabled and c.name in schedule]
+    metas = [schedule[c.name] for c in config.companies if c.checked and c.name in schedule]
     result.failing = sum(1 for meta in metas if meta.failures)
     # The digest's own saves don't reach `schedule`: take off what it sent.
     result.pending = max(0, sum(meta.pending or 0 for meta in metas) - result.digest_completed)
@@ -746,7 +746,7 @@ async def _digest(
 
     try:
         digest = await flush_digest(
-            store, [c.name for c in config.companies if c.enabled], _channels(notifiers, False), lease,
+            store, [c.name for c in config.companies if c.checked], _channels(notifiers, False), lease,
             now, config.settings.digest_interval_minutes, save, deadline=deadline,
             sent=unsaved.sent if unsaved else None, receipts=unsaved.channels if unsaved else None,
             locks=locks, save_lock=save_lock,
@@ -805,7 +805,7 @@ def _log_pass(result: PassResult, due: int, http: HttpClient, dry_run: bool) -> 
 async def run(config: AppConfig, store: StateStore, notifiers: Notifiers, *, list_matches: bool = False, **kwargs: Any) -> int:
     """run_pass(), or print_matches() with list_matches, returning an exit code."""
     if list_matches:
-        companies = [c for c in config.companies if c.enabled and (not kwargs.get("only") or c.name.lower() in kwargs["only"])]
+        companies = [c for c in config.companies if c.checked and (not kwargs.get("only") or c.name.lower() in kwargs["only"])]
         return await print_matches(companies, config.settings)
     return (await run_pass(config, store, notifiers, **kwargs)).exit_code
 

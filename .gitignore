@@ -18,5 +18,5 @@ samconfig.toml
 !.env.example
 # Each person's own settings (config/profile.example.yaml shows the format)
 config/profile.yaml
-# Built by scripts/package_app.sh
-role_radar/templates/directory.yaml
+# The professions' company lists, written by scripts/build_dev_app.sh (package_app.sh puts them in the app)
+role_radar/lists/

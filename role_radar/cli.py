@@ -188,7 +188,7 @@ def cmd_list_matches(args: argparse.Namespace) -> int:
     ctx = context(args)
     config = ConfigSource(ctx.runtime, ctx.config_path, ctx.clients).load()
     only = {c.lower() for c in args.company}
-    companies = [c for c in config.companies if c.enabled and (not only or c.name.lower() in only)]
+    companies = [c for c in config.companies if c.checked and (not only or c.name.lower() in only)]
     return asyncio.run(print_matches(companies, config.settings))
 
 
@@ -220,7 +220,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"Last 24 hours:  {day['checked']:,} checks (Mac {mac:,}, Lambda {cloud:,}), {day['failed']:,} failed, "
           f"{day['new_jobs']:,} new jobs, {day['matches']:,} new matches, {day['alerts']:,} alerts sent")
 
-    enabled = [c for c in config.companies if c.enabled]
+    enabled = [c for c in config.companies if c.checked]
     schedule = backend.store.load_schedule()
     interval = interval_for(config.settings)
     due = due_companies(enabled, schedule, now, interval)
@@ -412,7 +412,7 @@ def cmd_config_push(args: argparse.Namespace) -> int:
         + yaml.safe_dump(raw, sort_keys=False, allow_unicode=True, width=120)
     )
     aws.S3Text(ctx.clients.s3, ctx.runtime.config_url).write(text)
-    enabled = sum(c.enabled for c in config.companies)
+    enabled = sum(c.checked for c in config.companies)
     print(
         f"Uploaded {path}{' with ' + str(profile) if profile.exists() else ''} to {ctx.runtime.config_url}: "
         f"{len(config.companies)} companies, {enabled} enabled. "

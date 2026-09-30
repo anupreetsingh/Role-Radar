@@ -28,6 +28,8 @@ from role_radar.http_client import HttpSettings
 
 # Rows the state store keeps for itself use keys starting with this.
 RESERVED_PREFIX = "#"
+# The professions a person can pick; each has its own company list (onboarding.PROFESSIONS).
+PROFESSIONS = ("tech", "accounting", "healthcare")
 
 
 @dataclass
@@ -41,6 +43,18 @@ class CompanyConfig:
     # Don't alert on a new match posted more than this many days before it was first
     # seen: an old job surfacing late (e.g. while a sitemap is being worked through).
     max_alert_age_days: int | None = None
+    # Countries it posts jobs in (US, CA, AU, IN), from its job locations. Empty: not known,
+    # so it's checked whichever countries settings.countries picks.
+    countries: list[str] = field(default_factory=list)
+    # The job site of a company Role Radar can't read yet; it stays `enabled: false` until it can.
+    platform: str | None = None
+    # False when settings.countries picks countries and this company posts in none of them.
+    in_countries: bool = field(default=True, init=False)
+
+    @property
+    def checked(self) -> bool:
+        """Whether checks read this company: it's enabled and posts in a picked country."""
+        return self.enabled and self.in_countries
 
 
 @dataclass
@@ -70,9 +84,17 @@ class Settings:
     # only the newest page, and read further only if it shows jobs it didn't show last time.
     # Only for platforms that list newest first (the scraper must support it).
     quick_check_by_ats: dict[str, float] = field(default_factory=dict)
+    # Only check companies that post jobs in these countries (codes such as US, CA, AU, IN).
+    # Empty: every company. A company with no `countries` of its own is always checked.
+    countries: list[str] = field(default_factory=list)
+    # The person's profession (one of PROFESSIONS), picked in the packaged app's Setup.
+    profession: str | None = None
     http: HttpSettings = field(default_factory=HttpSettings)
 
     def __post_init__(self) -> None:
+        self.countries = _country_codes(self.countries, "settings.countries")
+        if self.profession is not None and self.profession not in PROFESSIONS:
+            raise ValueError(f"settings.profession must be one of {', '.join(PROFESSIONS)}, not {self.profession!r}")
         if not math.isfinite(self.digest_interval_minutes) or self.digest_interval_minutes < 0:
             raise ValueError("settings.digest_interval_minutes must be a finite nonnegative number")
         self.check_interval_by_ats = _minutes_by_ats(self.check_interval_by_ats, "check_interval_by_ats")
@@ -106,6 +128,22 @@ def _minutes_by_ats(values: Mapping[str, float] | None, name: str) -> dict[str, 
             raise ValueError(f"settings.{name}[{ats!r}] must be a positive number of minutes")
         minutes_by_ats[str(ats).strip().lower()] = float(minutes)
     return minutes_by_ats
+
+
+def _country_codes(values: Any, name: str) -> list[str]:
+    """Two-letter country codes, uppercased, each once."""
+    if values is None:
+        return []
+    if isinstance(values, str) or not isinstance(values, (list, tuple)):
+        raise ValueError(f"{name} must be a list of country codes, e.g. [US, IN]")
+    codes: list[str] = []
+    for value in values:
+        code = str(value).strip().upper()
+        if len(code) != 2 or not code.isalpha():
+            raise ValueError(f"{name}: {value!r} isn't a two-letter country code (US, CA, AU, IN...)")
+        if code not in codes:
+            codes.append(code)
+    return codes
 
 
 # RuntimeSettings field → environment variables that override it, first one set wins.
@@ -186,7 +224,7 @@ class AppConfig:
 
 
 def _build(cls: type, data: dict[str, Any], where: str) -> Any:
-    names = {f.name for f in fields(cls)}
+    names = {f.name for f in fields(cls) if f.init}
     unknown = set(data) - names
     if unknown:
         raise ValueError(f"{where}: unknown keys {sorted(unknown)}")
@@ -223,10 +261,36 @@ def load_runtime(path: str | Path, profile: str | Path | None = None) -> Runtime
 
 
 def combined(path: str | Path, profile: str | Path | None = None) -> dict[str, Any]:
-    """The companies file's contents with the profile's sections applied (what `config push` uploads)."""
+    """The companies file's contents with the profile's sections applied (what `config push` uploads),
+    and, when settings.profession picks one, that profession's company list after the file's own."""
     path = Path(path)
     raw = _read_raw(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
-    return apply_profile(raw, read_profile(profile)) if profile else raw
+    raw = apply_profile(raw, read_profile(profile)) if profile else raw
+    profession = (raw.get("settings") or {}).get("profession")
+    if profession in PROFESSIONS:
+        own = {str(c.get("name")) for c in raw["companies"] if isinstance(c, dict)}
+        raw = {**raw, "companies": raw["companies"] + [c for c in profession_list(profession) if str(c["name"]) not in own]}
+    return raw
+
+
+def lists_dir() -> Path:
+    """Where the professions' company lists are: $ROLE_RADAR_LISTS, else the package's lists/ (the packaged app's)."""
+    if os.environ.get("ROLE_RADAR_LISTS"):
+        return Path(os.environ["ROLE_RADAR_LISTS"]).expanduser()
+    return Path(__file__).with_name("lists")
+
+
+def profession_list(profession: str) -> list[dict[str, Any]]:
+    """The companies shipped for a profession, with countries but without anyone's filters; [] if there's no list.
+
+    The packaged app carries lists/<profession>.yaml, rebuilt with each release, so the list and its
+    country tags stay current while a person's own additions stay in their companies file.
+    """
+    path = lists_dir() / f"{profession}.yaml"
+    if not path.exists():
+        return []
+    entries = (yaml.load(path.read_text(encoding="utf-8"), Loader=_YAML_LOADER) or {}).get("companies") or []
+    return [{k: v for k, v in e.items() if k != "filters"} for e in entries if isinstance(e, dict) and e.get("name") and e.get("url")]
 
 
 def read_profile(path: str | Path) -> dict[str, Any] | None:
@@ -307,6 +371,8 @@ def parse_raw(raw: dict[str, Any], source: str = "config") -> AppConfig:
         if company.name in seen_names:
             raise ValueError(f"companies[{i}]: duplicate company name {company.name!r}")
         seen_names.add(company.name)
+        if settings.countries and company.countries:
+            company.in_countries = bool(set(company.countries) & set(settings.countries))
         companies.append(company)
     return AppConfig(settings=settings, companies=companies, runtime=runtime)
 
@@ -324,4 +390,5 @@ def _parse_company(entry: Any, where: str, default_filters: dict[str, Any]) -> C
     except ValueError as exc:
         raise ValueError(f"{where} ({entry['name']}): {exc}") from exc
     entry["options"] = entry.get("options") or {}
+    entry["countries"] = _country_codes(entry.get("countries"), f"{where} ({entry['name']}): countries")
     return _build(CompanyConfig, {**entry, "filter": job_filter}, where)

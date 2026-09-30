@@ -273,6 +273,7 @@ alert again. The previous version behaved the same way.
 | amazon.jobs | `search.json`, newest first, by category | no |
 | Apple | Search pages' hydration JSON, newest first | no |
 | Google | First results page of each query (robots.txt disallows paging), newest first | no |
+| SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
 | Meta | `/jobsearch/sitemap.xml` for the job IDs | each new job's page once, for its title and location (up to 2 minutes of pages a check) |
 | TikTok | Public search API; the listing is filtered to US jobs locally | no |
 | Custom | Embedded-ATS detection → JSON-LD `JobPosting` → link heuristic | only if the filter needs a location or employment type the listing lacks (read from the job page's JSON-LD) |
@@ -302,6 +303,13 @@ the enabled employers, source limitations and expansion queue.
 |---|---|
 | New job | Recorded; alerted if it matches |
 | Existing job unchanged | Nothing |
+Each company's `countries` lists where it posts jobs (US, CA, AU, IN), taken from its job
+locations by `scripts/tag_countries.py`. Set `settings.countries` in the profile (e.g.
+`[US, IN]`) to check only companies that post in one of those; companies without
+`countries`, such as ones you add yourself, are always checked. The filters' `locations`
+still decide which jobs alert. A company on a job site Role Radar can't read yet carries
+`platform:` and stays `enabled: false`.
+
 | Job removed | `removed_at` set, but only if the listing was complete (a hit page cap or a heuristic parse never counts as removal) |
 | Removed job comes back with the same ID | Reactivated, no new alert |
 | Reposted with a new ID | A new job: alerted if it matches |
@@ -430,7 +438,7 @@ recorded without alerting, with the reason (`dropped_for` on the stored job, and
 
 Where descriptions come from: the listing already has them for Ashby, Lever, amazon.jobs
 (basic qualifications), Google (minimum qualifications), Meta (from the job page it
-already reads) and TikTok. Greenhouse, Workday, Rippling, Oracle HCM, Eightfold and Apple take one
+already reads) and TikTok. Greenhouse, Workday, Rippling, SmartRecruiters, Oracle HCM, Eightfold and Apple take one
 request per new match, at most `max_detail_requests` a check (the rest wait for the next
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.

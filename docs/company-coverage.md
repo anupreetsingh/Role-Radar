@@ -168,9 +168,9 @@ Limits worth knowing:
 - TikTok's API filters by city only, so each check reads all ~4,300 jobs (~18 MB)
   and keeps US ones.
 
-Not added, and why: SmartRecruiters (ServiceNow, Western Digital, AbbVie, Visa...)
-disallows its posting API to all crawlers but LinkedIn's; its public pages group
-jobs by city and would need their own reader. ByteDance's own site (jobs.bytedance.com)
+Not added, and why: SmartRecruiters disallows its posting API to all crawlers but
+LinkedIn's; its public pages group jobs by city and needed their own reader, which came
+later (see [SmartRecruiters](#smartrecruiters-september-2026)). ByteDance's own site (jobs.bytedance.com)
 hasn't been looked at yet. Netflix's Workday board (and Walmart's and Comcast's)
 answers HTTP 422; AMD's does too, but its Jibe career site is read instead.
 American Express's Eightfold API answers 404; its Oracle site is used.
@@ -344,6 +344,85 @@ At the check, the 298 boards listed 3,869 jobs, and 381 titles matched the defau
 filters before the experience filter. Each board takes one request per check. A new
 match's description, for the experience filter, takes one more.
 
+## Countries (September 2026)
+
+Each company carries `countries`: the target countries (US, CA, AU, IN) at least one of its
+jobs was posted in, open or closed. A user of the packaged app picks countries, and only
+companies posting in one of them are checked (a company without `countries` always is); the
+title, experience and city filters then decide which of their jobs alert.
+
+The first tags, on 2026-09-29, came from the ~372,000 jobs saved in the state table,
+read through a point-in-time export to S3 so the table's read capacity was untouched.
+`scripts/tag_countries.py` reads each location with `scripts/countries.py`: country names
+first, then a city beside a state or province code, checked against GeoNames' cities of
+5,000+ people, so "Columbus, IN" is Indiana but "Pune, IN" is India, "Perth, WA" is Western
+Australia and "Vancouver, WA" Washington. A city alone counts only when no other country
+has one nearly as large ("Cambridge" and "Richmond" stay undecided). Workday's "3 Locations",
+"Remote" and campus names say nothing, which left 203 companies without countries.
+
+At the first tagging, 4,402 companies posted in the US, 1,041 in Canada, 520 in Australia
+and 935 in India. Readers that ask their site for US jobs only (Workday country facets,
+Amazon, Apple, Google, TikTok, Eightfold) can only show US locations, so those companies
+were read once more without that limit (see below).
+
+## Indian and Australian employers (September 2026)
+
+Most large Indian tech employers were missing. On 2026-09-29 their job boards were found
+through Common Crawl's index, the public job APIs of Lever, Greenhouse and Ashby (one
+request per candidate name), and their careers pages, each read once:
+
+- Added and checked: Meesho, CRED, Mindtickle, FamPay (Lever); Groww (Greenhouse EU);
+  JioStar, Sprinklr, Uniphore (Workday); HCLTech, Zensar, Icertis (Oracle); Persistent
+  Systems (iCIMS); REA Group, Commonwealth Bank, Telstra (Workday); Octopus Deploy
+  (Greenhouse ANZ); Deputy, Immutable (Lever). CRED, Groww and Telstra listed no matching
+  title that day; they stay because they hire for the profile.
+- Added switched off (`enabled: false`, with `platform`), on job sites Role Radar can't
+  read yet: SmartRecruiters (Canva, Zomato, Freshworks, ixigo, Nagarro, SEEK, Nearmap;
+  switched on the next day, see below), Workable (Postman, Innovaccer, Cars24, Rokt, Employment Hero), Darwinbox (Unacademy,
+  CleverTap, Spinny, Airtel, Rapido, Tata 1mg, Go Digit, Ather Energy), TurboHire
+  (Flipkart, Ola), MyNextHire (Swiggy, ShareChat), SuccessFactors (Wipro), Taleo
+  (Cognizant), Zoho Recruit (Zoho), Recruitee (Lenskart), Freshteam (Hasura), Trakstar
+  (MoEngage), and their own sites (Atlassian, PhonePe, Zerodha, Infosys, TCS, WiseTech
+  Global). They have no `countries` until their jobs can be read, except Atlassian (its
+  own job feed) and Rokt.
+- Not found: Myntra (hires through job portals), Nykaa, Zepto, Urban Company, Chargebee
+  and others whose careers pages load their jobs in the browser. Walmart's Workday board
+  answers HTTP 422. Envato's only opening was outside the four countries.
+
+Atlassian's jobs come from iCIMS portals whose pages the iCIMS reader can't parse, but
+its site publishes every job in one feed (`www.atlassian.com/endpoint/careers/listings`),
+which a reader could use.
+
+## SmartRecruiters (September 2026)
+
+SmartRecruiters' posting API allows only LinkedIn's crawler, so the reader uses the
+public career page instead: the location groups it loads as it's scrolled
+(`careers.smartrecruiters.com/{company}/api/groups?page=N`, six groups a page) and, for a
+group of more than 9 jobs, its "Show more jobs" pages (10 jobs each). A group's heading
+is its jobs' location. These pages answer even where the company's career page redirects
+to its own site (SEEK, Nearmap). A job's own page answers JSON with its description and
+posting date, read once per new match for the experience check.
+
+Read on 2026-09-30, every listing complete:
+
+| Company | Jobs | Countries | Requests a check |
+|---|---|---|---|
+| Canva | 151 | US, AU, IN | 13 |
+| Zomato | 3 | AU, IN | 2 |
+| Freshworks | 120 | US, IN | 18 |
+| ixigo | 9 | IN | 2 |
+| Nagarro | 877 | US, CA, AU, IN | 98 (341 jobs in "Remote, India" alone) |
+| SEEK | 37 | AU | 5 |
+| Nearmap | 37 | US, CA, AU | 7 |
+| ServiceNow (added) | 694 | US, CA, AU, IN | 78 |
+| Western Digital (added) | 332 | US, IN | 41 |
+
+The first seven were already listed, switched off; ServiceNow and Western Digital were
+added. Every check reads the whole listing (it isn't newest first), about 265 requests a
+round, spaced 0.5 s apart on `smartrecruiters.com`. Not added: AbbVie (1,802 jobs, 199
+requests a check; a candidate for the Healthcare list) and Visa (its SmartRecruiters page
+is empty; its Workday board is read).
+
 ## How the less conventional sources are covered
 
 | Source | Employers/examples | What is checked |
@@ -391,7 +470,6 @@ sponsorship.
 | SafetyCulture | Resolve the primary listing feed. An embedded board for Mitti also appears on the site and must not be mislabeled as SafetyCulture. |
 | Postman | Resolve the current data source behind the open-positions page; older Greenhouse board names returned 404. |
 | PhonePe | Resolve the current data source behind the jobs page; the guessed legacy board returned 404. |
-| Freshworks | Its careers page points to SmartRecruiters; the API robot rules blocked our client. Assess an allowed public listing/feed before enabling it. |
 | Zoho | Validate its Zoho Recruit listing/RSS, including pagination, locations and stable IDs. |
 | PaperCut | Follow the current jobs board from its careers page and verify listing coverage. |
 | Tyler Technologies | Its custom page has individual listings; validate pagination and location extraction before enabling it. |

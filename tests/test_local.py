@@ -78,6 +78,51 @@ def test_the_profile_can_live_elsewhere(files, tmp_path, monkeypatch):
     assert load_config(files, profile_path(files)).companies[0].filter.include_keywords == ["designer"]
 
 
+def test_picked_countries_choose_which_companies_are_checked(files):
+    files.write_text("""
+companies:
+  - name: MathWorks
+    url: https://jobs.lever.co/mathworks
+    countries: [us, IN]
+  - name: Flipkart
+    url: https://jobs.lever.co/flipkart
+    countries: [IN]
+  - name: Canva
+    url: https://jobs.lever.co/canva
+    countries: [AU]
+  - name: Freshworks
+    url: https://jobs.smartrecruiters.com/Freshworks
+    countries: [IN, US]
+    platform: smartrecruiters
+    enabled: false
+  - name: My Own Pick
+    url: https://jobs.lever.co/mine
+""")
+    checked = lambda config: [c.name for c in config.companies if c.checked]  # noqa: E731
+    # No countries picked: every enabled company, as before.
+    assert checked(load_config(files, profile_path(files))) == ["MathWorks", "Flipkart", "Canva", "My Own Pick"]
+    files.with_name("profile.yaml").write_text(PROFILE + "  countries: [US]\n")
+    config = load_config(files, profile_path(files))
+    assert config.companies[0].countries == ["US", "IN"] and config.companies[3].platform == "smartrecruiters"
+    # A company with no countries of its own (one the person added) is always checked.
+    assert checked(config) == ["MathWorks", "My Own Pick"]
+    files.with_name("profile.yaml").write_text(PROFILE + "  countries: [IN, AU]\n")
+    assert checked(load_config(files, profile_path(files))) == ["MathWorks", "Flipkart", "Canva", "My Own Pick"]
+
+
+@pytest.mark.parametrize("line", ["countries: US", "countries: [USA]", "in_countries: false"])
+def test_company_countries_are_checked(files, line):
+    files.write_text(f"companies:\n  - name: Acme\n    url: https://jobs.lever.co/acme\n    {line}\n")
+    with pytest.raises(ValueError, match="country code|unknown keys"):
+        load_config(files)
+
+
+def test_the_profession_must_be_one_setup_offers(files):
+    files.with_name("profile.yaml").write_text(PROFILE + "  profession: law\n")
+    with pytest.raises(ValueError, match="settings.profession must be one of tech, accounting, healthcare"):
+        load_config(files, profile_path(files))
+
+
 def test_split_profile_restores_what_config_push_combined(files):
     from role_radar.config import combined
 
