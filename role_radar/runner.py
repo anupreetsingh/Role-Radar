@@ -77,6 +77,7 @@ class Runner:
         self.robots = robots or RobotsCache()
         self._config: AppConfig | None = None
         self._config_read_at = 0.0
+        self._config_stamp: tuple[int, ...] | None = None
         self.unsaved = Unsaved()  # alerts sent whose save failed, so they aren't sent again
         # Lease calls get a thread of their own: saves queued in the shared
         # pool mustn't delay a renewal, and a release runs after any renewal in flight.
@@ -86,16 +87,17 @@ class Runner:
         return await asyncio.get_running_loop().run_in_executor(self._lease_thread, fn, *args)
 
     def config(self) -> AppConfig:
-        """The companies config, re-read at most every CONFIG_REFRESH seconds."""
+        """The companies config, re-read at most every CONFIG_REFRESH seconds, and as soon as a local file changes."""
         now = self.clock()
-        if self._config is None or now - self._config_read_at >= CONFIG_REFRESH:
+        stamp = self.source.stamp()
+        if self._config is None or now - self._config_read_at >= CONFIG_REFRESH or stamp != self._config_stamp:
             try:
                 self._config = self.source.load()
             except Exception as exc:
                 if self._config is None:
                     raise
                 log.warning("Couldn't re-read the config from %s (%s); keeping the previous one", self.source.description, exc)
-            self._config_read_at = now
+            self._config_read_at, self._config_stamp = now, stamp
         return self._config
 
     def now(self) -> datetime:

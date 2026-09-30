@@ -88,6 +88,13 @@ class ConfigSource:
             )
         return self.local_config.read_text(encoding="utf-8")
 
+    def stamp(self) -> tuple[int, ...] | None:
+        """When the local files last changed (None for the S3 copy), so a change saved in Setup is read at once."""
+        if self._s3 or not self.local_config:
+            return None
+        files = (self.local_config, profile_path(self.local_config))
+        return tuple(f.stat().st_mtime_ns if f.exists() else 0 for f in files)
+
     def load(self) -> AppConfig:
         if self._s3 or not self.local_config:
             config = parse_config(self.read_text(), self.description)

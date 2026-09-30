@@ -135,6 +135,22 @@ def test_split_profile_restores_what_config_push_combined(files):
 # -- SQLite state ----------------------------------------------------------------------
 
 
+def test_the_checker_reads_a_changed_profile_at_once(files, tmp_path):
+    """Setup saves the profile while the checker runs: its next pass uses it, not one five minutes on."""
+    import os
+
+    from role_radar.runner import Runner
+
+    backend = open_backend(RuntimeSettings(storage="sqlite", state_file=str(tmp_path / "state.db")), "laptop:mac")
+    runner = Runner(ConfigSource(RuntimeSettings(), files), backend, [], clock=lambda: 1000.0)
+    assert runner.config().companies[0].filter.exclude_keywords == ["senior"]
+    profile = profile_path(files)
+    profile.write_text(PROFILE.replace("[senior]", "[senior, intern]"))
+    stat = profile.stat()
+    os.utime(profile, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+    assert runner.config().companies[0].filter.exclude_keywords == ["senior", "intern"]
+
+
 def test_sqlite_backend_keeps_state_on_this_mac(tmp_path):
     backend = open_backend(RuntimeSettings(storage="sqlite", state_file=str(tmp_path / "state.db")), "laptop:mac")
     assert isinstance(backend.store, SqliteStateStore) and backend.lease.acquire(180)
