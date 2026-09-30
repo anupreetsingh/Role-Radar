@@ -47,6 +47,9 @@ class ICIMSScraper(BaseScraper):
                 title = html_to_text(heading[1]) if heading else re.sub(r"^Requisition Title\s*", "", title)
                 fields = {html_to_text(k).lower(): html_to_text(v) for k, v in re.findall(r"<dt\b[^>]*>(.*?)</dt>\s*<dd\b[^>]*>(.*?)</dd>", row, re.I | re.S)}
                 location = join_nonempty(*(v for k, v in fields.items() if any(w in k for w in ("location", "country", "state", "city"))))
+                # Many portals show it in the card's header instead: a "Job Locations" label, then "US-TX-Richmond".
+                header = re.search(r"field-label[^>]*>\s*Job Locations?\s*</span>\s*<span\b[^>]*>(.*?)</span>", row, re.I | re.S)
+                location = location or (html_to_text(header[1]).strip() if header else None) or None
                 job_id = re.search(r"/jobs/(\d+)/", link_url)[1]
                 # An iCIMS hub can contain ids from distinct customer subportals.
                 job_key = f"{urlsplit(link_url).hostname}:{job_id}"

@@ -104,6 +104,17 @@ def test_icims_pagination_location_and_cross_portal_identity():
     assert "?" not in result.jobs[0].url
 
 
+def test_icims_location_from_the_card_header():
+    card = '''<li class="iCIMS_JobCardItem"><div class="row"><div class="col-xs-6 header left">
+      <span class="sr-only field-label">Job Locations</span> <span > US-TX-Richmond</span></div>
+      <div class="col-xs-12 title"><a href="https://careers-x.icims.com/jobs/5553/food-service-associate/job?in_iframe=1"
+      class="iCIMS_Anchor"><span class="sr-only field-label">Title</span><h3 > Food Service Associate</h3></a></div>
+      <dl class="iCIMS_JobHeaderGroup"><div class="iCIMS_JobHeaderTag"><dt class="iCIMS_JobHeaderField">Category</dt>
+      <dd class="iCIMS_JobHeaderData"><span > Food and Nutrition</span></dd></div></dl></div></li>'''
+    result = run_scraper("icims", "https://careers-x.icims.com/jobs/search", lambda r: httpx.Response(200, text=card))
+    assert [(j.title, j.location) for j in result.jobs] == [("Food Service Associate", "US-TX-Richmond")]
+
+
 def test_icims_repeated_page_is_incomplete():
     result = run_scraper("icims", "https://example.icims.com/jobs/search", lambda r: httpx.Response(200, text=icims_card("1") + '<a href="/jobs/search?pr=1">Next page of results</a>'))
     assert not result.complete and len(result.jobs) == 1
