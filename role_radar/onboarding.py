@@ -1,12 +1,17 @@
 """First-run setup for the packaged app (`role-radar setup ...`, what its Setup window runs).
 
   init       create the companies file (settings, no companies yet) and a Mac-only profile
-  show       what's set up: roles, companies, email, and whether it's ready to start
-  profile    save what the person is looking for (roles, words to skip, places, experience)
+  show       what's set up: profession, roles, countries, companies, email, and whether it's ready
+  profession pick Tech, Accounting & Finance or Healthcare: its company list comes with the app
+             (config.profession_list), and a new profession brings its titles and rule-out words
+  profile    save what the person is looking for (target and non-target roles, countries and cities,
+             experience and education)
   prompt     a prompt for ChatGPT or Claude that lists companies hiring for those roles
-  companies  add companies from the AI's answer: known employers come from the
-             directory (verified job boards), others are checked with one request first
+  companies  add companies of their own, e.g. from the AI's answer: known employers come from the
+             professions' lists (verified job boards), others are checked with one request first
   email      save a Gmail address and app password in the Keychain
+  discord    save a Discord channel's webhook in the Keychain (alerts are optional: email, Discord, both or neither)
+  recipients who else gets the alerts (friends, a school address), besides the Gmail they come from
 
 The files it writes carry a GENERATED marker, and it refuses to rewrite files
 without one, so a hand-edited companies.yaml or profile.yaml is never clobbered.
@@ -24,16 +29,200 @@ from typing import Any
 
 import yaml
 
-from role_radar.config import CompanyConfig, load_config, parse_raw, profile_path
-from role_radar.filters import JobFilter
+from role_radar.config import PROFESSIONS as PROFESSION_IDS
+from role_radar.config import CompanyConfig, combined, load_config, parse_raw, profession_list, profile_path
+from role_radar.filters import EDUCATION, JobFilter
 from role_radar.http_client import HttpClient
 from role_radar.scrapers import scraper_class_for
 
 GENERATED = "# Written by Role Radar's setup."
 DEFAULT_EXCLUDE = ["senior", "sr", "staff", "principal", "lead", "director", "vice president", "vp", "head of", "chief"]
+
+# The professions Setup offers (config.PROFESSIONS). Each has its own company list, and two sets of
+# boxes in groups, all ticked to start with: job titles that alert ("target roles"), and words that
+# rule a title out ("non-target roles"), set for someone early in their career. A rule written as a
+# pattern shows under a label: (label, pattern). Tech's are the titles tuned for software roles.
+PROFESSIONS: dict[str, dict[str, Any]] = {
+    "tech": {
+        "name": "Tech",
+        "about": "Software, data, AI, cloud and IT",
+        "groups": [
+            ("Software development", ["software engineer", "software engineering", "software development", "developer",
+                                      "programmer", "SWE", "SDE", "full stack", "front end", "back end", "web engineer",
+                                      "UI engineer", "Python engineer", "product engineer", "application engineer",
+                                      "integration engineer", "integrations engineer"]),
+            ("Cloud, platforms and DevOps", ["platform engineer", "platforms engineer", "platform engineering", "cloud engineer",
+                                             "infrastructure engineer", "site reliability", "SRE", "DevOps", "DevSecOps",
+                                             "production engineer", "build engineer", "release engineer", "tools engineer"]),
+            ("Systems, performance and graphics", ["distributed systems", "systems development", "compiler",
+                                                   "toolchain engineer", "runtime engineer", "kernel engineer",
+                                                   "performance engineer", "GPU engineer", "graphics engineer",
+                                                   "rendering engineer", "computer graphics", "gameplay engineer",
+                                                   "algorithm engineer", "algorithms engineer", "high performance computing",
+                                                   "HPC engineer", "member of technical staff", "member technical staff",
+                                                   "associate technical staff"]),
+            ("AI and machine learning", ["machine learning", "ML engineer", "MLOps", "LLMOps", "AI engineer",
+                                         "AI engineering", "applied AI", "artificial intelligence", "generative AI",
+                                         "gen AI engineer", "LLM engineer", "agent engineer", "agents engineer", "AI agent",
+                                         "AI agents", "conversational AI", "deep learning", "NLP engineer",
+                                         "natural language processing", "computer vision", "perception engineer",
+                                         "inference engineer", "search engineer", "information retrieval",
+                                         "research engineer", "applied scientist", "AI residency"]),
+            ("Data", ["data engineer", "data engineering", "data scientist", "data science", "analytics engineer",
+                      "database engineer", "ETL engineer"]),
+            ("Testing and compliance", ["SDET", "QA engineer", "quality assurance engineer", "QA automation",
+                                        "test automation", "software test", "GRC engineer"]),
+            ("Product and program management", ["technical program manager", "technical program management",
+                                                "associate product manager", "product manager"]),
+            ("Solutions and deployment", ["forward deployed engineer", "forward deployment engineer",
+                                          "AI deployment engineer", "solutions engineer", "solution engineer",
+                                          "solutions architect", "solution architect"]),
+            ("Graduate programs", ["engineering development group", "EDG", "technology development program",
+                                   "technology analyst program", "technical development program",
+                                   "software development program", "technology graduate"]),
+        ],
+        # Staff and manager spare Member of Technical Staff, and technical program and product managers.
+        "skip": [
+            ("Senior levels", ["senior", "sr",
+                               ("staff", r"re:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b"),
+                               "principal", "distinguished", "lead",
+                               ("manager", r"re:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b")]),
+            ("Executives", ["director", "vice president", "vp", "head of", "chief", "president", "officer"]),
+            ("Other kinds of work", [
+                ("SAP and ServiceNow", r"re:\b(?:ServiceNow|SAP|ABAP|Pega|MuleSoft|PeopleSoft|Fiori|Power[\s-]*Platform)\b"),
+                ("Salesforce", r"re:\bSalesforce[\s/_-]+(?:developer|engineer|architect|administrator|consultant)\b"),
+                ("content developer",
+                 r"re:\b(?:courseware|content|documentation|information|course|curriculum|certification)[\s/_-]+developer\b"),
+                ("firmware and hardware", r"re:\b(?:firmware|BIOS|UEFI|PCB|FPGA|ASIC|RTL|CNC|CMM|PLC|HVAC)\b"),
+                "design release", "process integration", "supplier", "technician"]),
+        ],
+    },
+    "accounting": {
+        "name": "Accounting & Finance",
+        "about": "Accounting, audit, tax, FP&A and payroll",
+        "groups": [
+            ("Accounting", ["accountant", "staff accountant", "junior accountant", "associate accountant",
+                            "accounting associate", "accounting analyst", "general ledger", "GL accountant",
+                            "cost accountant", "revenue accountant", "project accountant", "fixed asset accountant",
+                            "property accountant", "management accountant", "graduate accountant", "reconciliation",
+                            "bookkeeper"]),
+            ("Payables, receivables and payroll", ["accounts payable", "accounts receivable", "AP specialist",
+                                                   "AR specialist", "billing specialist", "credit controller", "payroll",
+                                                   "payroll accountant", "payroll specialist"]),
+            ("Audit and assurance", ["auditor", "audit associate", "audit assistant", "audit staff", "internal audit",
+                                     "external audit", "statutory audit", "audit & assurance", "assurance associate",
+                                     "SOX", "articleship", "article assistant"]),
+            ("Tax", ["tax associate", "tax accountant", "tax analyst", "tax consultant", "tax preparer", "tax intern",
+                     "indirect tax", "GST", "transfer pricing"]),
+            ("Financial planning and analysis", ["financial analyst", "finance analyst", "FP&A", "financial planning",
+                                                 "budget analyst", "business finance", "commercial finance",
+                                                 "strategic finance", "finance associate"]),
+            ("Reporting and controllership", ["financial reporting", "SEC reporting", "consolidation",
+                                              "technical accounting", "financial controller", "assistant controller"]),
+            ("Treasury, credit and funds", ["treasury analyst", "credit analyst", "fund accountant", "fund accounting",
+                                            "fund administration", "investment accountant", "valuation analyst"]),
+            ("Qualifications and programs", ["chartered accountant", "CA fresher", "semi qualified", "ACCA",
+                                             "finance graduate", "accounting intern", "finance intern"]),
+        ],
+        "skip": [  # not "staff": Staff Accountant
+            ("Senior levels", ["senior", "sr", "principal", "lead", "manager", "mgr", "supervisor"]),
+            ("Executives", ["director", "vice president", "vp", "head of", "chief", "partner"]),
+            ("Other kinds of work", ["sales", "account executive", "account manager", "recruiter", "software", "engineer",
+                                     "developer", "SAP", "Oracle", "Workday", "NetSuite", "customer", "teller",
+                                     "loan officer", "insurance agent", "quality assurance", "QA", "cyber", "security"]),
+        ],
+    },
+    "healthcare": {
+        "name": "Healthcare",
+        "about": "Doctors, nurses, pharmacists, therapists and technologists",
+        "groups": [
+            ("Nursing", ["registered nurse", "RN", "staff nurse", "graduate nurse", "new grad RN", "nurse resident",
+                         "enrolled nurse", "LPN", "LVN", "RPN", "clinical nurse", "nurse practitioner", "NP", "midwife",
+                         "nursing assistant", "nurse"]),
+            ("Doctors", ["physician", "doctor", "medical officer", "resident medical officer", "RMO", "junior resident",
+                         "resident physician", "house officer", "medical intern", "registrar", "hospitalist",
+                         "general practitioner", "GP", "family medicine", "internal medicine", "emergency medicine",
+                         "MBBS"]),
+            ("Specialists", ["surgeon", "anesthesiologist", "anaesthetist", "psychiatrist", "pediatrician",
+                             "paediatrician", "radiologist", "cardiologist", "oncologist", "neurologist", "obstetrician",
+                             "gynecologist", "dermatologist"]),
+            ("Advanced practice", ["physician assistant", "PA-C", "CRNA", "nurse anesthetist"]),
+            ("Pharmacy", ["pharmacist", "clinical pharmacist", "pharmacy resident"]),
+            ("Therapy and rehabilitation", ["physical therapist", "physiotherapist", "occupational therapist",
+                                            "speech language pathologist", "speech therapist", "respiratory therapist",
+                                            "exercise physiologist"]),
+            ("Imaging and laboratory", ["radiologic technologist", "radiographer", "sonographer", "ultrasound technologist",
+                                        "MRI technologist", "CT technologist", "medical laboratory scientist",
+                                        "medical technologist"]),
+            ("Dental, eye and hearing", ["dentist", "dental hygienist", "dental therapist", "optometrist", "audiologist"]),
+            ("Mental health", ["psychologist", "clinical psychologist", "psychotherapist", "mental health counselor",
+                               "counsellor"]),
+            ("Emergency and nutrition", ["paramedic", "EMT", "dietitian", "dietician", "nutritionist"]),
+        ],
+        # Not "staff": Staff Nurse. Attending physicians and (in India and Australia) consultants are senior doctors.
+        "skip": [
+            ("Senior levels", ["senior", "sr", "principal", "lead", "manager", "mgr", "supervisor", "attending",
+                               "consultant"]),
+            ("Executives", ["director", "vice president", "vp", "head of", "chief"]),
+            ("Other kinds of work", ["sales", "account", "recruiter", "billing", "coder", "coding", "scheduler",
+                                     "receptionist", "marketing", "software", "engineer", "analyst", "veterinary", "vet",
+                                     "insurance", "claims"]),
+        ],
+    },
+}
+for _profession in PROFESSIONS.values():
+    _profession["titles"] = [t for _, titles in _profession["groups"] for t in titles]
+    _words = [w if isinstance(w, tuple) else (w, w) for _, words in _profession["skip"] for w in words]
+    _profession["skip_groups"] = [(name, [w[0] if isinstance(w, tuple) else w for w in words])
+                                  for name, words in _profession["skip"]]
+    _profession["exclude"] = [pattern for _, pattern in _words]  # the rules saved, all ticked to start with
+    _profession["patterns"] = dict(_words)  # label -> rule
+    _profession["labels"] = {pattern: label for label, pattern in _words}
+assert set(PROFESSIONS) == set(PROFESSION_IDS)
+
+# The countries Setup offers. Picking them decides which companies are checked (their `countries`),
+# and, unless the person names cities, which jobs alert: these rules for the job's location text.
+_US_STATES = ("Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|"
+              "Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|"
+              "Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|"
+              "North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|"
+              "Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|District of Columbia")
+_US_CODES = ("AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|"
+             "OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC")
+_US_CITIES = ("San Francisco|Bay Area|San Jose|Palo Alto|Mountain View|Sunnyvale|Redwood City|Menlo Park|Seattle|"
+              "Bellevue|Redmond|Boston|Cambridge|Austin|Dallas|Houston|Chicago|Los Angeles|San Diego|New York City|NYC|"
+              "Brooklyn|Atlanta|Denver|Boulder|Portland|Raleigh|Durham|Charlotte|Baltimore|Arlington|McLean|Reston|"
+              "Philadelphia|Pittsburgh|Cleveland|Columbus|Cincinnati|Detroit|Ann Arbor|Minneapolis|Madison|San Antonio|"
+              "Tampa|Orlando|Miami|Phoenix|Salt Lake City|Nashville|St\\. Louis|Kansas City|Indianapolis")
+_CA_PLACES = ("Ontario|Quebec|Québec|British Columbia|Alberta|Manitoba|Saskatchewan|Nova Scotia|New Brunswick|"
+              "Newfoundland|Toronto|Vancouver|Montréal|Montreal|Ottawa|Waterloo|Kitchener|Mississauga|Markham|Burnaby|"
+              "Calgary|Edmonton|Winnipeg|Halifax")
+_IN_PLACES = ("Bangalore|Bengaluru|Hyderabad|Pune|Mumbai|Navi Mumbai|Thane|Delhi|New Delhi|Noida|Gurgaon|Gurugram|"
+              "Chennai|Kolkata|Ahmedabad|Jaipur|Kochi|Cochin|Thiruvananthapuram|Trivandrum|Chandigarh|Mohali|Indore|"
+              "Coimbatore|Mysore|Mysuru|Mangalore|Vadodara|Nagpur|Lucknow|Bhubaneswar|Visakhapatnam|Karnataka|"
+              "Maharashtra|Telangana|Tamil Nadu|Haryana|Kerala|Gujarat|Uttar Pradesh|West Bengal")
+REMOTE = r"re:^(?:remote|anywhere|worldwide|global)(?:\s*[/,-]\s*(?:remote|anywhere|worldwide|global))*\s*$"
+COUNTRIES: dict[str, dict[str, Any]] = {
+    "US": {"name": "United States", "locations": [
+        "United States", "USA", r"re:\b(?-i:US|USA)\b", rf"re:\b(?:{_US_STATES})\b",
+        # A state code after a comma, unless the place is Indian or Canadian ("Pune, IN", "Toronto, CA").
+        rf"re:^(?!.*\b(?:{_IN_PLACES}|{_CA_PLACES})\b).*(?:,\s*|\s-\s)(?-i:{_US_CODES})\b",
+        rf"re:\b(?:{_US_CITIES})\b(?!,?\s*(?:UK|United Kingdom|England|New Zealand|Germany))"]},
+    "CA": {"name": "Canada", "locations": [
+        "Canada", r"re:\b(?-i:CAN)\b", r"re:^(?-i:CA)-", r"re:(?:,\s*|\s-\s)(?-i:AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)\b",
+        rf"re:\b(?:{_CA_PLACES})\b"]},
+    "AU": {"name": "Australia", "locations": [
+        "Australia", r"re:\b(?-i:AU|AUS)\b", r"re:(?:,\s*|\s-\s)(?-i:NSW|VIC|QLD|ACT|TAS)\b",
+        r"re:\b(?:Sydney|Melbourne|Brisbane|Perth|Adelaide|Canberra|Hobart|Darwin|Gold Coast|Newcastle, NSW|"
+        r"New South Wales|Queensland|Tasmania|Western Australia|South Australia)\b"]},
+    "IN": {"name": "India", "locations": ["India", r"re:\b(?-i:IND)\b", r"re:^(?-i:IN)-", rf"re:\b(?:{_IN_PLACES})\b"]},
+}
+_COUNTRY_RULES = {rule for country in COUNTRIES.values() for rule in country["locations"]} | {REMOTE}
 MAC_ONLY = {"storage": "sqlite", "secrets": "keychain"}
 GMAIL = {"SMTP_HOST": "smtp.gmail.com", "SMTP_PORT": "587", "SMTP_SECURITY": "starttls"}
 CHECK_TIMEOUT = 45.0  # seconds for one company's check before it counts as not working
+ADDRESS = re.compile(r"[^@\s,]+@[^@\s,]+\.[^@\s,]+")  # no commas: EMAIL_TO is a comma-separated list
+DISCORD_WEBHOOK = re.compile(r"https://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/api/(?:v\d+/)?webhooks/\d+/[\w-]+")
 
 # Careers page formats the AI should give, by job board (what the scrapers read).
 BOARD_FORMATS = [
@@ -77,10 +266,13 @@ def _check_generated(path: Path) -> None:
         raise NotGenerated(f"{path} wasn't written by setup; edit it by hand instead")
 
 
-def _write_profile(path: Path, runtime: dict[str, Any], filters: dict[str, Any]) -> None:
+def _write_profile(path: Path, runtime: dict[str, Any], filters: dict[str, Any],
+                   settings: dict[str, Any] | None = None) -> None:
+    sections = {"runtime": runtime, "filters": filters, **({"settings": settings} if settings else {})}
     text = (f"{GENERATED} Change it in the app (Settings), or by hand.\n"
-            "# runtime: where state and alert settings live; filters: what to look for.\n"
-            + yaml.safe_dump({"runtime": runtime, "filters": filters}, sort_keys=False, allow_unicode=True))
+            "# runtime: where state and alert settings live; filters: what to look for;\n"
+            "# settings: the profession (its company list) and countries (which of those companies are checked).\n"
+            + yaml.safe_dump(sections, sort_keys=False, allow_unicode=True))
     path.write_text(text, encoding="utf-8")
 
 
@@ -94,58 +286,183 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 def show(config: Path) -> dict[str, Any]:
     from role_radar import keychain
 
-    filters = _read_yaml(profile_path(config)).get("filters") or {}
-    companies = (_read_yaml(config).get("companies") or [])
+    profile = _read_yaml(profile_path(config))
+    filters, settings = profile.get("filters") or {}, profile.get("settings") or {}
+    own = _read_yaml(config).get("companies") or []
     try:
         stored = keychain.read_all()
     except RuntimeError:  # not macOS
         stored = {}
+    locations = filters.get("locations") or []
+    labels = PROFESSIONS[settings["profession"]]["labels"] if settings.get("profession") in PROFESSIONS else {}
     state = {
+        "profession": settings.get("profession"),
+        "professions": [{"id": pid, "name": p["name"], "about": p["about"],
+                         "groups": [{"name": name, "titles": titles} for name, titles in p["groups"]],
+                         "skip_groups": [{"name": name, "titles": words} for name, words in p["skip_groups"]]}
+                        for pid, p in PROFESSIONS.items()],
         "roles": filters.get("include_keywords") or [],
-        "exclude": filters.get("exclude_keywords") or [],
-        "locations": filters.get("locations") or [],
+        "exclude": [labels.get(rule, rule) for rule in filters.get("exclude_keywords") or []],  # as Setup's boxes
+        "locations": locations,
+        "countries": settings.get("countries") or [],
+        "country_options": [{"code": code, "name": c["name"]} for code, c in COUNTRIES.items()],
+        "cities": [place for place in locations if place not in _COUNTRY_RULES],
         "max_experience_years": filters.get("max_experience_years"),
-        "companies": len(companies),
-        "email": stored.get("EMAIL_TO"),
+        "education": filters.get("education"),
+        **_companies(config),
+        "own_companies": len(own),
+        "email": stored.get("EMAIL_FROM") or stored.get("EMAIL_TO"),
+        "also": _also(stored),
         "email_ready": bool(stored.get("EMAIL_TO") and stored.get("SMTP_PASSWORD")),
+        "discord_ready": bool(stored.get("DISCORD_WEBHOOK_URL")),
     }
-    state["ready"] = bool(state["roles"] and state["companies"] and state["email_ready"])
+    # Setup is done, and checking may start: with a profession, only once countries narrow its list.
+    # Alerts are optional: without them, new matches collect in Live Tracking.
+    state["ready"] = bool(state["roles"] and state["companies"]
+                          and (state["countries"] or not state["profession"]))
     return state
 
 
+def _companies(config: Path) -> dict[str, Any]:
+    """What checks would read: the profession's companies and their own, in their countries.
+
+    `companies_for` has the count for every combination of countries ("US+IN"), and `sample_for` a few
+    of their names, so Setup can show both as countries are ticked; `companies` is for the saved ones.
+    """
+    raw = combined(config, profile_path(config))
+    picked = set((raw.get("settings") or {}).get("countries") or [])
+    enabled = [c for c in raw["companies"] if c.get("enabled", True)]
+    tracked = lambda chosen: [c for c in enabled if not chosen or not c.get("countries") or chosen & set(c["countries"])]  # noqa: E731
+    combos = [[code for i, code in enumerate(COUNTRIES) if mask >> i & 1] for mask in range(1, 2 ** len(COUNTRIES))]
+    return {
+        "companies": len(tracked(picked)),
+        "companies_for": {"+".join(combo): len(tracked(set(combo))) for combo in combos},
+        "sample_for": {"+".join(combo): [c["name"] for c in tracked(set(combo)) if c.get("countries")][:12] for combo in combos},
+        "companies_by_country": {code: sum(1 for c in enabled if code in (c.get("countries") or [])) for code in COUNTRIES},
+        "companies_untagged": sum(1 for c in enabled if not c.get("countries")),
+        "companies_off": sum(1 for c in raw["companies"] if not c.get("enabled", True)),
+    }
+
+
+def save_profession(config: Path, profession: str) -> None:
+    """Pick a profession: its company list comes with the app, and a new profession brings its own
+    titles and rule-out words, keeping any titles the person added themselves."""
+    if profession not in PROFESSIONS:
+        raise ValueError(f"pick one of: {', '.join(p['name'] for p in PROFESSIONS.values())}")
+    path = profile_path(config)
+    _check_generated(path)
+    profile = _read_yaml(path)
+    filters, settings = dict(profile.get("filters") or {}), dict(profile.get("settings") or {})
+    if settings.get("profession") != profession:
+        offered = {t.casefold() for p in PROFESSIONS.values() for t in p["titles"]}
+        theirs = [t for t in filters.get("include_keywords") or [] if t.casefold() not in offered]
+        filters.update(include_keywords=PROFESSIONS[profession]["titles"] + theirs,
+                       exclude_keywords=list(PROFESSIONS[profession]["exclude"]), match_on=["title"], exclude_on=["title"])
+    settings["profession"] = profession
+    _write_profile(path, profile.get("runtime") or MAC_ONLY, filters, settings)
+    load_config(config, path)  # never leave a profile that doesn't load
+
+
 def save_profile(config: Path, roles: list[str], exclude: list[str], locations: list[str],
-                 max_experience_years: int | None) -> None:
-    """Replace what the profile looks for; keep where state lives."""
+                 max_experience_years: int | None, countries: list[str] | None = None,
+                 education: str | None = None) -> None:
+    """Replace what the profile looks for; keep where state lives and the profession.
+
+    With `countries` (codes from COUNTRIES), only companies posting there are checked, and `locations`
+    are cities: jobs alert from those cities, or anywhere in those countries when none are given,
+    plus jobs listed only as "Remote". Without it, `locations` are the location rules themselves.
+    `exclude` may name the profession's non-target boxes by their labels. `education` is their
+    highest (filters.EDUCATION), and None keeps the saved one.
+    """
     path = profile_path(config)
     _check_generated(path)
     clean = lambda words: [w.strip() for w in words if w and w.strip()]  # noqa: E731
-    filters: dict[str, Any] = {"include_keywords": clean(roles), "exclude_keywords": clean(exclude),
+    profile = _read_yaml(path)
+    settings = dict(profile.get("settings") or {})
+    patterns = PROFESSIONS[settings["profession"]]["patterns"] if settings.get("profession") in PROFESSIONS else {}
+    filters: dict[str, Any] = {"include_keywords": clean(roles),
+                               "exclude_keywords": [patterns.get(w, w) for w in clean(exclude)],
                                "match_on": ["title"], "exclude_on": ["title"]}
-    if clean(locations):
+    education = education if education is not None else (profile.get("filters") or {}).get("education")
+    if education is not None:
+        if education not in EDUCATION:
+            raise ValueError(f"education must be one of {', '.join(EDUCATION)}")
+        filters["education"] = education
+    if countries is not None:
+        picked = [c for c in COUNTRIES if c in {str(x).upper() for x in countries}]
+        if not picked:
+            raise ValueError("pick at least one country")
+        settings["countries"] = picked
+        places = clean(locations) or [rule for c in picked for rule in COUNTRIES[c]["locations"]]
+        filters["locations"] = places + [REMOTE]
+    elif clean(locations):
         filters["locations"] = clean(locations)
     if max_experience_years is not None:
         if not 0 <= int(max_experience_years) <= 30:
             raise ValueError("years of experience must be between 0 and 30")
         filters["max_experience_years"] = int(max_experience_years)
     if not filters["include_keywords"]:
-        raise ValueError("add at least one role to look for")
-    runtime = _read_yaml(path).get("runtime") or MAC_ONLY
-    _write_profile(path, runtime, filters)
+        raise ValueError("pick at least one job title")
+    _write_profile(path, profile.get("runtime") or MAC_ONLY, filters, settings)
     load_config(config, path)  # never leave a profile that doesn't load
 
 
 def save_email(address: str, app_password: str) -> None:
-    """Gmail: send from and to the address, signing in with an app password (spaces don't matter)."""
+    """Gmail: send from the address to itself (and anyone added), signing in with an app password
+    (spaces don't matter)."""
     from role_radar import keychain
 
     address, password = address.strip(), re.sub(r"\s+", "", app_password)
-    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address):
+    if not ADDRESS.fullmatch(address):
         raise ValueError(f"{address!r} doesn't look like an email address")
     if not re.fullmatch(r"[A-Za-z]{16}", password):
         raise ValueError("a Gmail app password is 16 letters (Google shows it in groups of four)")
-    for name, value in {**GMAIL, "EMAIL_TO": address, "EMAIL_FROM": address, "SMTP_USERNAME": address}.items():
+    also = _also(keychain.read_all())  # a new Gmail keeps the people added before
+    for name, value in {**GMAIL, "EMAIL_TO": _recipients(address, also), "EMAIL_FROM": address,
+                        "SMTP_USERNAME": address}.items():
         keychain.write(name, value)
     keychain.write("SMTP_PASSWORD", password)
+
+
+def save_discord(webhook_url: str) -> None:
+    """Discord: alerts go to a channel through a webhook made in its settings (Integrations → Webhooks)."""
+    from role_radar import keychain
+
+    url = webhook_url.strip()
+    if not DISCORD_WEBHOOK.fullmatch(url):
+        raise ValueError("that isn't a Discord webhook URL: in Discord, open the channel's settings, then Integrations → "
+                         "Webhooks → New Webhook → Copy Webhook URL (it starts https://discord.com/api/webhooks/)")
+    keychain.write("DISCORD_WEBHOOK_URL", url)
+
+
+def save_recipients(also: list[str]) -> None:
+    """Who else gets the alerts, besides the Gmail address they come from (which always does)."""
+    from role_radar import keychain
+
+    sender = keychain.read("EMAIL_FROM")
+    if not sender:
+        raise ValueError("save your Gmail address and app password first")
+    keychain.write("EMAIL_TO", _recipients(sender, also))
+
+
+def _recipients(sender: str, also: list[str]) -> str:
+    """EMAIL_TO: the sender first, then everyone else once each."""
+    found, seen = [sender], {sender.casefold()}
+    for address in (a.strip() for a in also):
+        if not address:
+            continue
+        if not ADDRESS.fullmatch(address):
+            raise ValueError(f"{address!r} doesn't look like an email address")
+        if address.casefold() not in seen:
+            seen.add(address.casefold())
+            found.append(address)
+    return ",".join(found)
+
+
+def _also(stored: dict[str, str]) -> list[str]:
+    """Everyone the alerts go to besides the sender."""
+    sender = (stored.get("EMAIL_FROM") or "").casefold()
+    return [r.strip() for r in (stored.get("EMAIL_TO") or "").split(",") if r.strip() and r.strip().casefold() != sender]
 
 
 # -- the prompt ------------------------------------------------------------------------
@@ -246,15 +563,15 @@ def _key(name: str) -> str:
 
 
 def load_directory(path: str | Path | None = None) -> dict[str, dict[str, Any]]:
-    """Known employers with verified job boards (the full companies list), by name key.
-
-    $ROLE_RADAR_DIRECTORY, else the package's copy. Their own filters are left behind.
-    """
-    path = Path(path or os.environ.get("ROLE_RADAR_DIRECTORY") or resources.files("role_radar").joinpath("templates/directory.yaml"))
-    if not path.exists():
-        return {}
-    entries = _read_yaml(path).get("companies") or []
-    return {_key(e["name"]): {k: v for k, v in e.items() if k != "filters"} for e in entries if e.get("name") and e.get("url")}
+    """Known employers with verified job boards, by name key: the professions' company lists, or the
+    file at `path` ($ROLE_RADAR_DIRECTORY). Their own filters are left behind."""
+    path = path or os.environ.get("ROLE_RADAR_DIRECTORY")
+    if path:
+        entries = _read_yaml(Path(path)).get("companies") or [] if Path(path).exists() else []
+    else:
+        entries = [e for pid in PROFESSIONS for e in profession_list(pid)]
+    return {_key(e["name"]): {k: v for k, v in e.items() if k != "filters"} for e in entries
+            if e.get("name") and e.get("url") and e.get("enabled", True)}
 
 
 def import_companies(config: Path, text: str, *, replace: bool = False, check: bool = True,

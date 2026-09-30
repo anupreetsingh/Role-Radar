@@ -18,9 +18,9 @@
   role-radar config push         upload the companies file, with your profile applied, to runtime.config_url
   role-radar config pull         restore a lost profile.yaml from what `config push` uploaded
   role-radar secrets [set|delete NAME]
-  role-radar setup [init|show|profile|prompt|companies|email]
-                                 the packaged app's first-run setup (JSON on stdin and stdout)
                                  alert settings in this Mac's Keychain (runtime.secrets: keychain)
+  role-radar setup [init|show|profession|profile|prompt|companies|email|discord|recipients]
+                                 the packaged app's first-run setup (JSON on stdin and stdout)
   role-radar migrate --from dynamodb:TABLE --to sqlite:PATH   (or json:PATH, either way)
   role-radar login-item on|off   set up the Mac's background checker (`role-radar start` under
                                  launchd), which the menu bar app starts and stops (macOS)
@@ -351,10 +351,12 @@ def cmd_setup(args: argparse.Namespace) -> int:
     action = args.action or "show"
     if action == "init":
         onboarding.init(config)
+    elif action == "profession":
+        onboarding.save_profession(config, json.load(sys.stdin).get("profession") or "")
     elif action == "profile":
         data = json.load(sys.stdin)
         onboarding.save_profile(config, data.get("roles") or [], data.get("exclude") or [], data.get("locations") or [],
-                                data.get("max_experience_years"))
+                                data.get("max_experience_years"), data.get("countries"), data.get("education"))
     elif action == "prompt":
         print(onboarding.prompt(config))
         return 0
@@ -365,6 +367,10 @@ def cmd_setup(args: argparse.Namespace) -> int:
     elif action == "email":
         data = json.load(sys.stdin)
         onboarding.save_email(data.get("address") or "", data.get("password") or "")
+    elif action == "discord":
+        onboarding.save_discord(json.load(sys.stdin).get("webhook") or "")
+    elif action == "recipients":
+        onboarding.save_recipients(json.load(sys.stdin).get("also") or [])
     print(json.dumps(onboarding.show(config)))
     return 0
 
@@ -713,9 +719,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_matches)
 
     p = sub.add_parser("setup", parents=[common], help="the packaged app's first-run setup (JSON in and out)")
-    p.add_argument("action", nargs="?", choices=["init", "show", "profile", "prompt", "companies", "email"],
-                   help="init: create the files; profile: save roles etc. (JSON on stdin); prompt: print the AI prompt; "
-                        "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin)")
+    p.add_argument("action", nargs="?",
+                   choices=["init", "show", "profession", "profile", "prompt", "companies", "email", "discord",
+                            "recipients"],
+                   help="init: create the files; profession: pick one (JSON on stdin); profile: save titles, countries "
+                        "etc. (JSON on stdin); prompt: print the AI prompt; "
+                        "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin); "
+                        "discord: save a Discord webhook (JSON on stdin); "
+                        "recipients: who else gets the alerts (JSON on stdin)")
     p.add_argument("--replace", action="store_true", help="companies: replace the list instead of adding to it")
     p.add_argument("--no-check", action="store_true", help="companies: don't read each new job board once first")
     p.set_defaults(func=cmd_setup)

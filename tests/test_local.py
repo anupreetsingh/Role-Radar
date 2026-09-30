@@ -235,10 +235,14 @@ def test_keychain_uses_the_security_tool(monkeypatch):
     monkeypatch.setattr(keychain.sys, "platform", "darwin")
     monkeypatch.setattr(keychain.subprocess, "run", run)
     assert keychain.read_all() == {"EMAIL_TO": "me@example.com"}
+    assert calls[0][3] == "role-radar"
     keychain.write("SMTP_PASSWORD")  # no value: `security` asks on the terminal
     assert calls[-1][-2:] == ["Role Radar SMTP_PASSWORD", "-w"]
     with pytest.raises(ValueError, match="unknown setting"):
         keychain.write("PASSWORD", "x")
+    monkeypatch.setenv("ROLE_RADAR_KEYCHAIN", "com.roleradar.app")  # the packaged app's own items
+    keychain.read("EMAIL_TO")
+    assert calls[-1][3] == "com.roleradar.app"
 
 
 def test_without_aws_the_menu_never_shows_lambda_checking(tmp_path):
