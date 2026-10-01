@@ -33,7 +33,7 @@ from typing import Any, Callable, Iterator
 
 from role_radar.storage import (
     SKIPPED_KEPT, STATS_KEPT, SWITCHES as SWITCH_NAMES, CompanyMeta, CompanyRecord, DigestSchedule, MonitorState,
-    QueuedMatch, SeenJob, StateStore, compact, queue_changes, to_iso,
+    QueuedMatch, SeenJob, StateStore, compact, from_iso, queue_changes, to_iso,
 )
 
 SCHEDULE, DIGEST, REQUEST, SWITCHES = "#schedule", "#digest", "#request", "#switches"
@@ -174,11 +174,12 @@ class SqliteStateStore(StateStore):
         row = self._get(QUEUE, key, db) or {}
         row.update(company=company, uid=uid, title=job.title, url=job.url, first_seen=job.first_seen,
                    location=job.location, queued_at=row.get("queued_at") or self._now())
-        ttl = None
         if done:
             row["done_at"] = self._now()
-            ttl = int(self.clock() + SKIPPED_KEPT.total_seconds())
-        self._put(db, QUEUE, key, {k: v for k, v in row.items() if v is not None}, ttl)
+        else:  # waiting, perhaps again: put back after its skip was applied
+            row.pop("done_at", None)
+            row.pop("restore_at", None)
+        self._put(db, QUEUE, key, {k: v for k, v in row.items() if v is not None}, _queue_ttl(row))
 
     # -- switches and the digest ------------------------------------------------
 
@@ -214,22 +215,30 @@ class SqliteStateStore(StateStore):
     def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
         with self._tx() as db:
             row = self._get(QUEUE, f"{company}#{uid}", db)
-            if not row or row.get("done_at"):
+            if not row:
                 return False
-            if skipped:
+            if row.get("done_at"):  # the digest applied the skip: marked as new, the next one puts it back
+                if skipped and not row.pop("restore_at", None):
+                    return False
+                if skipped:
+                    row["skipped_at"] = self._now()
+                else:
+                    row["restore_at"] = self._now()
+                    row.pop("skipped_at", None)
+            elif skipped:
                 row["skipped_at"] = self._now()
             else:
                 row.pop("skipped_at", None)
-            self._put(db, QUEUE, f"{company}#{uid}", row)
+            self._put(db, QUEUE, f"{company}#{uid}", row, _queue_ttl(row))
         return True
 
     def mark_send(self, company: str, uid: str) -> bool:
         with self._tx() as db:
             row = self._get(QUEUE, f"{company}#{uid}", db)
-            if not row or row.get("done_at") or row.get("skipped_at"):
+            if not row or (row.get("done_at") and not row.get("restore_at")) or row.get("skipped_at"):
                 return False
             row["send_at"] = self._now()
-            self._put(db, QUEUE, f"{company}#{uid}", row)
+            self._put(db, QUEUE, f"{company}#{uid}", row, _queue_ttl(row))
         return True
 
     def repair_queue(self, add: list[QueuedMatch], remove: list[tuple[str, str]]) -> None:
@@ -308,3 +317,9 @@ class SqliteStateStore(StateStore):
             self.save_digest(state.digest)
         for name, on in state.switches.items():
             self.save_switch(name, on)
+
+
+def _queue_ttl(row: dict[str, Any]) -> int | None:
+    """A list row whose skip the digest applied is kept SKIPPED_KEPT from then; one still waiting, for good."""
+    done = row.get("done_at")
+    return int(from_iso(done).timestamp() + SKIPPED_KEPT.total_seconds()) if done else None

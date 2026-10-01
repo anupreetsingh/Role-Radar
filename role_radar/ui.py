@@ -55,7 +55,7 @@ def snapshot(backend: Backend, laptop_pid: Callable[[], int | None], now: dateti
         "latest_pass": {"runner": latest[0].split(":", 1)[0], **{k: latest[1].get(k) for k in PASS_FIELDS}} if latest else None,
         "next_digest": backend.store.load_digest().next_send_at,
         "alerts_off": alerts_off(stored),
-        "waiting": sum(1 for m in backend.store.load_queue() if not (m.skipped_at or m.done_at)),
+        "waiting": sum(1 for m in backend.store.load_queue() if not m.seen),
         "round": latest_round(backend.store.load_rounds(), now or utcnow()),
     }
 
@@ -64,11 +64,11 @@ def live(store: StateStore, now: datetime | None = None) -> dict[str, Any]:
     """Live Tracking: matches waiting to be sent (newest first), skipped, and the alerts sent; the round in progress."""
     queue = store.load_queue()
     digest = store.load_digest()
-    waiting = [m for m in queue if not (m.skipped_at or m.done_at)]
-    skipped = [m for m in queue if m.skipped_at or m.done_at]
+    waiting = [m for m in queue if not m.seen]
+    skipped = [m for m in queue if m.seen]
     return {
         "waiting": [_match(m) for m in sorted(waiting, key=lambda m: (m.first_seen, m.company, m.uid), reverse=True)],
-        "skipped": [_match(m) for m in sorted(skipped, key=lambda m: m.done_at or m.skipped_at or "", reverse=True)],
+        "skipped": [_match(m) for m in sorted(skipped, key=lambda m: m.skipped_at or m.done_at or "", reverse=True)],
         "sent": sent_alerts(store.recent_alerts(SENT_ROWS), SENT_ROWS),
         "round": latest_round(store.load_rounds(), now or utcnow()),
         "next_digest": digest.next_send_at,

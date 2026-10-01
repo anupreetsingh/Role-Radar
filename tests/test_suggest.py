@@ -71,6 +71,14 @@ def test_adding_an_unreadable_company_can_suggest_it_too(config, posted, monkeyp
     assert posted["bodies"][0]["note"].startswith("couldn't add it")
 
 
+def test_adding_a_company_suggests_it_unless_its_listed(config, posted, monkeypatch):
+    onboarding.import_companies(config, "- name: Own Co\n  url: https://jobs.lever.co/own\n", check=False, directory={})
+    for name in ("Nowhere Co", "Own Co"):  # unknown, then listed already
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"name": name})))
+        assert cli.main(["setup", "add", "--config", str(config)]) == 0
+    assert [(b["name"], b["note"]) for b in posted["bodies"]] == [("Nowhere Co", "couldn't add it: no careers page to read")]
+
+
 @pytest.fixture
 def box(fake_aws, monkeypatch):
     """The suggestions box's function and table, in fake AWS."""

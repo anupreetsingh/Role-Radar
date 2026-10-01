@@ -328,8 +328,8 @@ def show(config: Path) -> dict[str, Any]:
 def _companies(config: Path) -> dict[str, Any]:
     """What checks would read: the profession's companies and their own, in their countries.
 
-    `companies_for` has the count for every combination of countries ("US+IN"), and `sample_for` a few
-    of their names, so Setup can show both as countries are ticked; `companies` is for the saved ones.
+    `companies_for` has the count for every combination of countries ("US+IN"), so Setup can show it as
+    countries are ticked; `companies` is for the saved ones.
     """
     raw = combined(config, profile_path(config))
     picked = set((raw.get("settings") or {}).get("countries") or [])
@@ -339,10 +339,8 @@ def _companies(config: Path) -> dict[str, Any]:
     return {
         "companies": len(tracked(picked)),
         "companies_for": {"+".join(combo): len(tracked(set(combo))) for combo in combos},
-        "sample_for": {"+".join(combo): [c["name"] for c in tracked(set(combo)) if c.get("countries")][:12] for combo in combos},
         "companies_by_country": {code: sum(1 for c in enabled if code in (c.get("countries") or [])) for code in COUNTRIES},
         "companies_untagged": sum(1 for c in enabled if not c.get("countries")),
-        "companies_off": sum(1 for c in raw["companies"] if not c.get("enabled", True)),
     }
 
 
@@ -677,22 +675,32 @@ def set_tracked(config: Path, names: list[str], tracked: bool) -> None:
     _write_profile(path, profile.get("runtime") or MAC_ONLY, dict(profile.get("filters") or {}), settings)
 
 
-def add_company(config: Path, name: str, url: str) -> dict[str, Any]:
-    """Track a company of their own, from its careers page: its job board is read once to check it works.
+def add_company(config: Path, name: str, url: str = "") -> dict[str, Any]:
+    """Track a company they want, by name, and from its careers page if it isn't listed: its job board is
+    read once to check it works.
 
-    {"status": "added", "name", "jobs"}; "listed" when the profession's list or their own has it
-    already (turned back on if they'd turned it off); "failed" with the reason it can't be read."""
+    {"status": "added", "name", "jobs"}; "listed" when the profession's list or their own has it already
+    (turned back on if they'd turned it off; `why` it still isn't tracked, if so); "failed" with the reason
+    it can't be tracked: no careers page, or one Role Radar can't read (listed or not; then its `url`)."""
     name, url = name.strip(), url.strip()
     if not name:
         raise ValueError("give the company's name")
-    if not re.match(r"^https?://[^\s/]+\.[^\s/]+", url):
-        raise ValueError("give its careers page's address, starting with https://")
-    same = [r for r in find_companies(config, "", limit=10**6)["results"]
-            if _key(r["name"]) == _key(name) or r["url"].rstrip("/").lower() == url.rstrip("/").lower()]
+    if url and not re.match(r"^https?://", url):
+        url = "https://" + url
+    if url and not re.match(r"^https?://[^\s/]+\.[^\s/]+", url):
+        raise ValueError("give its careers page's address, e.g. https://jobs.lever.co/acme")
+    find = lambda: find_companies(config, "", limit=10**6)["results"]  # noqa: E731
+    same = [r for r in find() if _key(r["name"]) == _key(name) or (url and r["url"].rstrip("/").lower() == url.rstrip("/").lower())]
     if same:
-        if same[0]["off"]:
-            set_tracked(config, [same[0]["name"]], True)
-        return {"status": "listed", "name": same[0]["name"], "turned_on": same[0]["off"]}
+        row = same[0]
+        if not row["readable"]:
+            return {"status": "failed", "name": row["name"], "url": row["url"], "reason": row["why"]}
+        if row["off"]:
+            set_tracked(config, [row["name"]], True)
+            row = next(r for r in find() if r["name"] == row["name"])
+        return {"status": "listed", "name": row["name"], "turned_on": same[0]["off"], "why": row["why"]}
+    if not url:
+        return {"status": "failed", "name": name, "reason": "no careers page to read"}
     report = import_companies(config, yaml.safe_dump([{"name": name, "url": url}]), check=True, directory={})
     if report.added:
         return {"status": "added", "name": name, "jobs": report.added[0].get("jobs")}

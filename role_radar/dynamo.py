@@ -411,6 +411,9 @@ class DynamoStateStore(StateStore):
         values = {f":f{i}": _serialize(v) for i, v in enumerate(fields.values()) if v is not None} | {":now": {"S": _iso(now)}}
         sets = [f"#f{i} = :f{i}" for i, v in enumerate(fields.values()) if v is not None] + ["#q = if_not_exists(#q, :now)"]
         removes = [f"#f{i}" for i, v in enumerate(fields.values()) if v is None]
+        if not done:  # waiting, perhaps again: put back after its skip was applied
+            names |= {"#d": "done_at", "#r": "restore_at", "#t": "ttl"}
+            removes += ["#d", "#r", "#t"]
         return {
             "TableName": self.table, "Key": _key(QUEUE, f"{company}#{uid}"),
             "UpdateExpression": "SET " + ", ".join(sets) + (" REMOVE " + ", ".join(removes) if removes else ""),
@@ -481,29 +484,44 @@ class DynamoStateStore(StateStore):
         return [QueuedMatch.from_dict(item) for item in self._query(QUEUE) if item.get("ttl", now) >= now]
 
     def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
-        """Not fenced on the lease: a skip is the user's. Only a match still waiting can be (un)skipped."""
-        change = {"UpdateExpression": "SET #s = :now", "ExpressionAttributeValues": {":now": {"S": _iso(self.clock())}}} \
-            if skipped else {"UpdateExpression": "REMOVE #s"}
-        try:
-            self.client.update_item(
-                TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"), **change,
-                ConditionExpression="attribute_exists(pk) AND attribute_not_exists(#d)",
-                ExpressionAttributeNames={"#s": "skipped_at", "#d": "done_at"},
-            )
-        except ClientError as exc:
-            if _error_code(exc) == "ConditionalCheckFailedException":
-                return False
-            raise
-        return True
+        """Not fenced on the lease: a skip is the user's. A waiting match is (un)skipped; one whose skip the
+        digest applied is marked as new (the next digest puts it back), or no longer.
+
+        Each kind is tried in turn, the likelier first: what's skipped is mostly waiting, and what's marked
+        as new mostly applied. A try that finds the other kind costs a write.
+        """
+        now = {":now": {"S": _iso(self.clock())}}
+        waiting = ({"UpdateExpression": "SET #s = :now", "ExpressionAttributeValues": now} if skipped
+                   else {"UpdateExpression": "REMOVE #s"}) | {
+            "ConditionExpression": "attribute_exists(pk) AND attribute_not_exists(#d)",
+            "ExpressionAttributeNames": {"#s": "skipped_at", "#d": "done_at"},
+        }
+        applied = {"UpdateExpression": "SET #s = :now REMOVE #r", "ExpressionAttributeValues": now,
+                   "ConditionExpression": "attribute_exists(#d) AND attribute_exists(#r)",
+                   "ExpressionAttributeNames": {"#s": "skipped_at", "#r": "restore_at", "#d": "done_at"}} if skipped else {
+            "UpdateExpression": "SET #r = :now REMOVE #s", "ExpressionAttributeValues": now,
+            "ConditionExpression": "attribute_exists(#d)",
+            "ExpressionAttributeNames": {"#r": "restore_at", "#s": "skipped_at", "#d": "done_at"},
+        }
+        for change in (waiting, applied) if skipped else (applied, waiting):
+            try:
+                self.client.update_item(TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"), **change)
+                return True
+            except ClientError as exc:
+                if _error_code(exc) != "ConditionalCheckFailedException":
+                    raise
+        return False
 
     def mark_send(self, company: str, uid: str) -> bool:
-        """Not fenced on the lease either: sending is the user's. Only a waiting match that isn't skipped."""
+        """Not fenced on the lease either: sending is the user's. Only a waiting match (or one marked as new)
+        that isn't skipped."""
         try:
             self.client.update_item(
                 TableName=self.table, Key=_key(QUEUE, f"{company}#{uid}"), UpdateExpression="SET #t = :now",
                 ExpressionAttributeValues={":now": {"S": _iso(self.clock())}},
-                ConditionExpression="attribute_exists(pk) AND attribute_not_exists(#d) AND attribute_not_exists(#s)",
-                ExpressionAttributeNames={"#t": "send_at", "#d": "done_at", "#s": "skipped_at"},
+                ConditionExpression="attribute_exists(pk) AND (attribute_not_exists(#d) OR attribute_exists(#r)) "
+                                    "AND attribute_not_exists(#s)",
+                ExpressionAttributeNames={"#t": "send_at", "#d": "done_at", "#r": "restore_at", "#s": "skipped_at"},
             )
         except ClientError as exc:
             if _error_code(exc) == "ConditionalCheckFailedException":

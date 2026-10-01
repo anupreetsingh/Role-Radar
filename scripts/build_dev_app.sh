@@ -29,8 +29,14 @@ ROLE_RADAR_HOME="$HOME/Library/Application Support/Role Radar" ROLE_RADAR_AGENT=
 rm -rf "$stage"
 mkdir -p "$stage/Contents/MacOS" "$stage/Contents/Resources/python/bin"
 echo "Building the app..."
-swiftc -parse-as-library -swift-version 5 -target arm64-apple-macos14.0 \
+# Optimized and with Sparkle, as the packaged app is (unoptimized SwiftUI feels sluggish), but with no
+# update feed: the dev build never updates itself.
+sparkle="$(sh "$project/scripts/get_sparkle.sh")"
+swiftc -parse-as-library -swift-version 5 -O -target arm64-apple-macos14.0 \
+    -F "$sparkle" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     "$project/macos/RoleRadarMenu.swift" -o "$stage/Contents/MacOS/RoleRadarMenu"
+mkdir -p "$stage/Contents/Frameworks"
+ditto "$sparkle/Sparkle.framework" "$stage/Contents/Frameworks/Sparkle.framework"
 if xcrun --find actool >/dev/null 2>&1; then
     xcrun actool "$project/macos/AppIcon.icon" --compile "$stage/Contents/Resources" --platform macosx \
         --minimum-deployment-target 14.0 --app-icon AppIcon --output-partial-info-plist "$project/build/icon.plist" >/dev/null
@@ -86,7 +92,7 @@ EOF
 
 rm -rf "$app"
 mv "$stage" "$app"
-rmdir "$project/build/.staging" 2>/dev/null || true
+rm -rf "$project/build/.staging"  # Finder may have left a .DS_Store in it
 # Tell Finder and the Dock it changed, so they show its icon rather than one remembered from before.
 touch "$app"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$app" || true

@@ -121,8 +121,7 @@ def test_setup_counts_the_companies_each_choice_of_countries_tracks(config, list
     assert state["companies_for"]["US"] == 3  # MathWorks, US Only, and Untagged Co (tracked everywhere)
     assert state["companies_for"]["IN"] == 3 and state["companies_for"]["US+CA+AU+IN"] == 4
     assert state["companies_by_country"] == {"US": 2, "CA": 0, "AU": 0, "IN": 2}
-    assert (state["companies_untagged"], state["companies_off"]) == (1, 1)  # Canva is switched off
-    assert state["sample_for"]["IN"] == ["MathWorks", "Flipkart Labs"]  # named companies, not the untagged one
+    assert state["companies_untagged"] == 1
 
 
 def test_a_profession_is_ready_only_once_countries_are_picked(config, lists, monkeypatch):
@@ -405,7 +404,7 @@ def test_adding_a_company_of_their_own_reads_its_board_first(config, lists, boar
 
     onboarding.set_tracked(config, ["MathWorks"], False)
     again = onboarding.add_company(config, "MathWorks", "https://jobs.lever.co/mathworks")
-    assert again == {"status": "listed", "name": "MathWorks", "turned_on": True}
+    assert again == {"status": "listed", "name": "MathWorks", "turned_on": True, "why": None}
     assert onboarding.find_companies(config, "mathworks")["results"][0]["tracked"]
 
     failed = onboarding.add_company(config, "Gone Co", "https://job-boards.greenhouse.io/gone")
@@ -414,3 +413,18 @@ def test_adding_a_company_of_their_own_reads_its_board_first(config, lists, boar
     assert custom["status"] == "failed" and "can read" in custom["reason"]
     with pytest.raises(ValueError, match="https://"):
         onboarding.add_company(config, "No Link", "ownsite careers page")
+
+
+def test_adding_a_company_by_name_says_whether_it_can_be_tracked(config, lists, boards):
+    onboarding.save_profession(config, "tech")
+    onboarding.save_profile(config, ["software engineer"], [], [], 2, countries=["IN"])
+    assert onboarding.add_company(config, "mathworks") == {"status": "listed", "name": "MathWorks", "turned_on": False,
+                                                           "why": None}
+    assert onboarding.add_company(config, "US Only")["why"] == "it doesn't post jobs in your countries"
+    canva = onboarding.add_company(config, "Canva")  # on the list, on a job site Role Radar can't read yet
+    assert canva["status"] == "failed" and canva["url"] and "can't read" in canva["reason"]
+    assert onboarding.add_company(config, "Nowhere Co") == {"status": "failed", "name": "Nowhere Co",
+                                                            "reason": "no careers page to read"}
+    added = onboarding.add_company(config, "Good Co", "job-boards.greenhouse.io/good")  # https:// assumed
+    assert added["status"] == "added"
+    assert onboarding.find_companies(config, "good")["results"][0]["url"] == "https://job-boards.greenhouse.io/good"

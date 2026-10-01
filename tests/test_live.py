@@ -70,10 +70,71 @@ def test_a_skipped_match_is_recorded_not_sent(monkeypatch, store_factory):
     assert job.dropped_for == SKIPPED and job.notified_at
     (done,) = store_factory().load_queue()  # the sent one left the list; the skip stays, applied
     assert (done.uid, bool(done.skipped_at), bool(done.done_at)) == (skip.uid, True, True)
-    assert not store_factory().mark_skipped("Acme", skip.uid, False)  # too late to undo
+    assert not store_factory().mark_skipped("Acme", skip.uid, True)  # seen already
+    assert not store_factory().mark_send("Acme", skip.uid)
 
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(60))
     assert len(notifier.batches) == 1
+
+
+def test_a_recorded_skip_can_be_put_back(monkeypatch, store_factory):
+    cfg, notifier = companies("Acme"), RecordingNotifier()
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(0))
+    skip = next(m for m in store_factory().load_queue() if m.title == "Data Engineer")
+    assert store_factory().mark_skipped("Acme", skip.uid, True)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(30))  # sends the other, records the skip
+    assert len(notifier.batches) == 1 and store_factory().load_company("Acme").jobs[skip.uid].dropped_for == SKIPPED
+
+    assert store_factory().mark_skipped("Acme", skip.uid, False)  # Mark as New: listed as new at once
+    assert [m["uid"] for m in ui.live(store_factory())["waiting"]] == [skip.uid] and not ui.live(store_factory())["skipped"]
+    assert store_factory().mark_skipped("Acme", skip.uid, True)  # and back, before the digest
+    (seen,) = ui.live(store_factory())["skipped"]
+    assert seen["uid"] == skip.uid and seen["skipped_at"]
+    assert store_factory().mark_skipped("Acme", skip.uid, False)
+
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(60))  # the digest puts it back, and sends it
+    assert [[j.uid for j in batch] for batch in notifier.batches][1:] == [[skip.uid]]
+    job = store_factory().load_company("Acme").jobs[skip.uid]
+    assert job.notified_at and not job.dropped_for
+    assert store_factory().load_queue() == []
+
+
+def test_with_alerts_off_a_match_put_back_waits_again(monkeypatch, store_factory):
+    cfg, notifier = companies("Acme"), RecordingNotifier()
+    store_factory().save_switch("discord", False)
+    store_factory().save_switch("email", False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(0))
+    skip, keep = sorted(store_factory().load_queue(), key=lambda m: m.title)
+    assert store_factory().mark_skipped("Acme", skip.uid, True)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(30))
+    assert [m["final"] for m in ui.live(store_factory())["skipped"]] == [True]
+
+    assert store_factory().mark_skipped("Acme", skip.uid, False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(60))
+    assert notifier.batches == []
+    (back, other) = sorted(store_factory().load_queue(), key=lambda m: m.title)
+    assert (back.uid, back.skipped_at, back.done_at, back.restore_at) == (skip.uid, None, None, None)
+    assert store_factory().load_company("Acme").jobs[skip.uid].dropped_for is None
+
+    assert store_factory().mark_send("Acme", skip.uid)  # waiting like any other: it can be sent
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(90))
+    assert [[j.uid for j in batch] for batch in notifier.batches] == [[skip.uid]]
+    assert [m.uid for m in store_factory().load_queue()] == [keep.uid]
+
+
+def test_a_match_marked_as_new_can_be_sent_before_the_digest_puts_it_back(monkeypatch, store_factory):
+    cfg, notifier = companies("Acme"), RecordingNotifier()
+    store_factory().save_switch("discord", False)
+    store_factory().save_switch("email", False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(0))
+    skip = store_factory().load_queue()[0]
+    assert store_factory().mark_skipped("Acme", skip.uid, True)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(30))
+    assert store_factory().mark_skipped("Acme", skip.uid, False)
+    assert store_factory().mark_send("Acme", skip.uid)
+    run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=at(60))
+    assert [[j.uid for j in batch] for batch in notifier.batches] == [[skip.uid]]
+    assert skip.uid not in {m.uid for m in store_factory().load_queue()}
 
 
 def test_a_skip_can_be_undone_until_the_digest(monkeypatch, store_factory):

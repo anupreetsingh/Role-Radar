@@ -20,12 +20,18 @@
 // (it runs the project's code), or package it with scripts/package_app.sh: then the app
 // carries its own Python and keeps its files in ~/Library/Application Support/Role Radar,
 // and a Setup window (`role-radar setup`) asks for a profession, job titles and places, and a Gmail account. It sits
-// in the Dock while one of its windows is open, and in the menu bar always.
+// in the Dock while one of its windows is open, and in the menu bar always. Built with Sparkle
+// (package_app.sh), it also updates itself: see Updates.
 
 import AppKit
 import Charts
+import Combine
+import Observation
 import ServiceManagement
 import SwiftUI
+#if canImport(Sparkle)
+import Sparkle
+#endif
 
 struct RunnerState: Decodable {
     struct Switches: Decodable {
@@ -147,7 +153,7 @@ struct RoundInfo: Decodable {
 
 /// Live Tracking's lists (`role-radar matches --json`), newest first.
 struct LiveState: Decodable {
-    struct Match: Decodable, Identifiable {
+    struct Match: Decodable, Identifiable, Equatable {
         let company: String
         let uid: String
         let title: String
@@ -155,14 +161,13 @@ struct LiveState: Decodable {
         let url: String
         let first_seen: String
         var skipped_at: String?
-        let final: Bool  // the skip was applied: it can't be undone
         var send_at: String?  // sent from Live Tracking: on its way out
         var id: String { company + "#" + uid }
     }
 
     /// One alert that went out: when, by which runner, and its jobs, newest first as the alert listed them.
-    struct Alert: Decodable, Identifiable {
-        struct Job: Decodable {
+    struct Alert: Decodable, Identifiable, Equatable {
+        struct Job: Decodable, Equatable {
             let company: String?
             let title: String?
             let location: String?
@@ -183,23 +188,38 @@ struct LiveState: Decodable {
     let send_requested: Bool
     let alerts_off: Bool
 
-    /// Move a match between Waiting and Skipped straight away, before the CLI confirms it.
-    mutating func setSkipped(_ id: String, _ on: Bool) {
-        if on, let i = waiting.firstIndex(where: { $0.id == id }) {
-            var match = waiting.remove(at: i)
-            match.skipped_at = When.iso.string(from: Date())
-            skipped.insert(match, at: 0)
-        } else if !on, let i = skipped.firstIndex(where: { $0.id == id && !$0.final }) {
-            var match = skipped.remove(at: i)
-            match.skipped_at = nil
-            waiting.append(match)
+    /// Move matches between Waiting and Skipped straight away, before the CLI confirms it: in one pass,
+    /// so marking hundreds as seen redraws the list once, not once a match.
+    mutating func setSkipped(_ ids: Set<String>, _ on: Bool) {
+        if on {
+            let now = When.iso.string(from: Date())
+            var moved: [Match] = []
+            waiting.removeAll { match in
+                guard ids.contains(match.id) else { return false }
+                var seen = match
+                seen.skipped_at = now
+                moved.append(seen)
+                return true
+            }
+            skipped.insert(contentsOf: moved, at: 0)
+        } else {
+            var back: [Match] = []
+            skipped.removeAll { match in
+                guard ids.contains(match.id) else { return false }
+                var new = match
+                new.skipped_at = nil
+                back.append(new)
+                return true
+            }
+            waiting.append(contentsOf: back)
             waiting.sort { $0.first_seen > $1.first_seen }
         }
     }
 
-    /// Show a match as on its way out straight away, before the CLI confirms it.
-    mutating func setSending(_ id: String) {
-        if let i = waiting.firstIndex(where: { $0.id == id }) { waiting[i].send_at = When.iso.string(from: Date()) }
+    /// Show matches as on their way out straight away, before the CLI confirms it.
+    mutating func setSending(_ ids: Set<String>) {
+        let now = When.iso.string(from: Date())
+        for i in waiting.indices where ids.contains(waiting[i].id) { waiting[i].send_at = now }
     }
 }
 
@@ -299,6 +319,7 @@ enum When {
 enum Place {
     static let info = Bundle.main.infoDictionary ?? [:]
     static let packaged = info["RRPackaged"] as? Bool ?? false
+    static let version = info["CFBundleShortVersionString"] as? String ?? ""
     static let support = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Role Radar").path
     static let agent = "com.roleradar.app.checker"  // the packaged app's own launchd agent
@@ -324,7 +345,7 @@ enum Place {
 /// app: opening it (or clicking its Dock icon) shows Settings, and closing the last window leaves just
 /// the menu bar icon, still checking. Opened at login, it starts in the menu bar only.
 enum Dock {
-    static let openSettings = Notification.Name("RoleRadarOpenSettings")
+    static let openWindow = Notification.Name("RoleRadarOpenWindow")
     static var launchedAtLogin = false
     private static var windows = 0
 
@@ -339,6 +360,79 @@ enum Dock {
         guard Place.packaged else { return }
         windows = max(0, windows - 1)
         if windows == 0 { NSApp.setActivationPolicy(.accessory) }
+    }
+
+    /// In the Dock and in front, for a window that isn't one of ours (Sparkle's), then back out
+    /// once it's gone if none of ours is open.
+    static func show() {
+        guard Place.packaged else { return }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate()
+    }
+
+    static func hideIfNoWindows() {
+        guard Place.packaged, windows == 0 else { return }
+        NSApp.setActivationPolicy(.accessory)
+    }
+}
+
+/// Updates for the downloadable app, with Sparkle. Its Info.plist names the feed (the latest GitHub
+/// release's appcast.xml) and the public key updates must be signed with (scripts/publish_update.sh
+/// signs them); it looks for a newer version every few hours, and "Check for Updates…" looks now.
+/// Found on a schedule, an update shows as Sparkle's own window, the app brought forward for it.
+/// A build without Sparkle (one run from the code) or without a feed (the dev build) has no updater.
+@MainActor
+final class Updates: NSObject, ObservableObject {
+    static let shared = Updates()
+    @Published private(set) var available = false
+    @Published private(set) var canCheck = false
+#if canImport(Sparkle)
+    private var controller: SPUStandardUpdaterController?
+#endif
+
+    func start() {
+#if canImport(Sparkle)
+        guard controller == nil, Place.packaged, Place.info["SUFeedURL"] != nil else { return }
+        let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: self)
+        controller.updater.publisher(for: \.canCheckForUpdates).assign(to: &$canCheck)
+        self.controller = controller
+        available = true
+#endif
+    }
+
+    func check() {
+#if canImport(Sparkle)
+        Dock.show()
+        controller?.checkForUpdates(nil)
+#endif
+    }
+}
+
+#if canImport(Sparkle)
+extension Updates: SPUStandardUserDriverDelegate {
+    // A menu bar app: an update found on a schedule is shown gently, the app brought forward for it.
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem,
+                                                               state: SPUUserUpdateState) {
+        guard handleShowingUpdate else { return }
+        MainActor.assumeIsolated { Dock.show() }
+    }
+
+    nonisolated func standardUserDriverWillFinishUpdateSession() {
+        MainActor.assumeIsolated { Dock.hideIfNoWindows() }
+    }
+}
+#endif
+
+/// "Check for Updates…" in the app menu, when the app can update itself.
+struct CheckForUpdates: View {
+    @ObservedObject var updates = Updates.shared
+
+    var body: some View {
+        if updates.available {
+            Button("Check for Updates…") { updates.check() }.disabled(!updates.canCheck)
+        }
     }
 }
 
@@ -365,15 +459,43 @@ struct SetupState: Decodable {
     let education: String?  // none, bachelors, masters or phd
     let companies: Int  // how many companies checks read: the profession's, in their countries, and their own
     let companies_for: [String: Int]?  // the same for every combination of countries, keyed "US+IN"
-    let sample_for: [String: [String]]?  // a few of those companies' names
     let companies_by_country: [String: Int]?
     let companies_untagged: Int?  // companies whose job locations name no country: tracked for every country
-    let companies_off: Int?  // companies on job sites Role Radar can't read yet
     let email: String?
     let also: [String]  // who else gets the alerts, besides `email`
     let email_ready: Bool
     let discord_ready: Bool?  // a Discord webhook is saved
     let ready: Bool
+}
+
+/// `role-radar setup find`: the companies whose name or job site has every word searched for.
+struct CompanySearch: Decodable {
+    struct Company: Decodable, Identifiable {
+        let name: String
+        let url: String
+        let site: String?  // the reader, e.g. "workday"
+        let countries: [String]
+        let own: Bool  // added by them, not from the profession's list
+        let readable: Bool  // false: on a job site Role Radar can't read yet
+        let off: Bool  // they turned it off
+        let tracked: Bool
+        let why: String?  // why it isn't tracked
+        var id: String { name }
+    }
+    let total: Int
+    let results: [Company]
+    let untracked: Int  // how many they've turned off
+}
+
+/// `role-radar setup add`: a company they asked for, tracked or not. Unless it was listed already, it's
+/// also suggested for everyone's list.
+struct AddResult: Decodable {
+    let status: String  // "added", "listed" (already there) or "failed" (can't be tracked)
+    let name: String
+    let jobs: Int?
+    let url: String?  // failed: listed already, on a job site Role Radar can't read yet
+    let why: String?  // listed, but not tracked
+    let turned_on: Bool?
 }
 
 @MainActor
@@ -385,9 +507,11 @@ final class Model: ObservableObject {
     @Published var liveBusy: Set<String> = []  // match ids, "all" (Skip All) or "send" (Send Now) in flight
     @Published var liveError: String?
     private var liveActions = 0  // a refresh that started before the latest skip or send is out of date
+    private var liveData: Data?  // the lists as last read: the same again changes nothing, so nothing is drawn again
     @Published var setup: SetupState?  // the packaged app's setup; nil when built from the code
     @Published var setupError: String?  // why Setup couldn't read or save its files: always shown
-    @Published var wantsSetup = false  // opens the Setup window (the menu bar label watches it)
+    @Published var wantsWindow = false  // opens the window (the menu bar label watches it)
+    @Published var showingSetup = false  // the window shows Setup's pages rather than Live Tracking
 
     init() {
         Task { [weak self] in
@@ -408,7 +532,10 @@ final class Model: ObservableObject {
         Self.runQuietly("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Bundle.main.bundlePath])
         if case .failure(let message) = await setupCommand(["init"]) { setupError = message }
         await loadSetup()
-        if !(setup?.ready ?? false) || !Dock.launchedAtLogin { wantsSetup = true }
+        if !(setup?.ready ?? false) || !Dock.launchedAtLogin {
+            showingSetup = !(setup?.ready ?? false)  // Setup until it's done, then Live Tracking
+            wantsWindow = true
+        }
     }
 
     var menuSymbol: String {
@@ -510,7 +637,7 @@ final class Model: ObservableObject {
     func startChecking() async {
         try? SMAppService.mainApp.register()
         await set("laptop", on: true)
-        wantsSetup = false
+        wantsWindow = false
     }
 
     /// Flip a switch: "laptop" or "lambda" (runners), "discord" or "email" (alerts).
@@ -530,45 +657,70 @@ final class Model: ObservableObject {
 
     func skip(_ match: LiveState.Match, _ on: Bool) async {
         liveActions += 1
+        liveData = nil  // shown changed already: take whatever comes back
         liveBusy.insert(match.id)
-        live?.setSkipped(match.id, on)
+        live?.setSkipped([match.id], on)
         await runLive(["matches", on ? "skip" : "unskip", match.company, match.uid, "--json"])
         liveBusy.remove(match.id)
     }
 
-    /// Clear matches from the stack (nil: all of them): they're recorded, never sent.
-    func clear(_ matches: [LiveState.Match]?) async {
+    /// Mark matches as seen (nil: all of them): they leave the stack, and are never sent.
+    func markSeen(_ matches: [LiveState.Match]?) async {
         liveActions += 1
-        liveBusy.insert("clear")
-        for match in matches ?? live?.waiting ?? [] { live?.setSkipped(match.id, true) }
-        await runLive(["matches", "skip"] + Self.picks(matches) + ["--json"])
-        liveBusy.remove("clear")
+        liveData = nil  // shown changed already: take whatever comes back
+        liveBusy.insert("seen")
+        live?.setSkipped(Set((matches ?? live?.waiting ?? []).map(\.id)), true)
+        await runLive(["matches", "skip", "--json"] + Self.picks(matches), stdin: Self.pickList(matches))
+        liveBusy.remove("seen")
+    }
+
+    /// Put seen matches back among the new ones, while the next digest hasn't recorded them yet.
+    func markNew(_ matches: [LiveState.Match]) async {
+        liveActions += 1
+        liveData = nil
+        liveBusy.insert("new")
+        live?.setSkipped(Set(matches.map(\.id)), false)
+        await runLive(["matches", "unskip", "--json"] + Self.picks(matches), stdin: Self.pickList(matches))
+        liveBusy.remove("new")
     }
 
     /// Send matches now (nil: all of them), alerts on or off; once sent, they leave the stack.
     func send(_ matches: [LiveState.Match]?) async {
         liveActions += 1
+        liveData = nil  // shown changed already: take whatever comes back
         liveBusy.insert("send")
-        for match in matches ?? live?.waiting ?? [] { live?.setSending(match.id) }
-        await runLive(["matches", "send"] + Self.picks(matches) + ["--json"])
+        live?.setSending(Set((matches ?? live?.waiting ?? []).map(\.id)))
+        await runLive(["matches", "send", "--json"] + Self.picks(matches), stdin: Self.pickList(matches))
         liveBusy.remove("send")
     }
 
+    /// All of them (`--all`), or the picked ones as JSON on stdin: a process takes at most 4,096 arguments,
+    /// so one `--pick COMPANY UID` per match ended the app past about 1,360 of them.
     private static func picks(_ matches: [LiveState.Match]?) -> [String] {
-        guard let matches else { return ["--all"] }
-        return matches.flatMap { ["--pick", $0.company, $0.uid] }
+        matches == nil ? ["--all"] : ["--stdin"]
+    }
+
+    private static func pickList(_ matches: [LiveState.Match]?) -> String? {
+        guard let matches else { return nil }
+        let pairs = matches.map { [$0.company, $0.uid] }
+        return (try? JSONSerialization.data(withJSONObject: pairs)).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
     }
 
     /// Whether alerts can be sent at all: email or Discord is set up.
     var canAlert: Bool { channelReady("email") || channelReady("discord") }
 
-    private func runLive(_ args: [String], unless outdated: () -> Bool = { false }) async {
-        let result = await Self.cli(args: ["-m", "role_radar"] + args + ["--config", Place.config])
+    private func runLive(_ args: [String], stdin: String? = nil, unless outdated: () -> Bool = { false }) async {
+        let result = await Self.cli(args: ["-m", "role_radar"] + args + ["--config", Place.config], stdin: stdin)
         if outdated() { return }
         switch result {
         case .success(let data):
+            if data == liveData {
+                liveError = nil
+                return
+            }
             do {
                 live = try JSONDecoder().decode(LiveState.self, from: data)
+                liveData = data
                 liveError = nil
             } catch {
                 liveError = "Unexpected reply from role-radar: \(error.localizedDescription)"
@@ -892,6 +1044,7 @@ struct Health {
 struct Panel: View {
     @AppStorage(TextSize.key) private var scale = TextSize.standard
     @ObservedObject var model: Model
+    @ObservedObject private var updates = Updates.shared
     @Environment(\.openWindow) private var openWindow
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
 
@@ -1007,7 +1160,8 @@ struct Panel: View {
                     Text("Finish setting up: pick your profession, countries and the roles you want.")
                         .scaledFont(11).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button {
-                        openWindow(id: SetupView.id)
+                        model.showingSetup = true
+                        openWindow(id: MainWindow.id)
                         NSApp.activate()
                     } label: {
                         Label("Set Up Role Radar", systemImage: "wand.and.stars").scaledFont(13).frame(maxWidth: .infinity)
@@ -1024,7 +1178,8 @@ struct Panel: View {
                     health.waiting
                     health.failing
                     Button {
-                        openWindow(id: LiveWindow.id)
+                        model.showingSetup = false
+                        openWindow(id: MainWindow.id)
                         NSApp.activate()
                     } label: {
                         Label("Live Tracking", systemImage: "list.bullet.rectangle.portrait")
@@ -1050,11 +1205,12 @@ struct Panel: View {
                     .fixedSize()
                 Spacer(minLength: 8)
                 if Place.packaged {
-                    Button("Settings…") {
-                        openWindow(id: SetupView.id)
+                    Button("Edit Setup…") {
+                        model.showingSetup = true
+                        openWindow(id: MainWindow.id)
                         NSApp.activate()
                     }
-                    .help("Roles, companies and email")
+                    .help("Your profession, countries, roles, qualifications and alerts")
                 }
                 Button("Log") { NSWorkspace.shared.open(Place.log) }
                 Button("Quit") { NSApp.terminate(nil) }
@@ -1062,6 +1218,15 @@ struct Panel: View {
             }
             .scaledFont(12)
             .controlSize(TextSize.controls(scale))
+            if updates.available {
+                HStack {
+                    Text("Version \(Place.version)").scaledFont(11).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Check for Updates…") { updates.check() }
+                        .buttonStyle(.link).scaledFont(11)
+                        .disabled(!updates.canCheck)
+                }
+            }
         }
         .padding(14)
         .frame(width: max(330, 290 * scale))  // wider as the text grows, so lines don't wrap into a column
@@ -1080,12 +1245,41 @@ struct Panel: View {
 
 /// One match in Live Tracking: title, company and place, when. Clicking it opens the posting;
 /// its button skips it (or undoes that).
+/// A select box that's easy to hit, as in Gmail: a bigger box, a round highlight under the pointer.
+/// `mixed`: some of what it stands for are selected (the box above a list).
+struct SelectBox: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
+    @Binding var on: Bool
+    var mixed = false
+    @State private var hovering = false
+
+    static func width(_ scale: Double) -> CGFloat { 30 * scale }
+
+    var body: some View {
+        Button { on.toggle() } label: {
+            Image(systemName: mixed ? "minus.square.fill" : on ? "checkmark.square.fill" : "square")
+                .font(.system(size: 16 * scale))
+                .foregroundStyle(on || mixed ? Color.accentColor : Color.secondary)
+                .frame(width: Self.width(scale), height: Self.width(scale))
+                .background(Circle().fill(Color.primary.opacity(hovering ? 0.09 : 0)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.1), value: hovering)
+        .accessibilityLabel("Select")
+        .accessibilityValue(on ? "selected" : "not selected")
+    }
+}
+
 struct MatchRow: View {
+    @AppStorage(TextSize.key) private var scale = TextSize.standard
     let title: String
     let company: String?
     let location: String?
     let url: String?
     let when: String
+    var since: (label: String, at: String?)? = nil  // "Found 2:32 PM (12 min. ago)", its own part kept current
     var dimmed = false
     var action: (title: String, help: String, run: () -> Void)? = nil
     var busy = false
@@ -1104,9 +1298,10 @@ struct MatchRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             if let picked {
-                Toggle("Select", isOn: picked).toggleStyle(.checkbox).labelsHidden()
+                SelectBox(on: picked).padding(.leading, -6)
             } else if let symbol {
-                Image(systemName: symbol).scaledFont(11).foregroundStyle(.secondary).frame(width: 16)
+                Image(systemName: symbol).scaledFont(12).foregroundStyle(.secondary)
+                    .frame(width: SelectBox.width(scale)).padding(.leading, -6)
             }
             Button(action: open) {
                 HStack(alignment: .center, spacing: 8) {
@@ -1115,7 +1310,13 @@ struct MatchRow: View {
                             .foregroundStyle(hovering ? Color.accentColor : Color.primary)
                         Text([company, location].compactMap { $0 }.joined(separator: " · "))
                             .scaledFont(11).foregroundStyle(.secondary).lineLimit(1)
-                        if !when.isEmpty {
+                        if let since {
+                            // Only this text is drawn again, each minute: not the row, so the cursor stays right.
+                            TimelineView(.everyMinute) { _ in
+                                Text(since.label + " " + When.stamp(since.at))
+                                    .scaledFont(11).foregroundStyle(.tertiary).monospacedDigit()
+                            }
+                        } else if !when.isEmpty {
                             Text(when).scaledFont(11).foregroundStyle(.tertiary).monospacedDigit()
                         }
                     }
@@ -1145,6 +1346,8 @@ struct MatchRow: View {
             }
         }
         .opacity(dimmed ? 0.55 : 1)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(picked?.wrappedValue == true ? 0.12 : 0))
+            .padding(.horizontal, -8).padding(.vertical, -2))
         .contextMenu {
             if link != nil {
                 Button("Open Posting", action: open)
@@ -1171,8 +1374,53 @@ struct LinkCursor: ViewModifier {
         } else {
             content.onHover { inside in
                 guard active else { return }
-                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                (inside ? NSCursor.pointingHand : NSCursor.arrow).set()
             }
+        }
+    }
+}
+
+/// The plain arrow over a bar of controls, so a pointing hand from a row it borders can't linger there.
+struct ArrowCursor: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.pointerStyle(.default)
+        } else {
+            content.onHover { inside in if inside { NSCursor.arrow.set() } }
+        }
+    }
+}
+
+/// The app's one window: Setup's pages until it's done (or when asked for again), otherwise Live
+/// Tracking, switching in place rather than opening another window.
+struct MainWindow: View {
+    static let id = "main"
+    @ObservedObject var model: Model
+
+    private var setupShown: Bool { Place.packaged && model.showingSetup }
+
+    var body: some View {
+        Group {
+            if setupShown { SetupView(model: model) } else { LiveWindow(model: model) }
+        }
+        .navigationTitle(setupShown ? "Role Radar Setup" : "Live Tracking")
+        .toolbar {
+            if Place.packaged && !setupShown {
+                ToolbarItem(placement: .navigation) {
+                    Button { model.showingSetup = true } label: {
+                        Label("Edit Setup", systemImage: "slider.horizontal.3").labelStyle(.titleAndIcon)
+                    }
+                    .help("Change your profession, countries, roles, qualifications or alerts")
+                }
+            } else if setupShown && model.setup?.ready ?? false {
+                ToolbarItem(placement: .navigation) {
+                    Button { model.showingSetup = false } label: {
+                        Label("Live Tracking", systemImage: "list.bullet.rectangle.portrait").labelStyle(.titleAndIcon)
+                    }
+                    .help("Back to the new jobs; what you changed here is saved")
+                }
+            }
+            ToolbarItem { TextSizeButtons() }
         }
     }
 }
@@ -1182,8 +1430,6 @@ struct LinkCursor: ViewModifier {
 struct LiveWindow: View {
     static let id = "live"
     @ObservedObject var model: Model
-    @State private var opened: Set<String> = []  // sent alerts unfolded: each starts folded
-    @State private var selected: Set<String> = []  // new jobs ticked, to clear or send together
 
     private var live: LiveState? { model.live }
 
@@ -1235,9 +1481,9 @@ struct LiveWindow: View {
             return model.state?.checking == "lambda" ? "Sending: Lambda sends them at its next run (within 5 minutes)."
                                                      : "Sending: the Mac sends them within a minute."
         }
-        if !model.canAlert { return "No alerts set up: new jobs collect here. To send them, set up email or Discord in Settings." }
-        if live.alerts_off { return "Alerts are off: new jobs collect here until you send or clear them." }
-        return "New jobs go out every 10 minutes. Send some sooner, or clear the ones you don't want."
+        if !model.canAlert { return "No alerts set up: new jobs collect here. To send them, set up email or Discord in Edit Setup." }
+        if live.alerts_off { return "Alerts are off: new jobs collect here until you send them or mark them as seen." }
+        return "New jobs go out every 10 minutes. Send some sooner, or mark the ones you don't want as seen."
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
@@ -1249,115 +1495,256 @@ struct LiveWindow: View {
 
     // -- the lists ----------------------------------------------------------------
 
+    /// A view of its own, drawn again only when its jobs change: the round's progress changes every
+    /// few seconds, and drawing the rows again under a pointer that isn't moving leaves macOS showing
+    /// the wrong cursor (an arrow on a row, a hand on a button) until it moves.
     @ViewBuilder private var lists: some View {
         if let live {
-            List {
-                if live.alerts_off {
-                    Label(model.canAlert ? "Alerts are off: new jobs collect here, newest on top. Clear the ones "
-                                           + "you've seen, or send some."
-                                         : "New jobs collect here, newest on top. Clear the ones you've seen.",
-                          systemImage: "tray.full")
-                        .scaledFont(12).foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
-                }
-                Section {
-                    if live.waiting.isEmpty {
-                        Text("No new jobs. They appear here as soon as their company is checked.")
-                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
-                    }
-                    ForEach(live.waiting) { match in
-                        let sending = match.send_at != nil
-                        MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                                 when: "Found " + When.stamp(match.first_seen), busy: model.liveBusy.contains(match.id),
-                                 picked: sending ? nil : ticked(match.id), symbol: sending ? "paperplane" : nil,
-                                 note: sending ? "Sending…" : nil,
-                                 menu: sending ? [] : rowMenu(match))
-                    }
-                } header: {
-                    header("New jobs", live.waiting.count) { stackButtons(live) }
-                }
-                Section {
-                    if live.skipped.isEmpty {
-                        Text("Cleared jobs are never sent. You can put one back for a few minutes.")
-                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
-                    }
-                    ForEach(live.skipped) { match in
-                        MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                                 when: "Cleared " + When.stamp(match.skipped_at),
-                                 dimmed: true,
-                                 action: match.final ? nil : ("Put Back", "Return it to New jobs",
-                                                              { Task { await model.skip(match, false) } }),
-                                 busy: model.liveBusy.contains(match.id))
-                    }
-                } header: {
-                    header("Cleared", live.skipped.count) { EmptyView() }
-                }
-                Section {
-                    if live.sent.isEmpty {
-                        Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
-                    }
-                    ForEach(live.sent) { alert in
-                        DisclosureGroup(isExpanded: expanded(alert.id)) {
-                            ForEach(Array(alert.jobs.enumerated()), id: \.offset) { _, job in
-                                MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url, when: "")
-                            }
-                        } label: {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.15)) { expanded(alert.id).wrappedValue.toggle() }
-                            } label: {
-                                alertLabel(alert).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help(opened.contains(alert.id) ? "Hide this alert's jobs" : "Show this alert's jobs")
-                        }
-                    }
-                } header: {
-                    header("Sent alerts", live.sent.count) { EmptyView() }
-                }
-            }
-            .listStyle(.inset)
+            JobList(model: model, waiting: live.waiting, skipped: live.skipped, sent: live.sent,
+                    alertsOff: live.alerts_off, canAlert: model.canAlert, busy: model.liveBusy)
+                .equatable()
         } else if let error = model.liveError {
             ContentUnavailableView("Couldn't load the matches", systemImage: "exclamationmark.triangle", description: Text(error))
         } else {
             ProgressView("Loading matches…").frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
+}
 
-    private func ticked(_ id: String) -> Binding<Bool> {
-        Binding(get: { selected.contains(id) },
-                set: { on in if on { selected.insert(id) } else { selected.remove(id) } })
+/// The jobs ticked in one of Live Tracking's lists. Each tick box reads it itself, so ticking one
+/// redraws the boxes, not the rows around them.
+@Observable final class Picks {
+    var ids: Set<String> = []
+
+    /// A job's tick box.
+    func box(_ id: String) -> Binding<Bool> {
+        Binding(get: { self.ids.contains(id) },
+                set: { on in if on { self.ids.insert(id) } else { self.ids.remove(id) } })
+    }
+}
+
+/// A new job's row. Equatable on what it shows, so ticking one job doesn't draw every row again
+/// (with a couple of thousand new jobs, every tick used to redraw every row): its tick box follows
+/// `picks` on its own.
+struct NewJobRow: View, Equatable {
+    let match: LiveState.Match
+    let picks: Picks
+    let busy: Bool
+    let canAlert: Bool
+    let menu: [(title: String, run: () -> Void)]
+
+    nonisolated static func == (a: NewJobRow, b: NewJobRow) -> Bool {
+        a.match == b.match && a.busy == b.busy && a.canAlert == b.canAlert  // `picks` is the list's, for good
     }
 
-    /// Clear or send the ticked jobs, or all of them when none are ticked.
-    private func stackButtons(_ live: LiveState) -> some View {
-        let open = live.waiting.filter { $0.send_at == nil }
-        let chosen = open.filter { selected.contains($0.id) }
-        let targets = chosen.isEmpty ? nil : chosen
-        let busy = model.liveBusy.contains("clear") || model.liveBusy.contains("send")
-        return HStack(spacing: 6) {
-            if !chosen.isEmpty {
-                Button("Deselect") { selected = [] }
-            }
-            Button(chosen.isEmpty ? "Clear All" : "Clear \(chosen.count) Selected") {
-                selected = []
-                Task { await model.clear(targets) }
-            }
-            .disabled(open.isEmpty || busy)
-            .help("Take them off the stack. Cleared jobs are never sent.")
-            Button(chosen.isEmpty ? "Send All" : "Send \(chosen.count) Selected") {
-                selected = []
-                Task { await model.send(targets) }
-            }
-            .disabled(open.isEmpty || busy || !model.canAlert)
-            .help(model.canAlert ? "Send them by email or Discord now; once sent, they leave the stack."
-                                 : "Set up email or Discord in Settings to send jobs.")
+    var body: some View {
+        let sending = match.send_at != nil
+        MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
+                 when: "", since: ("Found", match.first_seen), busy: busy,
+                 picked: sending ? nil : picks.box(match.id), symbol: sending ? "paperplane" : nil,
+                 note: sending ? "Sending…" : nil, menu: sending ? [] : menu)
+    }
+}
+
+/// A seen job's row: ticked to go back with others, or put back on its own.
+struct SeenJobRow: View, Equatable {
+    let match: LiveState.Match
+    let picks: Picks
+    let busy: Bool
+    let markNew: () -> Void
+
+    nonisolated static func == (a: SeenJobRow, b: SeenJobRow) -> Bool {
+        a.match == b.match && a.busy == b.busy
+    }
+
+    var body: some View {
+        MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
+                 when: "", since: ("Seen", match.skipped_at), dimmed: true,
+                 action: ("Mark as New", "Put it back in New jobs", markNew), busy: busy, picked: picks.box(match.id))
+    }
+}
+
+/// Live Tracking's jobs, with the bar that acts on them: New jobs (the stack), Seen (folded), and the
+/// alerts sent. Equatable on what it shows, so it's drawn again only when that changes.
+struct JobList: View, Equatable {
+    let model: Model  // for its actions; not watched
+    let waiting: [LiveState.Match]
+    let skipped: [LiveState.Match]
+    let sent: [LiveState.Alert]
+    let alertsOff: Bool
+    let canAlert: Bool
+    let busy: Set<String>
+    @State private var opened: Set<String> = []  // sent alerts unfolded: each starts folded
+    @State private var picks = Picks()  // new jobs ticked, to mark as seen or send together
+    @State private var showSeen = false  // the Seen section is folded until opened
+    @State private var seenPicks = Picks()  // seen jobs ticked, to mark as new together
+    @State private var seenShown = 100  // the Seen section lists this many, newest first
+
+    nonisolated static func == (a: JobList, b: JobList) -> Bool {
+        a.waiting == b.waiting && a.skipped == b.skipped && a.sent == b.sent && a.alertsOff == b.alertsOff
+            && a.canAlert == b.canAlert && a.busy == b.busy
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Fixed above the list, as in Gmail: always in reach, and rows never scroll under it.
+            stackHeader
+                .padding(.leading, 16).padding(.trailing, 20).padding(.vertical, 10)  // its box in line with the rows
+                .contentShape(Rectangle())
+                .modifier(ArrowCursor())
+            Divider()
+            list
         }
-        .controlSize(.small)
+    }
+
+    private var list: some View {
+        List {
+            if alertsOff {
+                Label(canAlert ? "Alerts are off: new jobs collect here, newest on top. Mark the ones "
+                                       + "you've seen, or send some as alerts."
+                                     : "New jobs collect here, newest on top. Mark the ones you've seen.",
+                      systemImage: "tray.full")
+                    .scaledFont(12).foregroundStyle(.secondary)
+                    .padding(.vertical, 4)
+            }
+            Section {
+                if waiting.isEmpty {
+                    Text("No new jobs. They appear here as soon as their company is checked.")
+                        .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                }
+                ForEach(waiting) { match in
+                    NewJobRow(match: match, picks: picks, busy: busy.contains(match.id), canAlert: canAlert,
+                              menu: rowMenu(match))
+                        .equatable()
+                }
+            }
+            Section {
+                if showSeen {
+                    if skipped.isEmpty {
+                        Text("Jobs you mark as seen go here for a week, and are never sent. Mark one as new to "
+                             + "put it back.")
+                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                    }
+                    ForEach(skipped.prefix(seenShown)) { match in
+                        SeenJobRow(match: match, picks: seenPicks, busy: busy.contains(match.id),
+                                   markNew: { Task { await model.skip(match, false) } })
+                            .equatable()
+                            .listRowBackground(Color.primary.opacity(0.04))
+                    }
+                    if skipped.count > seenShown {
+                        Button("Show \(min(100, skipped.count - seenShown)) More") { seenShown += 100 }
+                            .controlSize(.small).padding(.vertical, 4)
+                    }
+                }
+            } header: {
+                seenHeader
+            }
+            Section {
+                if sent.isEmpty {
+                    Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                }
+                ForEach(sent) { alert in
+                    DisclosureGroup(isExpanded: expanded(alert.id)) {
+                        ForEach(Array(alert.jobs.enumerated()), id: \.offset) { _, job in
+                            MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url, when: "")
+                        }
+                    } label: {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) { expanded(alert.id).wrappedValue.toggle() }
+                        } label: {
+                            alertLabel(alert).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(opened.contains(alert.id) ? "Hide this alert's jobs" : "Show this alert's jobs")
+                    }
+                }
+            } header: {
+                header("Sent alerts", sent.count) { EmptyView() }
+            }
+        }
+        .listStyle(.inset)
+    }
+
+    /// Seen jobs' header: unfold them; once unfolded, a box to select those shown, and Mark as New for
+    /// the selected ones.
+    private var seenHeader: some View {
+        let shown = skipped.prefix(seenShown)
+        let chosen = shown.filter { seenPicks.ids.contains($0.id) }
+        let all = Binding(get: { !shown.isEmpty && chosen.count == shown.count },
+                          set: { on in seenPicks.ids = on ? Set(shown.map(\.id)) : [] })
+        return HStack(spacing: 6) {
+            if showSeen && !shown.isEmpty {
+                SelectBox(on: all, mixed: !chosen.isEmpty && chosen.count < shown.count)
+                    .padding(.leading, -6)
+                    .help(chosen.isEmpty ? "Select all" : "Deselect all")
+            }
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { showSeen.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right").scaledFont(10, weight: .semibold).foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(showSeen ? 90 : 0))
+                    Text("Seen").scaledFont(12, weight: .semibold)
+                    Text(showSeen && !chosen.isEmpty ? "\(chosen.count) selected" : skipped.count.formatted())
+                        .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(showSeen ? "Hide the jobs marked as seen" : "Show the jobs marked as seen")
+            if showSeen && !chosen.isEmpty {
+                Button("Mark as New") {
+                    seenPicks.ids = []
+                    Task { await model.markNew(chosen) }
+                }
+                .controlSize(.small)
+                .disabled(busy.contains("new"))
+                .help("Put them back in New jobs")
+            }
+        }
+    }
+
+    /// New jobs' header: a box to select them all, and what to do with the selected ones (or all of them).
+    private var stackHeader: some View {
+        let open = waiting.filter { $0.send_at == nil }
+        let chosen = open.filter { picks.ids.contains($0.id) }
+        let targets = chosen.isEmpty ? nil : chosen
+        let busy = busy.contains("seen") || busy.contains("send")
+        let all = Binding(get: { !open.isEmpty && chosen.count == open.count },
+                          set: { on in picks.ids = on ? Set(open.map(\.id)) : [] })
+        return HStack(spacing: 8) {
+            if !open.isEmpty {
+                SelectBox(on: all, mixed: !chosen.isEmpty && chosen.count < open.count)
+                    .padding(.leading, -6)  // in line with the jobs' boxes
+                    .help(chosen.isEmpty ? "Select all" : "Deselect all")
+            }
+            Text("New jobs").scaledFont(12, weight: .semibold)
+            Text(chosen.isEmpty ? waiting.count.formatted() : "\(chosen.count) selected")
+                .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+            Spacer()
+            Group {
+                Button(chosen.isEmpty ? "Mark All as Seen" : "Mark as Seen") {
+                    picks.ids = []
+                    Task { await model.markSeen(targets) }
+                }
+                .disabled(open.isEmpty || busy)
+                .help("Take them off the stack. Jobs marked as seen are never sent.")
+                Button(chosen.isEmpty ? "Send All as Alert" : "Send as Alert") {
+                    picks.ids = []
+                    Task { await model.send(targets) }
+                }
+                .disabled(open.isEmpty || busy || !canAlert)
+                .help(canAlert ? "Send them by email or Discord now; once sent, they leave the stack."
+                                     : "Set up email or Discord in Edit Setup to send jobs.")
+            }
+            .controlSize(.small)
+        }
     }
 
     private func rowMenu(_ match: LiveState.Match) -> [(title: String, run: () -> Void)] {
-        var items: [(title: String, run: () -> Void)] = [("Clear", { Task { await model.clear([match]) } })]
-        if model.canAlert { items.append(("Send Now", { Task { await model.send([match]) } })) }
+        var items: [(title: String, run: () -> Void)] = [("Mark as Seen", { Task { await model.markSeen([match]) } })]
+        if canAlert { items.append(("Send as Alert", { Task { await model.send([match]) } })) }
         return items
     }
 
@@ -1373,8 +1760,10 @@ struct LiveWindow: View {
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "paperplane.fill").scaledFont(11).foregroundStyle(.secondary)
             Text(sent.map(When.full) ?? alert.sent_at).scaledFont(13, weight: .semibold).monospacedDigit()
-            Text([jobs, by.map { "sent by \($0)" }, sent.map { When.ago($0) }].compactMap { $0 }.joined(separator: " · "))
-                .scaledFont(11).foregroundStyle(.secondary)
+            TimelineView(.everyMinute) { _ in
+                Text([jobs, by.map { "sent by \($0)" }, sent.map { When.ago($0) }].compactMap { $0 }.joined(separator: " · "))
+                    .scaledFont(11).foregroundStyle(.secondary)
+            }
         }
         .padding(.vertical, 3)
     }
@@ -1403,7 +1792,6 @@ struct DotLabel: LabelStyle {
 struct SetupView: View {
     static let id = "setup"
     @ObservedObject var model: Model
-    @Environment(\.dismissWindow) private var dismissWindow
 
     @State private var page = 0  // 0 profession, 1 titles and places, 2 email alerts
     @State private var picked: Set<String> = []  // ticked titles
@@ -1430,6 +1818,14 @@ struct SetupView: View {
     @State private var notes: [String: (text: String, ok: Bool)] = [:]  // each action's last result
     @State private var filled = false
     @State private var saved = ""  // the profile pages' answers as last saved, to tell when they've changed
+    // The Companies page: search (empty: the ones they turned off), add their own, ask for one.
+    @State private var query = ""
+    @State private var found: CompanySearch?
+    @State private var shown = 50  // how many results to list
+    @State private var searching: Task<Void, Never>?
+    @State private var turning: Set<String> = []  // companies being turned on or off
+    @State private var newCompany = ""
+    @State private var newCareers = ""
 
     private var setup: SetupState? { model.setup }
     private var profession: SetupState.Profession? { setup?.professions?.first { $0.id == setup?.profession } }
@@ -1505,7 +1901,7 @@ struct SetupView: View {
     private func toTop(_ scroll: ScrollViewProxy, settle: [Double] = [0, 0.3]) {
         for delay in settle {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                NSApp.windows.first { $0.title == "Role Radar Setup" }?.makeFirstResponder(nil)
+                NSApp.keyWindow?.makeFirstResponder(nil)
                 scroll.scrollTo("top", anchor: .top)
             }
         }
@@ -1637,18 +2033,90 @@ struct SetupView: View {
                             .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                if let names = setup?.sample_for?[pickedKey], !names.isEmpty {
-                    section("Including", nil) {
-                        Text(names.joined(separator: ", ") + ", and more.")
-                            .scaledFont(13).fixedSize(horizontal: false, vertical: true)
+                findSection
+            }
+            addSection
+        }
+        .task { await search() }
+        .onChange(of: query) { _, _ in
+            searching?.cancel()
+            shown = 50
+            searching = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000)  // once they pause typing
+                if !Task.isCancelled { await search() }
+            }
+        }
+    }
+
+    /// Search the list; untick one to stop tracking it. With nothing typed, the ones turned off.
+    private var findSection: some View {
+        section("Find a company", "Untick a company to stop tracking it; tick it again to bring it back.") {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search companies", text: $query).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+            }
+            if let found {
+                if query.isEmpty {
+                    if !found.results.isEmpty {
+                        Text("Turned off (\(found.total))").scaledFont(11, weight: .medium).foregroundStyle(.secondary)
                     }
+                } else if found.total == 0 {
+                    Text("No company on the list matches. Add it below, or ask for it.")
+                        .scaledFont(12).foregroundStyle(.secondary)
+                } else {
+                    Text(found.total > found.results.count ? "\(found.results.count) of \(found.total)" : "\(found.total) found")
+                        .scaledFont(11).foregroundStyle(.secondary)
                 }
-                if let off = setup?.companies_off, off > 0 {
-                    Text("\(off) more, such as Atlassian, Canva and Flipkart, use job sites Role Radar can't read yet; "
-                         + "they'll be tracked once it can.")
-                        .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                ForEach(found.results) { company in companyRow(company) }
+                if found.total > found.results.count {
+                    Button("Show More") { shown += 50; Task { await search() } }.controlSize(.small)
                 }
             }
+            if let note = notes["find"] {
+                Label(note.text, systemImage: "exclamationmark.triangle").scaledFont(11).foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func companyRow(_ company: CompanySearch.Company) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Toggle("", isOn: Binding(get: { !company.off }, set: { on in Task { await setTracked(company, on) } }))
+                .toggleStyle(.checkbox).labelsHidden()
+                .disabled(!company.readable || turning.contains(company.name))
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(company.name).scaledFont(13)
+                    if company.own { Text("Yours").scaledFont(10, weight: .medium).foregroundStyle(.secondary) }
+                }
+                Text(Self.about(company)).scaledFont(11).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// "Workday · US, CA", and why it isn't tracked unless they turned it off themselves.
+    private static func about(_ company: CompanySearch.Company) -> String {
+        var parts: [String] = []
+        if let site = company.site, site != "generic" {
+            parts.append(siteNames[site] ?? site.capitalized)
+        }
+        if !company.countries.isEmpty { parts.append(company.countries.joined(separator: ", ")) }
+        if let why = company.why, !company.off { parts.append("not tracked: \(why)") }
+        return parts.joined(separator: " · ")
+    }
+
+    private static let siteNames = ["oracle_hcm": "Oracle", "smartrecruiters": "SmartRecruiters", "icims": "iCIMS",
+                                    "bamboohr": "BambooHR", "hrmdirect": "HRM Direct", "tiktok": "TikTok"]
+
+    /// A company they want: tracked at once if Role Radar can read its job site, and either way suggested
+    /// for everyone's list (the maintainer's suggestions box), unless it's listed already.
+    private var addSection: some View {
+        section("Add a company you want", "Not on the list? Give its name, and its careers page if you know it. "
+                + "If Role Radar can read its job site, it's tracked right away; if not, we'll work on it.") {
+            TextField("Company name", text: $newCompany).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+            TextField("Careers page (optional), https://…", text: $newCareers).textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 420)
+            actionRow("add", "Add", disabled: newCompany.trimmingCharacters(in: .whitespaces).isEmpty) { await addCompany() }
         }
     }
 
@@ -1857,7 +2325,7 @@ struct SetupView: View {
                 Button(model.state?.checking == "laptop" ? "Done" : "Start Checking") {
                     Task {
                         await model.startChecking()
-                        dismissWindow(id: SetupView.id)
+                        model.showingSetup = false  // the window turns into Live Tracking
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -2040,6 +2508,63 @@ struct SetupView: View {
         notes["also"] = problem.map { ($0, false) } ?? ("Saved", true)
     }
 
+    /// The companies matching what's typed (nothing typed: the ones turned off).
+    private func search() async {
+        let typed = query
+        let result = await model.setupCommand(["find"], stdin: json(["query": typed, "limit": shown,
+                                                                     "which": typed.isEmpty ? "off" : "all"]))
+        guard typed == query else { return }  // they've typed more since
+        switch result {
+        case .success(let data):
+            found = try? JSONDecoder().decode(CompanySearch.self, from: data)
+            notes["find"] = found == nil ? ("Unexpected reply from role-radar", false) : nil
+        case .failure(let message):
+            notes["find"] = (message, false)
+        }
+    }
+
+    private func setTracked(_ company: CompanySearch.Company, _ on: Bool) async {
+        turning.insert(company.name)
+        let problem = await model.setupStep(["track"], stdin: json(["names": [company.name], "tracked": on]))
+        turning.remove(company.name)
+        notes["find"] = problem.map { ($0, false) }
+        await search()
+    }
+
+    private func addCompany() async {
+        let gaveCareers = !newCareers.trimmingCharacters(in: .whitespaces).isEmpty
+        let result = await model.setupCommand(["add"], stdin: json(["name": newCompany, "url": newCareers]))
+        switch result {
+        case .success(let data):
+            guard let added = try? JSONDecoder().decode(AddResult.self, from: data) else {
+                notes["add"] = ("Unexpected reply from role-radar", false)
+                return
+            }
+            switch added.status {
+            case "added":
+                let jobs = added.jobs.map { $0 == 1 ? " (1 job listed now)" : " (\($0) jobs listed now)" } ?? ""
+                notes["add"] = ("Added: Role Radar now tracks \(added.name)\(jobs).", true)
+                newCompany = ""
+                newCareers = ""
+            case "listed":
+                if let why = added.why {
+                    notes["add"] = ("\(added.name) is on the list, but isn't tracked: \(why).", false)
+                } else {
+                    notes["add"] = (added.turned_on == true ? "\(added.name) was turned off; it's tracked again."
+                                    : "\(added.name) is tracked already.", true)
+                }
+            default:
+                let hint = !gaveCareers && added.url == nil ? " If you know its careers page, add it and try again." : ""
+                notes["add"] = ("Role Radar can't track \(added.name) yet. We've noted it and are working on it.\(hint)",
+                                false)
+            }
+            await model.loadSetup()
+            await search()
+        case .failure(let message):
+            notes["add"] = (message, false)
+        }
+    }
+
     private func sendTest(_ channel: String) async {
         let result = await Model.cli(args: ["-m", "role_radar", "notifications", "test", "--channel", channel,
                                             "--config", Place.config])
@@ -2181,14 +2706,15 @@ struct MenuLabel: View {
     var body: some View {
         Image(systemName: model.menuSymbol)
             .accessibilityLabel(model.menuLabel)
-            .onChange(of: model.wantsSetup) { _, wants in
+            .onChange(of: model.wantsWindow) { _, wants in
                 if wants {
-                    openWindow(id: SetupView.id)
+                    openWindow(id: MainWindow.id)
                     NSApp.activate()
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: Dock.openSettings)) { _ in
-                openWindow(id: SetupView.id)
+            .onReceive(NotificationCenter.default.publisher(for: Dock.openWindow)) { _ in
+                if !(model.setup?.ready ?? false) { model.showingSetup = true }
+                openWindow(id: MainWindow.id)
                 NSApp.activate()
             }
     }
@@ -2203,13 +2729,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 
-    /// Opening the packaged app while it runs (Finder, Spotlight, its Dock icon) shows Settings.
+    /// Opening the packaged app while it runs (Finder, Spotlight, its Dock icon) shows its window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if Place.packaged { NotificationCenter.default.post(name: Dock.openSettings, object: nil) }
+        if Place.packaged { NotificationCenter.default.post(name: Dock.openWindow, object: nil) }
         return false
     }
 
-    /// Quit (or logging out) stops the Mac's checker with the app.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated { Updates.shared.start() }
+    }
+
+    /// Quit (or logging out, or an update) stops the Mac's checker with the app.
     func applicationWillTerminate(_ notification: Notification) {
         Model.stopChecker()
     }
@@ -2228,23 +2758,15 @@ struct RoleRadarMenuApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Live Tracking", id: LiveWindow.id) {
-            LiveWindow(model: model)
-                .toolbar { TextSizeButtons() }
+        Window("Role Radar", id: MainWindow.id) {
+            MainWindow(model: model)
                 .onAppear(perform: Dock.windowOpened)
                 .onDisappear(perform: Dock.windowClosed)
         }
-        .defaultSize(width: 1000, height: 680)
-
-        Window("Role Radar Setup", id: SetupView.id) {
-            SetupView(model: model)
-                .toolbar { TextSizeButtons() }
-                .onAppear(perform: Dock.windowOpened)
-                .onDisappear(perform: Dock.windowClosed)
-        }
-        .defaultSize(width: 760, height: 860)
+        .defaultSize(width: 1000, height: 780)
         .windowResizability(.contentMinSize)
         .commands {
+            CommandGroup(after: .appInfo) { CheckForUpdates() }
             CommandGroup(after: .toolbar) {
                 Button("Bigger Text") { TextSize.change(by: 0.1) }.keyboardShortcut("=")
                 Button("Smaller Text") { TextSize.change(by: -0.1) }.keyboardShortcut("-")

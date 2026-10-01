@@ -188,8 +188,9 @@ def waiting(job: SeenJob) -> bool:
 def queue_changes(record: CompanyRecord, current: dict[str, dict], loaded: dict[str, dict]) -> list[tuple[str, str, SeenJob | None]]:
     """How a save changes the company's rows in Live Tracking's list, from its job rows before and after.
 
-    ("put", uid, job): it's waiting (new, or its fields changed); ("done", uid, job): the
-    digest applied the user's skip; ("delete", uid, None): it stopped waiting (sent, dropped, pruned).
+    ("put", uid, job): it's waiting (new, its fields changed, or put back after its skip was
+    applied); ("done", uid, job): the digest applied the user's skip; ("delete", uid, None): it
+    stopped waiting (sent, dropped, pruned), or was put back and sent at once.
     """
     changes: list[tuple[str, str, SeenJob | None]] = []
     for uid in current.keys() | loaded.keys():
@@ -201,9 +202,14 @@ def queue_changes(record: CompanyRecord, current: dict[str, dict], loaded: dict[
             changes.append(("put", uid, job))
         elif job and job.dropped_for == SKIPPED and _waiting_row(before):
             changes.append(("done", uid, job))
-        elif _waiting_row(before):
+        elif _waiting_row(before) or (job and _skipped_row(before) and job.dropped_for != SKIPPED):
             changes.append(("delete", uid, None))
     return changes
+
+
+def _skipped_row(attrs: dict | None) -> bool:
+    """A stored job row whose skip the digest applied."""
+    return bool(attrs and attrs.get("dropped_for") == SKIPPED)
 
 
 def _waiting_row(attrs: dict | None) -> bool:
@@ -223,8 +229,14 @@ class QueuedMatch:
     location: str | None = None
     queued_at: str | None = None  # when it joined the list
     skipped_at: str | None = None  # skipped in Live Tracking: the next digest records it without sending it
-    done_at: str | None = None  # the digest applied the skip: it won't be sent, and can't be unskipped
+    done_at: str | None = None  # the digest applied the skip: it won't be sent, unless it's marked as new again
+    restore_at: str | None = None  # marked as new after its skip was applied: the next digest puts it back
     send_at: str | None = None  # sent from Live Tracking: the next digest sends it, alerts on or off
+
+    @property
+    def seen(self) -> bool:
+        """Listed as seen (skipped) in Live Tracking, not as new."""
+        return bool(self.skipped_at or (self.done_at and not self.restore_at))
 
     @classmethod
     def from_dict(cls, data: dict) -> QueuedMatch:
@@ -246,8 +258,10 @@ class MonitorState:
     switches: dict[str, bool] = field(default_factory=dict)
     # Activity counts per runner per hour ("<hour>#<runner>" → counts), for `status` and the menu bar app.
     stats: dict[str, dict[str, int]] = field(default_factory=dict)
-    # Matches skipped and sent in Live Tracking ("<company>#<uid>" → when), and each runner's latest round.
+    # Matches skipped, marked as new again and sent in Live Tracking ("<company>#<uid>" → when), and each
+    # runner's latest round.
     skipped: dict[str, str] = field(default_factory=dict)
+    restoring: dict[str, str] = field(default_factory=dict)
     sending: dict[str, str] = field(default_factory=dict)
     rounds: dict[str, dict] = field(default_factory=dict)
 
@@ -298,6 +312,8 @@ class MonitorState:
             data["stats"] = self.stats
         if self.skipped:
             data["skipped"] = self.skipped
+        if self.restoring:
+            data["restoring"] = self.restoring
         if self.sending:
             data["sending"] = self.sending
         if self.rounds:
@@ -315,7 +331,8 @@ class MonitorState:
                    digest=DigestSchedule.from_dict(data.get("digest") or {}),
                    switches={k: bool(v) for k, v in (data.get("switches") or {}).items()},
                    stats={k: dict(v) for k, v in (data.get("stats") or {}).items()},
-                   skipped=dict(data.get("skipped") or {}), sending=dict(data.get("sending") or {}),
+                   skipped=dict(data.get("skipped") or {}), restoring=dict(data.get("restoring") or {}),
+                   sending=dict(data.get("sending") or {}),
                    rounds={k: dict(v) for k, v in (data.get("rounds") or {}).items()})
 
 
@@ -387,11 +404,13 @@ class StateStore(ABC):
         return []
 
     def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
-        """Skip a waiting match, or undo that. False if it isn't waiting any more (sent, or the skip applied)."""
+        """Skip a waiting match, or undo that, even once the digest has applied the skip (the next one puts
+        it back). False if it isn't listed any more (sent, or seen long ago)."""
         raise NotImplementedError("This store does not support skipping matches")
 
     def mark_send(self, company: str, uid: str) -> bool:
-        """Have the next digest send a waiting match, alerts on or off. False if it isn't waiting (or is skipped)."""
+        """Have the next digest send a waiting match (or one marked as new), alerts on or off. False if it isn't
+        waiting (or is skipped)."""
         raise NotImplementedError("This store does not support sending matches")
 
     def request_digest(self) -> None:
@@ -446,6 +465,9 @@ class MemoryStateStore(StateStore):
         with self._lock:
             state = self._current()
             state.put(record)
+            for uid, job in record.jobs.items():  # a skip the digest undid: no longer to put back
+                if job.dropped_for != SKIPPED:
+                    state.restoring.pop(f"{record.name}#{uid}", None)
             for uid in record.alerted:
                 job = record.jobs[uid]
                 state.alerts.append(
@@ -513,26 +535,36 @@ class MemoryStateStore(StateStore):
                 for uid, job in jobs.items():
                     key = f"{company}#{uid}"
                     if waiting(job):
-                        done = None
-                    elif job.dropped_for == SKIPPED and job.notified_at and job.notified_at >= cutoff:
-                        done = job.notified_at
+                        done = restore = None
+                    elif _recorded_skip(job, cutoff):
+                        done, restore = job.notified_at, state.restoring.get(key)
                     else:
                         continue
                     out.append(QueuedMatch(company, uid, job.title, job.url, job.first_seen, job.location,
-                                           skipped_at=state.skipped.get(key) or done, done_at=done,
-                                           send_at=None if done else state.sending.get(key)))
+                                           skipped_at=None if restore else state.skipped.get(key) or done, done_at=done,
+                                           restore_at=restore, send_at=None if done and not restore else state.sending.get(key)))
             return out
 
     def mark_skipped(self, company: str, uid: str, skipped: bool) -> bool:
         with self._lock:
             state = self._current()
             job = state.companies.get(company, {}).get(uid)
-            if not job or not waiting(job):
+            key = f"{company}#{uid}"
+            if job and _recorded_skip(job, to_iso(utcnow() - SKIPPED_KEPT)):  # the digest applied the skip
+                if skipped and key not in state.restoring:
+                    return False
+                if skipped:
+                    state.restoring.pop(key)
+                    state.skipped[key] = to_iso(utcnow())
+                else:
+                    state.restoring[key] = to_iso(utcnow())
+                    state.skipped.pop(key, None)
+            elif not job or not waiting(job):
                 return False
-            if skipped:
-                state.skipped[f"{company}#{uid}"] = to_iso(utcnow())
+            elif skipped:
+                state.skipped[key] = to_iso(utcnow())
             else:
-                state.skipped.pop(f"{company}#{uid}", None)
+                state.skipped.pop(key, None)
             self._persist()
             return True
 
@@ -540,7 +572,8 @@ class MemoryStateStore(StateStore):
         with self._lock:
             state = self._current()
             job = state.companies.get(company, {}).get(uid)
-            if not job or not waiting(job) or f"{company}#{uid}" in state.skipped:
+            key = f"{company}#{uid}"
+            if not job or not (waiting(job) or key in state.restoring) or key in state.skipped:
                 return False
             state.sending[f"{company}#{uid}"] = to_iso(utcnow())
             self._persist()
@@ -559,6 +592,11 @@ class MemoryStateStore(StateStore):
         with self._lock:
             self.state = MonitorState.from_dict(state.to_dict())
             self._persist()
+
+
+def _recorded_skip(job: SeenJob, cutoff: str) -> bool:
+    """A match whose skip the digest applied, still listed in Live Tracking (since `cutoff`)."""
+    return job.dropped_for == SKIPPED and bool(job.notified_at) and job.notified_at >= cutoff
 
 
 class JsonStateStore(MemoryStateStore):

@@ -8,7 +8,16 @@
 # the code. Needs Xcode (swiftc, and actool for the icon) and uv (for the Python build).
 # It's signed ad hoc, not notarized: on first open, macOS asks to confirm in
 # System Settings → Privacy & Security → Open Anyway.
+#
+# It updates itself with Sparkle (scripts/get_sparkle.sh): it reads the latest GitHub release's
+# appcast.xml every few hours, and installs an update only if it's signed with the key whose
+# public half is below. scripts/publish_update.sh signs and publishes a version built here.
 set -eu
+
+# Where every copy looks for updates, and the key updates must be signed with (its private half is
+# in the Keychain of the Mac that publishes: `generate_keys --account role-radar`).
+update_feed="https://github.com/anupreetsingh/Role-Radar/releases/latest/download/appcast.xml"
+update_key="l2iPW44nrwGWO2yH4EjdIKwl67g54tiEpmmwZzV6GL0="
 
 project="$(cd "$(dirname "$0")/.." && pwd)"
 python_build="cpython-3.13.2-macos-aarch64-none"   # python-build-standalone, via uv
@@ -23,8 +32,12 @@ resources="$app/Contents/Resources"
 mkdir -p "$app/Contents/MacOS" "$resources"
 
 echo "Building the app for Apple Silicon..."
+sparkle="$(sh "$project/scripts/get_sparkle.sh")"
 swiftc -parse-as-library -swift-version 5 -O -target arm64-apple-macos14.0 \
+    -F "$sparkle" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     "$project/macos/RoleRadarMenu.swift" -o "$app/Contents/MacOS/RoleRadarMenu"
+mkdir -p "$app/Contents/Frameworks"
+ditto "$sparkle/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"  # as signed by Sparkle
 # The icon (macos/AppIcon.icon, from Icon Composer): what macOS 26 draws, and AppIcon.icns for older macOS.
 if xcrun --find actool >/dev/null 2>&1; then
     xcrun actool "$project/macos/AppIcon.icon" --compile "$resources" --platform macosx --minimum-deployment-target 14.0 \
@@ -87,6 +100,10 @@ cat > "$app/Contents/Info.plist" <<EOF
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>MIT License</string>
   <key>RRPackaged</key><true/>
+  <key>SUFeedURL</key><string>$update_feed</string>
+  <key>SUPublicEDKey</key><string>$update_key</string>
+  <key>SUEnableAutomaticChecks</key><true/>
+  <key>SUScheduledCheckInterval</key><integer>21600</integer>
 </dict>
 </plist>
 EOF

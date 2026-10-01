@@ -26,7 +26,7 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 2. Open Role Radar. The app isn't signed with a paid Apple developer account, so macOS first
    says it can't check it: click **Done**, then open **System Settings → Privacy & Security**,
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
-3. The **Setup** window walks through these pages:
+3. Its window walks through Setup's pages:
    - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
      companies, built into the app and refreshed with each version (Tech's has about 7,800,
      Accounting & Finance's about 3,900, Healthcare's about 1,800).
@@ -37,8 +37,9 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
      India), and optionally cities. Only companies that post jobs in those countries are
      checked, and jobs alert from anywhere in them, or only from your cities. On the Companies
      page, **Find a company** searches the list: untick one to stop tracking it (with nothing
-     typed, it lists those turned off). **Add a company** tracks one that isn't listed, from its
-     careers page, after reading it once to check it can; **Ask for a company** sends one to the
+     typed, it lists those turned off). **Add a company you want** takes a name, and a careers
+     page if known: one listed already says so (turned back on if it was off); otherwise it's
+     tracked if Role Radar can read the page (read once to check), and either way it goes to the
      maintainer's suggestions box for a later version (see below).
    - **Roles:** target roles, the job titles to look for, and non-target roles, words that rule
      a title out (Senior, Lead, Staff, Director...). Both are boxes grouped by kind, all ticked
@@ -55,19 +56,34 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
      and to anyone you add (a friend, your school email), and each person sees only your
      address. Discord needs a channel's webhook URL (the channel's settings → Integrations →
      Webhooks). Both are kept in your Mac's Keychain.
-4. **Start Checking.** Role Radar opens at login and checks while your Mac is on. New matches
-   collect in **Live Tracking**, and go out every 10 minutes if alerts are set up.
-   **Settings…** in its menu changes the profession, titles, places or alerts.
+4. **Start Checking.** The window turns into **Live Tracking**. Role Radar opens at login and
+   checks while your Mac is on. New matches collect in Live Tracking, and go out every 10
+   minutes if alerts are set up. **Edit Setup** there (or **Edit Setup…** in its menu) turns
+   the window back into Setup's pages, to change the profession, roles, places or alerts.
 
 Its files live in `~/Library/Application Support/Role Radar`, and its log is
 `~/Library/Logs/com.roleradar.app.checker.log`.
 
-**Packaging a new version** (from the code, on an Apple Silicon Mac with uv and Xcode): bump `__version__` in `role_radar/__init__.py`, then
+**Updates.** The app updates itself with [Sparkle](https://sparkle-project.org): every six
+hours (or with **Check for Updates…** in its menu) it reads the latest GitHub release's
+`appcast.xml`, and offers a newer version if there is one. It installs an update only if it's
+signed with the update key, so a copy from the first release on never needs downloading again.
+Its settings, history and Keychain items live outside the app, so an update keeps them.
+
+**Publishing a new version** (from the code, on an Apple Silicon Mac with uv and Xcode): bump
+`__version__` in `role_radar/__init__.py` (every copy compares it with its own), then
 
 ```bash
-sh scripts/package_app.sh      # → dist/Role-Radar-<version>-apple-silicon.zip
-gh release create v<version> dist/Role-Radar-<version>-apple-silicon.zip --title "Role Radar <version>"
+sh scripts/package_app.sh                 # → dist/Role-Radar-<version>-apple-silicon.zip
+sh scripts/publish_update.sh NOTES.md     # signs it, writes appcast.xml, creates GitHub release v<version>
 ```
+
+Publish as a normal release, not a pre-release: every copy reads the latest release. The update
+key is made once on the Mac that publishes (`build/sparkle/<version>/bin/generate_keys --account
+role-radar`, after `sh scripts/get_sparkle.sh`); its public half is `update_key` in
+`scripts/package_app.sh`, and the private half stays in that Mac's Keychain. Keep a copy
+somewhere safe (`generate_keys --account role-radar -x FILE`, then into a password manager):
+without it, no copy of the app can take an update again, and everyone reinstalls.
 
 **Suggestions box.** The Companies page's requests go to a Lambda function URL that keeps them in
 a DynamoDB table, the same company once with how many asked (`deploy/suggestions`, its own stack,
@@ -86,7 +102,8 @@ beside the app's companies file and goes with the next one.
 
 The script puts a Python (python-build-standalone, via uv) and Role Radar inside the app,
 with the companies in `config/companies.yaml` as its directory of known employers and the icon in
-`macos/AppIcon.icon` (open it in Xcode's Icon Composer to change it), and signs it ad hoc. The packaged app runs its checker as its own launchd agent,
+`macos/AppIcon.icon` (open it in Xcode's Icon Composer to change it), and Sparkle (fetched once by
+`scripts/get_sparkle.sh`), and signs it ad hoc. The packaged app runs its checker as its own launchd agent,
 `com.roleradar.app.checker`, with its own files and Keychain items, so it never touches one
 run from the code. To try a build as someone new would, `KEEP_APP=dist sh scripts/package_app.sh`
 keeps a copy of the app in `dist/`, and `sh scripts/reset_app.sh` wipes the packaged app's
@@ -418,23 +435,26 @@ each company's check. Baselines and dry runs never send a digest.
 #### Live Tracking
 
 The menu bar app's **Live Tracking** window (or `role-radar matches`) is the stack of new
-jobs, so alerts are optional: open the app and the latest roles are on top. It has three
-sections, newest first:
+jobs, so alerts are optional: open the app and the latest roles are on top. In the
+downloadable app it's the same window as Setup: **Edit Setup** switches it to Setup's pages,
+and finishing them switches it back. It has three sections, newest first:
 
 - **New jobs.** A match appears as soon as its company's check is saved, not when the
   round ends. With alerts on, the digest sends them every 10 minutes and they leave the
   stack; with both channels off (or none set up), the stack keeps growing, and the first
   digest after one is switched on sends everything in it.
-- **Cleared.** Tick jobs and **Clear** them, or **Clear All** (`role-radar matches skip
-  COMPANY UID`, `--pick COMPANY UID` for each of several, or `--all`). The next digest time
-  records them as skipped instead of sending them (`dropped_for: skipped in Live
-  Tracking`), alerts on or off; until then **Put Back** returns one. Cleared jobs stay
-  listed for a week.
+- **Seen**, folded until opened. Select jobs (the box beside each, or the one above them
+  all) and **Mark as Seen**, or **Mark All as Seen** with none selected (`role-radar matches
+  skip COMPANY UID`, `--pick COMPANY UID` for each of several, or `--all`). The next digest
+  time records them as skipped instead of sending them (`dropped_for: skipped in Live
+  Tracking`), alerts on or off. They stay listed, shaded, for a week, and **Mark as New**
+  (`unskip`) puts one back meanwhile: at once if its skip isn't recorded yet, otherwise the
+  next digest time undoes the record.
 - **Sent alerts.** Each alert that went out, newest first: when, and the jobs it held.
 
-**Send** the ticked jobs, or **Send All** (`role-radar matches send`, with `--pick` or
-`--all`), to send them now, alerts on or off: to the channels switched on, or every one set
-up when both are off. The Mac sends within a minute, Lambda at its next run, and sent jobs
+**Send as Alert** sends the selected jobs now, or **Send All as Alert** all of them
+(`role-radar matches send`, with `--pick` or `--all`), alerts on or off: to the channels
+switched on, or every one set up when both are off. The Mac sends within a minute, Lambda at its next run, and sent jobs
 leave the stack. The window also shows the round in progress (how many of the due companies
 are done), and the last 24 hours' activity. It reads the lists every 5 seconds while it's open.
 
@@ -602,10 +622,11 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar login-item on\|off` | Sets up the Mac's checker: `role-radar start` as a launchd agent, started now. The menu bar app owns it from then on (see below), so it has no RunAtLoad or KeepAlive: launchd never starts it by itself. It logs to `~/Library/Logs/role-radar.log`. It needs the alert settings in the Keychain or SSM, because a launchd agent can't see your shell's environment variables. |
 | `role-radar switch laptop\|lambda on\|off` | Turns a runner on or off, independently; no arguments shows every switch. The switches live in the state store. A laptop switched off releases the lease (so Lambda covers, if it's on) and idles until switched back on, picking up the change within a minute; a pass in progress stops starting companies within 30 s. Lambda switched off exits at once on each run. With both off, nothing is checked. `status` shows the switches. |
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
-| `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` undoes that until the next digest; `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
+| `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` puts them back while they're listed (a week); `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
 | `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.zip`: the app with its own Python, for someone else's Mac (see [Get the app](#get-the-app)). |
+| `scripts/publish_update.sh` | Signs the packaged zip with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from (`DRY_RUN=1` stops before publishing). |
 | `scripts/reset_app.sh` | Quits the packaged app and removes its checker, files, logs and Keychain items: its next launch is a first run. |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 

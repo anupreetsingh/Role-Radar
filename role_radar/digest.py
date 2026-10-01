@@ -8,7 +8,9 @@ and go out in the first digest after one is switched back on.
 Live Tracking can change what the next digest does, alerts on or off: matches
 sent from there go at once (to the channels switched on, or every one set up
 when all are off), and a match skipped there is recorded as notified, with the
-reason, instead of being sent. Until that digest the skip can be undone.
+reason, instead of being sent. Until that digest the skip can be undone; after
+it, while Live Tracking still lists the match, marking it as new has the next
+digest undo the record, putting the match back among those waiting.
 
 A pass in progress also sends the digest when it's due (monitor.run_pass), so
 a company being checked right then is left for the next digest: `locks` holds
@@ -43,6 +45,7 @@ class DigestResult:
     jobs: int = 0
     completed: int = 0
     skipped: int = 0  # matches skipped in Live Tracking, recorded without sending
+    restored: int = 0  # recorded skips undone: marked as new in Live Tracking
     failed: bool = False
 
 
@@ -86,10 +89,11 @@ async def flush_digest(
         log.debug("Alerts are switched off or it isn't the digest time: sending only what Live Tracking sent")
 
     # Read only the configured companies with matches still to send (or receipts from a
-    # failed save to apply, or matches skipped or sent in Live Tracking): reading every
-    # company's jobs takes minutes of a small table's read capacity. A company whose
+    # failed save to apply, or matches skipped, sent or marked as new in Live Tracking): reading
+    # every company's jobs takes minutes of a small table's read capacity. A company whose
     # schedule row predates the pending count is read once its next check has counted them.
-    marked = {m.company for m in await asyncio.to_thread(store.load_queue) if not m.done_at and (m.skipped_at or m.send_at)}
+    marked = {m.company for m in await asyncio.to_thread(store.load_queue)
+              if m.restore_at or (not m.done_at and (m.skipped_at or m.send_at))}
     carried = set(sent or {}) | set(receipts or {})
     metas = await asyncio.to_thread(store.load_schedule) if send_all or (fresh_start_at and marked | carried) else {}
     # After a fresh start (settings.fresh_start_at), what waits at a company not checked since was
@@ -158,9 +162,13 @@ async def _send(
                 job.notified_at = stamp
                 record.alerted.append(uid)
                 dirty.add(record.name)
+            mark = listed.get((record.name, uid))
+            if mark and mark.restore_at and job.dropped_for == SKIPPED:  # marked as new after its skip was applied
+                job.notified_at = job.dropped_for = None
+                dirty.add(record.name)
+                result.restored += 1
             if not waiting(job):
                 continue
-            mark = listed.get((record.name, uid))
             if mark and mark.skipped_at:
                 job.notified_at, job.dropped_for = to_iso(now), SKIPPED
                 dirty.add(record.name)
@@ -197,8 +205,8 @@ async def _send(
 
     if not queued:
         await persist()
-        if result.skipped:
-            log.info("Digest: nothing to send; %d skipped match(es) recorded", result.skipped)
+        if result.skipped or result.restored:
+            log.info("Digest: nothing to send; %d skipped match(es) recorded, %d put back", result.skipped, result.restored)
         return result
     result.attempted = True
     try:

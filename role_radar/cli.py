@@ -304,7 +304,7 @@ def cmd_matches(args: argparse.Namespace) -> int:
     if args.action in ("skip", "unskip", "send"):
         skip = args.action != "unskip"
         if args.all or (args.action == "send" and not picked):  # `send` alone sends them all, as before
-            targets = [(m.company, m.uid) for m in store.load_queue() if not m.done_at and bool(m.skipped_at) != skip]
+            targets = [(m.company, m.uid) for m in store.load_queue() if m.seen != skip]
         elif picked:
             targets = picked
         else:
@@ -387,8 +387,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
     elif action == "add":
         data = json.load(sys.stdin)
         result = onboarding.add_company(config, str(data.get("name") or ""), str(data.get("url") or ""))
-        if data.get("suggest") and result["status"] != "listed":
-            result["suggestion"] = suggest.suggest(config, result["name"], str(data.get("url") or ""),
+        if data.get("suggest", True) and result["status"] != "listed":  # for everyone's list, next version
+            result["suggestion"] = suggest.suggest(config, result["name"], result.get("url") or str(data.get("url") or ""),
                                                    "added it to their own list" if result["status"] == "added"
                                                    else f"couldn't add it: {result.get('reason')}")
         print(json.dumps(result))
@@ -764,8 +764,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("matches", parents=[common], help="matches waiting to be sent, skipped and sent; skip one or send now")
     p.add_argument("action", nargs="?", choices=["skip", "unskip", "send"],
-                   help="skip: record a waiting match without ever sending it (unskip undoes that until the next "
-                        "digest); send: send matches now, alerts on or off (without a match, all that are waiting)")
+                   help="skip: record a waiting match without ever sending it (unskip puts it back while it's "
+                        "listed, 7 days); send: send matches now, alerts on or off (without a match, all that are waiting)")
     p.add_argument("company", nargs="?", help="the match's company, as listed")
     p.add_argument("uid", nargs="?", help="the match's id, as listed")
     p.add_argument("--pick", nargs=2, action="append", metavar=("COMPANY", "UID"),
@@ -773,7 +773,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stdin", action="store_true",
                    help='read the matches from stdin as JSON, [["COMPANY", "UID"], ...]: for more than --pick can take '
                         "(an app launching this passes at most 4,096 arguments)")
-    p.add_argument("--all", action="store_true", help="skip, unskip or send every waiting match")
+    p.add_argument("--all", action="store_true", help="skip or send every waiting match, or unskip every skipped one")
     p.add_argument("--json", action="store_true", help="print the lists as JSON (what the menu bar app reads)")
     p.set_defaults(func=cmd_matches)
 
@@ -788,7 +788,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "recipients: who else gets the alerts (JSON on stdin); "
                         'find: search the companies ({"query", "limit", "offset", "which": "off"}); '
                         'track: turn companies on or off ({"names": [...], "tracked": false}); '
-                        'add: track a company of their own ({"name", "url", "suggest": true}); '
+                        'add: track a company they want ({"name", "url"}; also suggested for everyone\'s list '
+                        'unless "suggest": false); '
                         'suggest: ask for a company on everyone\'s list ({"name", "url", "note"})')
     p.add_argument("--replace", action="store_true", help="companies: replace the list instead of adding to it")
     p.add_argument("--no-check", action="store_true", help="companies: don't read each new job board once first")
