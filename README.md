@@ -2,6 +2,8 @@
 
 ![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fdownloads) ![Weekly users](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fusers)
 
+[![Download for Mac](https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-2ea44f?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-apple-silicon.dmg)
+
 Watches company careers pages and collects new jobs matching your criteria into a digest
 every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
 the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
@@ -22,8 +24,9 @@ There are three ways to run it:
 
 For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 
-1. Download `Role-Radar-<version>-apple-silicon.dmg` from the
-   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest), open it, and
+1. Click **Download for Mac** at the top: it's always the newest version
+   (`Role-Radar-apple-silicon.dmg`, also on the
+   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest)). Open it, and
    drag **Role Radar** onto **Applications** in the window that opens. (Opened from anywhere
    else, the app offers to move itself there: it has to be in Applications to keep checking and
    to update itself.)
@@ -76,9 +79,11 @@ hours (or with **Check for Updates…** in its menu) it reads the latest GitHub 
 signed with the update key, so a copy from the first release on never needs downloading again.
 Its settings, history and Keychain items live outside the app, so an update keeps them.
 
-**The badges at the top.** **Downloads** is how many times the app was downloaded from the
-Releases page, every version together. Updates fetch a copy of the disk image under another name
-(`...-update.dmg`), so they don't count. **Weekly users** is how many copies of the app ran in the
+**The badges at the top.** **Downloads** is how many times people downloaded the app, every
+version together: **Download for Mac**, the link beside the repo's About and the Releases page all
+fetch the same file, the newest release's `Role-Radar-apple-silicon.dmg`. Updates fetch a copy of
+the disk image under another name (`...-update.dmg`), and checking for one reads `appcast.xml`, so
+neither counts. **Weekly users** is how many copies of the app ran in the
 last 7 days: when it opens, and every six hours while it runs, the app sends an anonymous check-in
 to the suggestions box (deploy/suggestions), with a random id made once on that Mac and the app's
 and macOS's versions. Nothing else: no name, email, settings or jobs. The dev build and the app
@@ -645,7 +650,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
 | `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.dmg`: the app with its own Python, for someone else's Mac, in a disk image whose window shows it beside Applications (see [Get the app](#get-the-app)). The same file is the update. |
-| `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from (`DRY_RUN=1` stops before publishing). |
+| `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from, with the disk image as `Role-Radar-apple-silicon.dmg` for people and `Role-Radar-<version>-update.dmg` for updates (`DRY_RUN=1` stops before publishing). |
 | `scripts/build_dev_app.sh` | Builds **Role Radar Dev** into `build/` from the working tree, beside any installed Role Radar and apart from it (its own files, checker and Keychain items), checking no job sites unless built with `DEV_CHECKS=1`. `--open` opens it. |
 | `scripts/reset_app.sh` | Quits the dev build and removes its checker, files, logs and Keychain items: its next launch is a first run. `--installed` does the same to the downloaded app. |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |

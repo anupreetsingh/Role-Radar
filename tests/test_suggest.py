@@ -201,11 +201,12 @@ def test_the_box_counts_weekly_users(box):
 
 
 def test_the_downloads_badge_counts_fresh_downloads_only(box, monkeypatch):
-    """The disk image as people download it, every version; not its ...-update.dmg copy, nor the appcast."""
+    """The disk image as people download it, every version (older releases named it by version); not its
+    ...-update.dmg copy, nor the appcast."""
     module, client = box
     make_table(client, "role-radar-stats")
-    releases = [{"assets": [{"name": "Role-Radar-2.1.2-apple-silicon.dmg", "download_count": 3},
-                            {"name": "Role-Radar-2.1.2-update.dmg", "download_count": 40},
+    releases = [{"assets": [{"name": "Role-Radar-apple-silicon.dmg", "download_count": 3},
+                            {"name": "Role-Radar-2.1.3-update.dmg", "download_count": 40},
                             {"name": "appcast.xml", "download_count": 500}]},
                 {"assets": [{"name": "Role-Radar-2.1.0-apple-silicon.dmg", "download_count": 8}]}]
     asked = []
