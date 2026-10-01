@@ -34,6 +34,7 @@ from role_radar.config import CompanyConfig, combined, load_config, parse_raw, p
 from role_radar.filters import EDUCATION, JobFilter
 from role_radar.http_client import HttpClient
 from role_radar.scrapers import scraper_class_for
+from role_radar.storage import to_iso, utcnow
 
 GENERATED = "# Written by Role Radar's setup."
 DEFAULT_EXCLUDE = ["senior", "sr", "staff", "principal", "lead", "director", "vice president", "vp", "head of", "chief"]
@@ -358,6 +359,9 @@ def save_profession(config: Path, profession: str) -> None:
         theirs = [t for t in filters.get("include_keywords") or [] if t.casefold() not in offered]
         filters.update(include_keywords=PROFESSIONS[profession]["titles"] + theirs,
                        exclude_keywords=list(PROFESSIONS[profession]["exclude"]), match_on=["title"], exclude_on=["title"])
+        # A different search from here on: every company's next check is a quiet first one, so the
+        # jobs already open (the new profession's at companies on both lists) don't all alert at once.
+        settings["fresh_start_at"] = to_iso(utcnow())
     settings["profession"] = profession
     _write_profile(path, profile.get("runtime") or MAC_ONLY, filters, settings)
     load_config(config, path)  # never leave a profile that doesn't load

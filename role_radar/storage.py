@@ -127,6 +127,12 @@ class CompanyMeta:
         names = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in names})
 
+    def checked_since(self, when: str | None) -> bool:
+        """Whether a full check has succeeded since `when` (settings.fresh_start_at); True without one.
+        Quick checks don't count: they leave the full check's times as they were."""
+        last = self.last_ok_at or (self.last_checked_at if not self.failures else None)
+        return not when or bool(last and from_iso(last) >= from_iso(when))
+
 
 @dataclass
 class DigestSchedule:

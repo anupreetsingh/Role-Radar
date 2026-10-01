@@ -165,6 +165,23 @@ def test_non_target_roles_and_education(config, lists):
     assert "staff" not in onboarding.show(config)["exclude"]  # Staff Nurse is an entry-level title
 
 
+def test_switching_profession_starts_the_search_afresh(config, lists, monkeypatch):
+    from datetime import datetime, timezone
+
+    when = [datetime(2026, 9, 30, 12, tzinfo=timezone.utc)]
+    monkeypatch.setattr(onboarding, "utcnow", lambda: when[0])
+    fresh_start = lambda: load_config(config, profile_path(config)).settings.fresh_start_at  # noqa: E731
+    assert fresh_start() is None
+    onboarding.save_profession(config, "tech")
+    assert fresh_start() == "2026-09-30T12:00:00Z"
+    when[0] = when[0].replace(hour=13)
+    onboarding.save_profession(config, "tech")  # the same one again
+    onboarding.save_profile(config, ["software engineer"], ["senior"], [], 2, countries=["US"])
+    assert fresh_start() == "2026-09-30T12:00:00Z"  # other Setup changes don't start afresh
+    onboarding.save_profession(config, "healthcare")
+    assert fresh_start() == "2026-09-30T13:00:00Z"
+
+
 def test_a_new_profession_keeps_their_own_titles_and_companies(config, lists, boards):
     onboarding.save_profession(config, "tech")
     titles = onboarding.PROFESSIONS["tech"]["titles"][:3] + ["quantum whisperer"]

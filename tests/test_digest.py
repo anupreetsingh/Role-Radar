@@ -6,7 +6,8 @@ from role_radar import monitor
 from role_radar.config import AppConfig, CompanyConfig, Settings
 from role_radar.filters import JobFilter
 from role_radar.http_client import HttpSettings
-from role_radar.storage import JsonStateStore, from_iso
+from role_radar.storage import JsonStateStore, from_iso, to_iso
+from tests.conftest import fixture_json
 from tests.test_monitor import FlakyStore, RecordingNotifier, T0, run_monitor
 
 
@@ -171,6 +172,65 @@ def test_digest_skips_baselines_and_dry_runs(monkeypatch, store_factory):
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=1))
     run_monitor(monkeypatch, store_factory(), notifier, config=cfg, clock=lambda: T0 + timedelta(minutes=30))
     assert notifier.batches == []
+
+
+def searching(*titles, fresh_start=None, notify_on_first_run=True):
+    """One company, searched for `titles`; `fresh_start`: the search changed then (a profession switch)."""
+    cfg = config("Continental Finance")
+    cfg.companies[0].filter = JobFilter(include_keywords=list(titles))
+    cfg.settings.notify_on_first_run = notify_on_first_run
+    cfg.settings.fresh_start_at = to_iso(fresh_start) if fresh_start else None
+    return cfg
+
+
+def test_a_fresh_start_checks_each_company_quietly_once(monkeypatch, store_factory):
+    notifier, day = RecordingNotifier(), timedelta(days=1)
+    run_monitor(monkeypatch, store_factory(), notifier, config=searching("software developer", notify_on_first_run=False))
+
+    # The search changes: "Data Engineer" was open all along, seen but never a match until now.
+    switched = searching("data engineer", fresh_start=T0 + timedelta(hours=1), notify_on_first_run=False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, check_all=True, clock=lambda: T0 + day)
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, clock=lambda: T0 + day + timedelta(minutes=30))
+    assert notifier.batches == []
+    assert not store_factory().load_company("Continental Finance").pending_count()
+
+    # A job posted after that check alerts as usual.
+    listing = fixture_json("bamboohr_list.json")
+    listing["result"].append({**listing["result"][2], "id": "999", "jobOpeningName": "Data Engineer II"})
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, list_body=listing, check_all=True,
+                clock=lambda: T0 + 2 * day)
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, list_body=listing,
+                clock=lambda: T0 + 2 * day + timedelta(minutes=30))
+    assert [[j.title for j in batch] for batch in notifier.batches] == [["Data Engineer II"]]
+
+
+def test_without_a_fresh_start_a_changed_search_alerts_on_jobs_already_open(monkeypatch):
+    from role_radar.storage import MemoryStateStore
+
+    store, notifier, day = MemoryStateStore(), RecordingNotifier(), timedelta(days=1)
+    run_monitor(monkeypatch, store, notifier, config=searching("software developer", notify_on_first_run=False))
+    changed = searching("data engineer", notify_on_first_run=False)
+    run_monitor(monkeypatch, store, notifier, config=changed, check_all=True, clock=lambda: T0 + day)
+    run_monitor(monkeypatch, store, notifier, config=changed, clock=lambda: T0 + day + timedelta(minutes=30))
+    assert [[j.title for j in batch] for batch in notifier.batches] == [["Data Engineer"]]
+
+
+def test_matches_waiting_from_before_a_fresh_start_are_not_sent(monkeypatch, store_factory):
+    notifier = RecordingNotifier()
+    run_monitor(monkeypatch, store_factory(), notifier, config=searching("software developer", "data engineer"))
+    assert store_factory().load_company("Continental Finance").pending_count() == 2  # waiting for the digest
+
+    # The search changes before the digest goes out, and the company isn't due for a day.
+    switched = searching("data engineer", fresh_start=T0 + timedelta(minutes=10), notify_on_first_run=False)
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, clock=lambda: T0 + timedelta(minutes=30))
+    assert notifier.batches == []
+    assert store_factory().load_company("Continental Finance").pending_count() == 2  # held, not dropped
+
+    # Its next check settles them: the one that still matches was already open, so it's recorded, not sent.
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, check_all=True, clock=lambda: T0 + timedelta(days=1))
+    run_monitor(monkeypatch, store_factory(), notifier, config=switched, clock=lambda: T0 + timedelta(days=1, minutes=30))
+    assert notifier.batches == []
+    assert not store_factory().load_company("Continental Finance").pending_count()
 
 
 def test_digest_sends_each_posting_with_the_same_title_and_location(monkeypatch, store_factory):

@@ -17,7 +17,7 @@ import json
 import math
 import os
 from dataclasses import dataclass, field, fields, replace
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -89,12 +89,19 @@ class Settings:
     countries: list[str] = field(default_factory=list)
     # The person's profession (one of PROFESSIONS), picked in the packaged app's Setup.
     profession: str | None = None
+    # When the person's search last started afresh (a UTC time such as "2026-09-30T16:00:00Z"; Setup
+    # sets it when the profession changes). A company not fully checked since then is checked like a
+    # new one: the jobs open at that check are recorded without alerting (unless notify_on_first_run),
+    # and matches still waiting from the old search aren't sent.
+    fresh_start_at: str | None = None
     http: HttpSettings = field(default_factory=HttpSettings)
 
     def __post_init__(self) -> None:
         self.countries = _country_codes(self.countries, "settings.countries")
         if self.profession is not None and self.profession not in PROFESSIONS:
             raise ValueError(f"settings.profession must be one of {', '.join(PROFESSIONS)}, not {self.profession!r}")
+        if self.fresh_start_at is not None:
+            self.fresh_start_at = _utc_time(self.fresh_start_at, "settings.fresh_start_at")
         if not math.isfinite(self.digest_interval_minutes) or self.digest_interval_minutes < 0:
             raise ValueError("settings.digest_interval_minutes must be a finite nonnegative number")
         self.check_interval_by_ats = _minutes_by_ats(self.check_interval_by_ats, "check_interval_by_ats")
@@ -119,6 +126,16 @@ class Settings:
         """How often companies on `ats` get a quick check, or None if they don't."""
         minutes = self.quick_check_by_ats.get((ats or "").lower())
         return timedelta(minutes=minutes) if minutes else None
+
+
+def _utc_time(value: Any, name: str) -> str:
+    """An ISO time as the stores write theirs ("2026-09-30T16:00:00Z"). YAML reads an unquoted one as a datetime."""
+    try:
+        when = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        raise ValueError(f"{name} must be a time such as 2026-09-30T16:00:00Z, not {value!r}") from None
+    when = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    return when.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _minutes_by_ats(values: Mapping[str, float] | None, name: str) -> dict[str, float]:

@@ -65,6 +65,7 @@ async def flush_digest(
     receipts: dict[str, dict[str, dict[str, str]]] | None = None,
     locks: MutableMapping[str, asyncio.Lock] | None = None,
     save_lock: asyncio.Lock | None = None,
+    fresh_start_at: str | None = None,
 ) -> DigestResult:
     guard = save_lock or contextlib.nullcontext()
     schedule = await asyncio.to_thread(store.load_digest)
@@ -89,9 +90,13 @@ async def flush_digest(
     # company's jobs takes minutes of a small table's read capacity. A company whose
     # schedule row predates the pending count is read once its next check has counted them.
     marked = {m.company for m in await asyncio.to_thread(store.load_queue) if not m.done_at and (m.skipped_at or m.send_at)}
-    metas = await asyncio.to_thread(store.load_schedule) if send_all else {}
     carried = set(sent or {}) | set(receipts or {})
-    names = [name for name in companies if name in carried or name in marked or (name in metas and metas[name].pending)]
+    metas = await asyncio.to_thread(store.load_schedule) if send_all or (fresh_start_at and marked | carried) else {}
+    # After a fresh start (settings.fresh_start_at), what waits at a company not checked since was
+    # matched for the old search: it stays unsent until that check settles it.
+    stale = {name for name, meta in metas.items() if not meta.checked_since(fresh_start_at)}
+    names = [name for name in companies if name not in stale
+             and (name in carried or name in marked or (name in metas and metas[name].pending))]
     held: list[asyncio.Lock] = []
     busy: set[str] = set()
     if locks is not None:

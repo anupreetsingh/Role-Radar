@@ -379,9 +379,12 @@ async def process_company(
     """
     record = await asyncio.to_thread(store.load_company, company.name)
     state = MonitorState({company.name: record.jobs})
+    # After a fresh start (a profession switch), each company's next full check counts as its first:
+    # jobs already open then, matched for the first time only by the new search, don't alert.
+    first_run = record.is_new or not record.meta.checked_since(settings.fresh_start_at)
     try:
         outcome = await asyncio.wait_for(
-            check_company(company, http, state, settings, notify=notify, first_run=record.is_new,
+            check_company(company, http, state, settings, notify=notify, first_run=first_run,
                           scraper=scraper, first_page=first_page),
             timeout=timeout or settings.company_timeout,
         )
@@ -749,7 +752,7 @@ async def _digest(
             store, [c.name for c in config.companies if c.checked], _channels(notifiers, False), lease,
             now, config.settings.digest_interval_minutes, save, deadline=deadline,
             sent=unsaved.sent if unsaved else None, receipts=unsaved.channels if unsaved else None,
-            locks=locks, save_lock=save_lock,
+            locks=locks, save_lock=save_lock, fresh_start_at=config.settings.fresh_start_at,
         )
         result.digest_attempted |= digest.attempted
         result.digest_jobs += digest.jobs
