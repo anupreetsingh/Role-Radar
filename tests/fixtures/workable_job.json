@@ -1,0 +1,9 @@
+{
+  "id": 6088307, "shortcode": "D1E02E0D44", "title": "Software Engineer I", "remote": false,
+  "location": {"country": "India", "countryCode": "IN", "city": "Noida", "region": "Uttar Pradesh"},
+  "state": "published", "published": "2026-09-25T00:00:00.000Z", "type": "full", "department": ["Engineering"],
+  "workplace": "on_site",
+  "description": "<p>Build our booking APIs.</p>",
+  "requirements": "<ul><li>0-2 years of experience with Python</li></ul>",
+  "benefits": "<p>Founded 25 years ago; 10 years of parental leave history.</p>"
+}

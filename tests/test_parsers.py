@@ -279,6 +279,57 @@ def test_smartrecruiters_description_is_the_role_not_the_company():
     assert seen[-1] == swe.url
 
 
+def scrape_workable(url="https://apply.workable.com/acme/", *, described=(), **options):
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == "/api/v1/widget/accounts/acme":
+            return httpx.Response(200, json=fixture_json("workable_widget.json"))
+        if request.url.path == "/api/v2/accounts/acme/jobs/D1E02E0D44":
+            return httpx.Response(200, json=fixture_json("workable_job.json"))
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company(url=url)
+            cfg.options = options
+            scraper = SCRAPERS["workable"](cfg, http)
+            result = await scraper.fetch_jobs()
+            descriptions = {j.job_id: await scraper.fetch_description(j) for j in result.jobs if j.job_id in described}
+            return result, descriptions, seen
+
+    return asyncio.run(go())
+
+
+def test_workable_widget_lists_every_job_in_one_request():
+    result, _, seen = scrape_workable()
+    jobs = {j.job_id: j for j in result.jobs}
+    assert result.complete and list(jobs) == ["D1E02E0D44", "7414178934", "76675200E4"] and len(seen) == 1
+    swe = jobs["D1E02E0D44"]
+    assert swe.title == "Software Engineer I" and swe.uid == "acme:workable:D1E02E0D44"
+    assert swe.url == "https://apply.workable.com/j/D1E02E0D44"
+    assert swe.location == "Noida, Uttar Pradesh, India; New York, United States"  # the hidden Pune location left out
+    assert (swe.employment_type, swe.department, swe.date_posted) == ("Full-time", "Engineering", date(2026, 9, 25))
+    director = jobs["7414178934"]
+    assert director.location == "United States (Remote)" and director.employment_type is None and director.department is None
+    se = jobs["76675200E4"]
+    assert se.location == "Remote" and se.date_posted == date(2026, 8, 27)
+    assert se.url == "https://apply.workable.com/acme/j/76675200E4/"
+
+
+@pytest.mark.parametrize("url", ["https://apply.workable.com/acme/", "https://acme.workable.com/", "https://apply.workable.com/acme/j/D1E02E0D44/"])
+def test_workable_account_from_url(url):
+    result, _, _ = scrape_workable(url)
+    assert len(result.jobs) == 3
+
+
+def test_workable_description_is_the_role_not_the_benefits():
+    _, descriptions, seen = scrape_workable(described={"D1E02E0D44"})
+    assert descriptions == {"D1E02E0D44": "<p>Build our booking APIs.</p><ul><li>0-2 years of experience with Python</li></ul>"}
+    assert seen[-1] == "https://apply.workable.com/api/v2/accounts/acme/jobs/D1E02E0D44"
+
+
 def test_generic_json_ld():
     result = scrape("generic", "https://acme.example/careers", {"/careers": fixture_text("generic_jsonld.html")})
     (pe,) = result.jobs
@@ -325,6 +376,7 @@ def test_generic_empty_page_raises():
         ("https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite", "workday"),
         ("https://ats.rippling.com/en-US/acme/jobs", "rippling"),
         ("https://careers.smartrecruiters.com/Acme", "smartrecruiters"),
+        ("https://apply.workable.com/acme/", "workable"),
         ("https://www.acme.com/careers", "generic"),
     ],
 )

@@ -1,0 +1,34 @@
+{
+  "name": "Acme",
+  "description": "<p>Acme builds booking software.</p>",
+  "jobs": [
+    {
+      "title": "Software Engineer I ", "shortcode": "D1E02E0D44", "code": "1", "employment_type": "Full-time",
+      "telecommuting": false, "department": "Engineering",
+      "url": "https://apply.workable.com/j/D1E02E0D44", "shortlink": "https://apply.workable.com/j/D1E02E0D44",
+      "application_url": "https://apply.workable.com/j/D1E02E0D44/apply",
+      "published_on": "2026-09-25", "created_at": "2026-09-24",
+      "country": "India", "city": "Noida", "state": "Uttar Pradesh",
+      "education": "", "experience": "", "function": "Engineering", "industry": "Computer Software",
+      "locations": [
+        {"country": "India", "countryCode": "IN", "city": "Noida", "region": "Uttar Pradesh", "hidden": false},
+        {"country": "United States", "countryCode": "US", "city": "New York", "region": "New York", "hidden": false},
+        {"country": "India", "countryCode": "IN", "city": "Pune", "region": "Maharashtra", "hidden": true}
+      ]
+    },
+    {
+      "title": "Director, Growth Strategy", "shortcode": "7414178934", "code": "2", "employment_type": "",
+      "telecommuting": true, "department": "",
+      "url": "https://apply.workable.com/j/7414178934",
+      "published_on": "2026-06-05", "created_at": "2026-06-05",
+      "country": "United States", "city": "", "state": null,
+      "locations": [{"country": "United States", "countryCode": "US", "city": "", "region": null, "hidden": false}]
+    },
+    {
+      "title": "Solutions Engineer", "shortcode": "76675200E4", "code": "3", "employment_type": "Contract",
+      "telecommuting": true, "department": "Sales",
+      "published_on": null, "created_at": "2026-08-27",
+      "locations": []
+    }
+  ]
+}

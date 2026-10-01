@@ -39,6 +39,8 @@ DEFAULT_HOST_DELAYS = {
     "ats.rippling.com": 0.5,
     # careers. (listings) and jobs. (job pages) as one host.
     "smartrecruiters.com": 0.5,
+    # Workable answered 429 after ~1,100 requests at 2 a second; one every 2 s ran for hours.
+    "apply.workable.com": 2.0,
 }
 
 
