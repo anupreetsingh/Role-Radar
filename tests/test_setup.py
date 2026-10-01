@@ -5,9 +5,11 @@ import json
 
 import httpx
 import pytest
+import yaml
 
 from role_radar import cli, onboarding
 from role_radar.config import load_config, profile_path
+from role_radar.filters import JobFilter, compile_keyword
 from role_radar.http_client import HttpClient
 from tests.conftest import fixture_json, job
 
@@ -162,6 +164,48 @@ def test_non_target_roles_and_education(config, lists):
         onboarding.save_profile(config, ["software engineer"], [], [], 2, countries=["US"], education="diploma")
     onboarding.save_profession(config, "healthcare")
     assert "staff" not in onboarding.show(config)["exclude"]  # Staff Nurse is an entry-level title
+
+
+def test_setups_examples_are_what_the_rules_do(config, lists):
+    """Setup's ⓘ explains both lists with examples: each must be what the rules do, with only the boxes it
+    names ticked and with every box ticked."""
+    for pid, p in onboarding.PROFESSIONS.items():
+        everything = JobFilter(include_keywords=p["titles"], exclude_keywords=p["exclude"])
+        title, jobs = p["examples"]["target"]
+        assert title in p["titles"], pid
+        for name in jobs:
+            assert compile_keyword(title).search(name) and everything.evaluate(job(name)), (pid, name)
+        targets, words, reach, stopped = p["examples"]["non_target"]
+        assert set(targets) <= set(p["titles"]) and set(words) <= set(p["patterns"]), pid
+        named = JobFilter(include_keywords=targets, exclude_keywords=[p["patterns"][w] for w in words])
+        for rules in (named, everything):
+            assert all(rules.evaluate(job(name)) for name in reach), pid
+            assert not any(rules.evaluate(job(name)) for name in stopped), pid
+        assert not any(named.evaluate(job(name)).reason == "no include keyword matched" for name in stopped), pid
+    tech = next(p for p in onboarding.show(config)["professions"] if p["id"] == "tech")
+    assert tech["examples"]["non_target"] == {
+        "targets": ["product manager", "software engineering"], "words": ["manager"],
+        "reach": ["Product Manager Intern", "Software Engineering Intern"],
+        "stopped": ["Software Engineering Manager", "Product Manager - Engineering Manager"]}
+
+
+def test_older_rules_for_staff_and_manager_show_as_their_boxes(config, lists):
+    """Setups before target titles shielded their words saved staff and manager as longer rules: still ticked."""
+    onboarding.save_profession(config, "tech")
+    path = profile_path(config)
+    header = "".join(line for line in path.read_text().splitlines(keepends=True) if line.startswith("#"))
+    raw = yaml.safe_load(path.read_text())
+    old = {"staff": r"re:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b",
+           "manager": r"re:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b"}
+    labels = onboarding.PROFESSIONS["tech"]["labels"]
+    raw["filters"]["exclude_keywords"] = [old.get(labels.get(r, r), r) for r in raw["filters"]["exclude_keywords"]]
+    path.write_text(header + yaml.safe_dump(raw, sort_keys=False))
+    assert set(old.values()) <= set(load_config(config, path).companies[0].filter.exclude_keywords)
+    state = onboarding.show(config)
+    assert {"staff", "manager"} <= set(state["exclude"])
+    onboarding.save_profile(config, state["roles"], state["exclude"], [], 2, countries=["US"])
+    saved = load_config(config, profile_path(config)).companies[0].filter.exclude_keywords
+    assert "staff" in saved and r"re:\bmanagers?\b" in saved
 
 
 def test_switching_profession_starts_the_search_afresh(config, lists, monkeypatch):

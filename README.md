@@ -44,8 +44,10 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
      tracked if Role Radar can read the page (read once to check), and either way it goes to the
      maintainer's suggestions box for a later version (see below).
    - **Roles:** target roles, the job titles to look for, and non-target roles, words that rule
-     a title out (Senior, Lead, Staff, Director...). Both are boxes grouped by kind, all ticked
-     to start with: untick any you don't want, or add your own.
+     a title out (Senior, Lead, Staff, Director...), unless the word is part of the target title
+     that matched: Manager rules out Software Engineering Manager, not Product Manager. Both are boxes
+     grouped by kind, all ticked to start with: untick any you don't want, or add your own.
+     An ⓘ beside each explains it with an example.
    - **Qualifications:** skip jobs asking for a number of years or more ("3+" still alerts for
      no experience, 1+ and 2+), and your highest degree. Jobs that need a higher degree are
      skipped. A degree can also count in place of experience: if you skip 3+ years and have a
@@ -107,9 +109,12 @@ with the companies in `config/companies.yaml` as its directory of known employer
 `macos/AppIcon.icon` (open it in Xcode's Icon Composer to change it), and Sparkle (fetched once by
 `scripts/get_sparkle.sh`), and signs it ad hoc. The packaged app runs its checker as its own launchd agent,
 `com.roleradar.app.checker`, with its own files and Keychain items, so it never touches one
-run from the code. To try a build as someone new would, `KEEP_APP=dist sh scripts/package_app.sh`
-keeps a copy of the app in `dist/`, and `sh scripts/reset_app.sh` wipes the packaged app's
-setup so its next launch is a first run.
+run from the code. To try changes out, `sh scripts/build_dev_app.sh --open` builds **Role Radar Dev**
+into `build/`: the same app run on the repo's code, but an app of its own (`com.roleradar.app.dev`, files in
+`~/Library/Application Support/Role Radar Dev`, its own checker and Keychain items) that checks no job sites
+(`DEV_CHECKS=1` for one that does), so an installed Role Radar in use is never touched.
+`sh scripts/reset_app.sh` wipes the dev build's setup so its next launch is a first run (`--installed`
+wipes the downloaded app's instead, its settings and job history included).
 
 ## Run it on your Mac
 
@@ -480,7 +485,9 @@ apply to every company, and a company's own `filters` replace them **one key at 
 
 Matching is case-insensitive and respects word boundaries, so `AI` does not match
 "Maintain". A space in a keyword also matches `-`, `/` and `_`, and `re:` lets you use a
-regex. To change the logic itself, edit `JobFilter.evaluate` in `filters.py`. To make a
+regex. An exclude keyword never rules out an include keyword it's part of: with `manager`
+excluded, "Product Manager" still matches the include keyword `product manager`, but
+"Software Engineering Manager", matched by `software engineering`, doesn't. To change the logic itself, edit `JobFilter.evaluate` in `filters.py`. To make a
 new field matchable, add it to `FIELD_GETTERS`. Keywords can't match descriptions, and a
 config that puts `description` in `match_on` or `exclude_on` is rejected at load time.
 
@@ -629,7 +636,8 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.dmg`: the app with its own Python, for someone else's Mac, in a disk image whose window shows it beside Applications (see [Get the app](#get-the-app)). The same file is the update. |
 | `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from (`DRY_RUN=1` stops before publishing). |
-| `scripts/reset_app.sh` | Quits the packaged app and removes its checker, files, logs and Keychain items: its next launch is a first run. |
+| `scripts/build_dev_app.sh` | Builds **Role Radar Dev** into `build/` from the working tree, beside any installed Role Radar and apart from it (its own files, checker and Keychain items), checking no job sites unless built with `DEV_CHECKS=1`. `--open` opens it. |
+| `scripts/reset_app.sh` | Quits the dev build and removes its checker, files, logs and Keychain items: its next launch is a first run. `--installed` does the same to the downloaded app. |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
 Every command takes `--config PATH` and `-v`. Without `--config`, the local companies

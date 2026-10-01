@@ -61,8 +61,8 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                                                    "performance engineer", "GPU engineer", "graphics engineer",
                                                    "rendering engineer", "computer graphics", "gameplay engineer",
                                                    "algorithm engineer", "algorithms engineer", "high performance computing",
-                                                   "HPC engineer", "member of technical staff", "member technical staff",
-                                                   "associate technical staff"]),
+                                                   "HPC engineer", "member of technical staff", "member of the technical staff",
+                                                   "member technical staff", "associate technical staff"]),
             ("AI and machine learning", ["machine learning", "ML engineer", "MLOps", "LLMOps", "AI engineer",
                                          "AI engineering", "applied AI", "artificial intelligence", "generative AI",
                                          "gen AI engineer", "LLM engineer", "agent engineer", "agents engineer", "AI agent",
@@ -76,6 +76,7 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                                         "test automation", "software test", "GRC engineer"]),
             ("Product and program management", ["technical program manager", "technical program management",
                                                 "associate product manager", "product manager"]),
+            ("Business analysis", ["business analyst", "business systems analyst"]),
             ("Solutions and deployment", ["forward deployed engineer", "forward deployment engineer",
                                           "AI deployment engineer", "solutions engineer", "solution engineer",
                                           "solutions architect", "solution architect"]),
@@ -83,12 +84,11 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                                    "technology analyst program", "technical development program",
                                    "software development program", "technology graduate"]),
         ],
-        # Staff and manager spare Member of Technical Staff, and technical program and product managers.
+        # A word here never rules out a target title it's part of, so staff spares Member of Technical Staff,
+        # and manager spares technical program and product managers.
         "skip": [
-            ("Senior levels", ["senior", "sr",
-                               ("staff", r"re:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b"),
-                               "principal", "distinguished", "lead",
-                               ("manager", r"re:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b")]),
+            ("Senior levels", ["senior", "sr", "staff", "principal", "distinguished", "lead",
+                               ("manager", r"re:\bmanagers?\b")]),
             ("Executives", ["director", "vice president", "vp", "head of", "chief", "president", "officer"]),
             ("Other kinds of work", [
                 ("SAP and ServiceNow", r"re:\b(?:ServiceNow|SAP|ABAP|Pega|MuleSoft|PeopleSoft|Fiori|Power[\s-]*Platform)\b"),
@@ -98,6 +98,12 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                 ("firmware and hardware", r"re:\b(?:firmware|BIOS|UEFI|PCB|FPGA|ASIC|RTL|CNC|CMM|PLC|HVAC)\b"),
                 "design release", "process integration", "supplier", "technician"]),
         ],
+        # Setup's ⓘ, checked against the rules by the tests: a target title and jobs it alerts for; and with
+        # these target titles and non-target words ticked, jobs that reach you and jobs that don't.
+        "examples": {"target": ("software engineer", ["Software Engineer, GenAI", "Backend Software Engineer"]),
+                     "non_target": (["product manager", "software engineering"], ["manager"],
+                                    ["Product Manager Intern", "Software Engineering Intern"],
+                                    ["Software Engineering Manager", "Product Manager - Engineering Manager"])},
     },
     "accounting": {
         "name": "Accounting & Finance",
@@ -133,6 +139,8 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                                      "developer", "SAP", "Oracle", "Workday", "NetSuite", "customer", "teller",
                                      "loan officer", "insurance agent", "quality assurance", "QA", "cyber", "security"]),
         ],
+        "examples": {"target": ("accountant", ["Accountant II", "Revenue Accountant"]),
+                     "non_target": (["accountant"], ["senior"], ["Accountant II", "Staff Accountant"], ["Senior Accountant"])},
     },
     "healthcare": {
         "name": "Healthcare",
@@ -170,6 +178,8 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                                      "receptionist", "marketing", "software", "engineer", "analyst", "veterinary", "vet",
                                      "insurance", "claims"]),
         ],
+        "examples": {"target": ("registered nurse", ["Registered Nurse - ICU", "Registered Nurse, Night Shift"]),
+                     "non_target": (["nurse"], ["manager"], ["Registered Nurse", "Nurse Practitioner"], ["Nurse Manager"])},
     },
 }
 for _profession in PROFESSIONS.values():
@@ -180,6 +190,12 @@ for _profession in PROFESSIONS.values():
     _profession["exclude"] = [pattern for _, pattern in _words]  # the rules saved, all ticked to start with
     _profession["patterns"] = dict(_words)  # label -> rule
     _profession["labels"] = {pattern: label for label, pattern in _words}
+# What Setup saved for these boxes before a word stopped ruling out the target titles it's part of: they
+# still work, show as their boxes, and save as today's rules.
+PROFESSIONS["tech"]["labels"].update({
+    r"re:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b": "staff",
+    r"re:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b": "manager",
+})
 assert set(PROFESSIONS) == set(PROFESSION_IDS)
 
 # The countries Setup offers. Picking them decides which companies are checked (their `countries`),
@@ -301,7 +317,8 @@ def show(config: Path) -> dict[str, Any]:
         "profession": settings.get("profession"),
         "professions": [{"id": pid, "name": p["name"], "about": p["about"],
                          "groups": [{"name": name, "titles": titles} for name, titles in p["groups"]],
-                         "skip_groups": [{"name": name, "titles": words} for name, words in p["skip_groups"]]}
+                         "skip_groups": [{"name": name, "titles": words} for name, words in p["skip_groups"]],
+                         "examples": _examples(p["examples"])}
                         for pid, p in PROFESSIONS.items()],
         "roles": filters.get("include_keywords") or [],
         "exclude": [labels.get(rule, rule) for rule in filters.get("exclude_keywords") or []],  # as Setup's boxes
@@ -323,6 +340,13 @@ def show(config: Path) -> dict[str, Any]:
     state["ready"] = bool(state["roles"] and state["companies"]
                           and (state["countries"] or not state["profession"]))
     return state
+
+
+def _examples(examples: dict[str, Any]) -> dict[str, Any]:
+    """Setup's ⓘ examples, as `show` reports them."""
+    (title, jobs), (targets, words, reach, stopped) = examples["target"], examples["non_target"]
+    return {"target": {"title": title, "jobs": jobs},
+            "non_target": {"targets": targets, "words": words, "reach": reach, "stopped": stopped}}
 
 
 def _companies(config: Path) -> dict[str, Any]:

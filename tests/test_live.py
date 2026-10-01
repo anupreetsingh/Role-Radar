@@ -396,3 +396,21 @@ def test_matches_command_takes_a_big_selection_on_stdin(config, capsys, monkeypa
 
 def test_matches_command_needs_a_match_to_skip(config):  # noqa: F811
     assert cli.main(["matches", "skip", "--config", str(config)]) == cli.EXIT_USAGE
+
+
+def test_new_jobs_show_when_they_joined_the_list():
+    """A job only a later search matched (a title added in Setup) is new to them now: it shows, and sorts, as found
+    when it joined New jobs, not when it was first listed hours before."""
+    class Store(MemoryStateStore):
+        def load_queue(self):
+            return [QueuedMatch("Delta", "d:1", "IT Business Analyst", "https://d.example/1",
+                                first_seen=to_iso(T - timedelta(hours=2)), queued_at=to_iso(T)),
+                    QueuedMatch("Acme", "a:1", "Data Engineer", "https://a.example/1",
+                                first_seen=to_iso(T - timedelta(minutes=5)), queued_at=to_iso(T - timedelta(minutes=5))),
+                    QueuedMatch("Old", "o:1", "Software Developer", "https://o.example/1",
+                                first_seen=to_iso(T - timedelta(minutes=9)))]  # a store that doesn't keep queued_at
+
+    waiting = ui.live(Store(), now=T)["waiting"]
+    assert [(m["title"], m["found_at"]) for m in waiting] == [
+        ("IT Business Analyst", to_iso(T)), ("Data Engineer", to_iso(T - timedelta(minutes=5))),
+        ("Software Developer", to_iso(T - timedelta(minutes=9)))]

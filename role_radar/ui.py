@@ -67,7 +67,7 @@ def live(store: StateStore, now: datetime | None = None) -> dict[str, Any]:
     waiting = [m for m in queue if not m.seen]
     skipped = [m for m in queue if m.seen]
     return {
-        "waiting": [_match(m) for m in sorted(waiting, key=lambda m: (m.first_seen, m.company, m.uid), reverse=True)],
+        "waiting": [_match(m) for m in sorted(waiting, key=lambda m: (_found(m), m.company, m.uid), reverse=True)],
         "skipped": [_match(m) for m in sorted(skipped, key=lambda m: m.skipped_at or m.done_at or "", reverse=True)],
         "sent": sent_alerts(store.recent_alerts(SENT_ROWS), SENT_ROWS),
         "round": latest_round(store.load_rounds(), now or utcnow()),
@@ -99,9 +99,16 @@ def sent_alerts(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
     return out
 
 
+def _found(m: QueuedMatch) -> str:
+    """When a match joined the list: later than first seen for a job that only a later search
+    matched (a title added in Setup), which is new to them now, not when it was first listed."""
+    return m.queued_at or m.first_seen
+
+
 def _match(m: QueuedMatch) -> dict[str, Any]:
     return {"company": m.company, "uid": m.uid, "title": m.title, "location": m.location, "url": m.url,
-            "first_seen": m.first_seen, "skipped_at": m.skipped_at, "final": bool(m.done_at), "send_at": m.send_at}
+            "first_seen": m.first_seen, "found_at": _found(m), "skipped_at": m.skipped_at, "final": bool(m.done_at),
+            "send_at": m.send_at}
 
 
 def latest_round(rounds: dict[str, dict[str, Any]], now: datetime) -> dict[str, Any] | None:

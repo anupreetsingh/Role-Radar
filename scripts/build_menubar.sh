@@ -17,7 +17,7 @@ swiftc -parse-as-library -swift-version 5 -O -target "$(uname -m)-apple-macos14.
 
 # Stop the Mac's checker (it finishes the companies in flight) so the new app starts it on the current code.
 "$python" -m role_radar stop >/dev/null 2>&1 || true
-pkill -x RoleRadarMenu 2>/dev/null || true
+pkill -f "$app/Contents/MacOS/RoleRadarMenu" 2>/dev/null || true  # this app only, not the downloaded one
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS"
 cp "$build/RoleRadarMenu" "$app/Contents/MacOS/RoleRadarMenu"

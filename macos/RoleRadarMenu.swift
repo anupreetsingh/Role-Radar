@@ -160,9 +160,11 @@ struct LiveState: Decodable {
         let location: String?
         let url: String
         let first_seen: String
+        let found_at: String?  // when it joined New jobs: later than first_seen for a job only a later search matched
         var skipped_at: String?
         var send_at: String?  // sent from Live Tracking: on its way out
         var id: String { company + "#" + uid }
+        var found: String { found_at ?? first_seen }
     }
 
     /// One alert that went out: when, by which runner, and its jobs, newest first as the alert listed them.
@@ -212,7 +214,7 @@ struct LiveState: Decodable {
                 return true
             }
             waiting.append(contentsOf: back)
-            waiting.sort { $0.first_seen > $1.first_seen }
+            waiting.sort { $0.found > $1.found }
         }
     }
 
@@ -320,9 +322,15 @@ enum Place {
     static let info = Bundle.main.infoDictionary ?? [:]
     static let packaged = info["RRPackaged"] as? Bool ?? false
     static let version = info["CFBundleShortVersionString"] as? String ?? ""
+    // Its folder in Application Support, launchd agent and Keychain service: the dev build (build_dev_app.sh)
+    // names its own in Info.plist, so trying it out never touches the installed app's.
     static let support = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/Role Radar").path
-    static let agent = "com.roleradar.app.checker"  // the packaged app's own launchd agent
+        .appendingPathComponent("Library/Application Support/" + (info["RRHome"] as? String ?? "Role Radar")).path
+    static let agent = info["RRAgent"] as? String ?? "com.roleradar.app.checker"  // the packaged app's own launchd agent
+    static let keychain = info["RRKeychain"] as? String ?? "com.roleradar.app"
+    /// Whether it may check job sites: the dev build doesn't (RRNoChecks) unless built with DEV_CHECKS=1,
+    /// so trying it out never doubles the requests this Mac makes.
+    static let checks = !(info["RRNoChecks"] as? Bool ?? false)
     static let python: String = packaged
         ? (Bundle.main.resourcePath ?? "") + "/python/bin/python3"
         : info["RRPython"] as? String ?? ProcessInfo.processInfo.environment["RR_PYTHON"] ?? "python3"
@@ -333,7 +341,7 @@ enum Place {
     static let config = packaged ? support + "/companies.yaml" : workDir + "/config/companies.yaml"
     /// The packaged app's state, lock, checker and Keychain items are its own, apart from a checker run from the code.
     static let env: [String: String] = packaged
-        ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent, "ROLE_RADAR_KEYCHAIN": "com.roleradar.app"] : [:]
+        ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent, "ROLE_RADAR_KEYCHAIN": keychain] : [:]
     static let log = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/" + (packaged ? agent + ".log" : "role-radar.log"))
     /// The dev build (build_dev_app.sh) runs from the repo's build/ folder.
@@ -524,8 +532,17 @@ struct SetupState: Decodable {
         let id: String
         let name: String
         let about: String
+        /// For the ⓘ beside them: a target title and jobs it alerts for; and with some target titles and
+        /// non-target words ticked, jobs that reach you and jobs that don't.
+        struct Examples: Decodable {
+            struct Target: Decodable { let title: String; let jobs: [String] }
+            struct NonTarget: Decodable { let targets: [String]; let words: [String]; let reach: [String]; let stopped: [String] }
+            let target: Target
+            let non_target: NonTarget
+        }
         let groups: [Group]  // job titles that alert
         let skip_groups: [Group]?  // words that rule a title out
+        let examples: Examples?
     }
     struct Country: Decodable { let code: String; let name: String }
     let profession: String?
@@ -638,7 +655,7 @@ final class Model: ObservableObject {
     }
 
     /// The packaged app starts checking only once Setup is done (and it's in Applications); one built from the code always may.
-    var canStart: Bool { !Place.packaged || (!Place.misplaced && (setup?.ready ?? false)) }
+    var canStart: Bool { Place.checks && (!Place.packaged || (!Place.misplaced && (setup?.ready ?? false))) }
 
     /// Re-read the state, starting the Mac's checker first if it's switched on and not running.
     func refresh() async {
@@ -714,9 +731,9 @@ final class Model: ObservableObject {
         await Self.cli(args: ["-m", "role_radar", "setup"] + args + ["--config", Place.config], stdin: stdin)
     }
 
-    /// Setup is done: start checking now and at every login.
+    /// Setup is done: start checking now and at every login (the dev build doesn't open at login).
     func startChecking() async {
-        try? SMAppService.mainApp.register()
+        if !Place.devBuild { try? SMAppService.mainApp.register() }
         await set("laptop", on: true)
         wantsWindow = false
     }
@@ -1536,6 +1553,9 @@ struct LiveWindow: View {
         return VStack(alignment: .leading, spacing: 14) {
             card {
                 Text("Now").scaledFont(12, weight: .semibold)
+                if !Place.checks {
+                    Text("This dev build doesn't check job sites.").scaledFont(11).foregroundStyle(.secondary)
+                }
                 health.round
                 if let fraction = live?.round?.fraction {
                     ProgressView(value: fraction).controlSize(.small)
@@ -1621,7 +1641,7 @@ struct NewJobRow: View, Equatable {
     var body: some View {
         let sending = match.send_at != nil
         MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                 when: "", since: ("Found", match.first_seen), busy: busy,
+                 when: "", since: ("Found", match.found), busy: busy,
                  picked: sending ? nil : picks.box(match.id), symbol: sending ? "paperplane" : nil,
                  note: sending ? "Sending…" : nil, menu: sending ? [] : menu)
     }
@@ -1724,19 +1744,17 @@ struct JobList: View, Equatable {
                 if sent.isEmpty {
                     Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
                 }
-                ForEach(sent) { alert in
-                    DisclosureGroup(isExpanded: expanded(alert.id)) {
-                        ForEach(Array(alert.jobs.enumerated()), id: \.offset) { _, job in
-                            MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url, when: "")
-                        }
-                    } label: {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) { expanded(alert.id).wrappedValue.toggle() }
-                        } label: {
-                            alertLabel(alert).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help(opened.contains(alert.id) ? "Hide this alert's jobs" : "Show this alert's jobs")
+                // One flat run of rows, each with an id of its own: an alert, then its jobs while it's open.
+                // The list (an outline view underneath) took only the first unfolding or two when the jobs
+                // sat inside the alert's row, or in a ForEach nested in it; the rest showed only once that
+                // row was drawn again, when its "min. ago" next changed, up to a minute after the click.
+                ForEach(sentRows) { row in
+                    switch row {
+                    case .alert(let alert):
+                        alertHeader(alert)
+                    case .job(_, _, let job):
+                        MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url, when: "")
+                            .padding(.leading, 20)
                     }
                 }
             } header: {
@@ -1829,9 +1847,43 @@ struct JobList: View, Equatable {
         return items
     }
 
-    private func expanded(_ id: String) -> Binding<Bool> {
-        Binding(get: { opened.contains(id) },
-                set: { open in if open { opened.insert(id) } else { opened.remove(id) } })
+    /// A row of the Sent alerts section: an alert, or one of an open alert's jobs.
+    private enum SentRow: Identifiable {
+        case alert(LiveState.Alert)
+        case job(alert: String, index: Int, LiveState.Alert.Job)
+
+        var id: String {
+            switch self {
+            case .alert(let alert): return alert.id
+            case .job(let alert, let index, _): return "\(alert)#\(index)"
+            }
+        }
+    }
+
+    private var sentRows: [SentRow] {
+        sent.flatMap { alert -> [SentRow] in
+            guard opened.contains(alert.id) else { return [.alert(alert)] }
+            return [.alert(alert)] + alert.jobs.enumerated().map { .job(alert: alert.id, index: $0.offset, $0.element) }
+        }
+    }
+
+    /// An alert's row: click it to show its jobs below it, or hide them.
+    private func alertHeader(_ alert: LiveState.Alert) -> some View {
+        let open = opened.contains(alert.id)
+        return Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if open { opened.remove(alert.id) } else { opened.insert(alert.id) }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right").scaledFont(10, weight: .semibold).foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(open ? 90 : 0))
+                alertLabel(alert)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(open ? "Hide this alert's jobs" : "Show this alert's jobs")
     }
 
     private func alertLabel(_ alert: LiveState.Alert) -> some View {
@@ -2209,7 +2261,7 @@ struct SetupView: View {
     private var rolesPage: some View {
         VStack(alignment: .leading, spacing: 28) {
             section("Target roles", "A job alerts you when its title contains one of the ticked titles. "
-                    + "Untick any you don't want.") {
+                    + "Untick any you don't want.", info: targetInfo) {
                 HStack(spacing: 8) {
                     Button("Tick All") { picked = Set(offered + ownTitles) }.controlSize(.small)
                     Button("Untick All") { picked = [] }.controlSize(.small)
@@ -2223,8 +2275,9 @@ struct SetupView: View {
                     add(&newTitle, offered: offered, own: &ownTitles, to: &picked)
                 }
             }
-            section("Non-target roles", "A job whose title contains a ticked word never alerts you, even when it "
-                    + "matches a target role. Untick any you want, such as Senior or Lead if you have the experience.") {
+            section("Non-target roles", "A ticked word here stops a job's alert, unless the word is part of a target "
+                    + "title you ticked. Untick any you want, such as Senior or Lead if you have the experience.",
+                    info: nonTargetInfo) {
                 ForEach(profession?.skip_groups ?? [], id: \.name) { group in
                     chips(group.name, group.titles, $skipped)
                 }
@@ -2234,6 +2287,26 @@ struct SetupView: View {
                 }
             }
         }
+    }
+
+    /// The ⓘ beside target roles: what a ticked title does, with an example.
+    private var targetInfo: AnyView? {
+        guard let example = profession?.examples?.target else { return nil }
+        let rule = "You get an alert when a ticked title is in a job's title."
+        return AnyView(InfoButton(hint: rule) {
+            Text(rule)
+            TickedExample(targets: [example.title], words: [], reach: example.jobs, stopped: [])
+        })
+    }
+
+    /// The ⓘ beside non-target roles: what a ticked word does, and that it never stops a target title it's part of.
+    private var nonTargetInfo: AnyView? {
+        guard let example = profession?.examples?.non_target else { return nil }
+        let rule = "A ticked word here stops the alert, unless it's part of a target title you ticked."
+        return AnyView(InfoButton(hint: rule) {
+            Text(rule)
+            TickedExample(targets: example.targets, words: example.words, reach: example.reach, stopped: example.stopped)
+        })
     }
 
     // -- page 5: qualifications ------------------------------------------------------------------
@@ -2421,9 +2494,13 @@ struct SetupView: View {
 
     // -- pieces ----------------------------------------------------------------------
 
-    private func section<Content: View>(_ title: String, _ about: String?, @ViewBuilder content: () -> Content) -> some View {
+    private func section<Content: View>(_ title: String, _ about: String?, info: AnyView? = nil,
+                                        @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).scaledFont(15, weight: .semibold)
+            HStack(spacing: 6) {
+                Text(title).scaledFont(15, weight: .semibold)
+                if let info { info }
+            }
             if let about {
                 Text(about).scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
@@ -2741,6 +2818,76 @@ struct Chip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// An ⓘ beside a heading: a hint on hover, and the full explanation in a popover on click.
+struct InfoButton<Content: View>: View {
+    let hint: String
+    @ViewBuilder let content: () -> Content
+    @State private var shown = false
+
+    var body: some View {
+        Button { shown.toggle() } label: {
+            Image(systemName: "info.circle").scaledFont(13).foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(hint)
+        .popover(isPresented: $shown, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 16) { content() }
+                .scaledFont(13)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(18)
+                .frame(width: 380, alignment: .leading)
+        }
+    }
+}
+
+/// An ⓘ example: the boxes ticked, drawn as Setup draws them, then the jobs that reach you and those that don't.
+struct TickedExample: View {
+    let targets: [String]
+    let words: [String]
+    let reach: [String]
+    let stopped: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("You have ticked:").scaledFont(13, weight: .semibold)
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                    boxes("Target roles", targets)
+                    if !words.isEmpty { boxes("Non-target roles", words) }
+                }
+            }
+            jobs("Then, these reach you:", reach, reaches: true)
+            jobs(reach.isEmpty ? "Then, these don't:" : "And these don't:", stopped, reaches: false)
+        }
+    }
+
+    @ViewBuilder
+    private func boxes(_ label: String, _ titles: [String]) -> some View {
+        GridRow(alignment: .top) {
+            Text(label).scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)  // level with a box's text
+            FlowLayout(spacing: 6) {
+                ForEach(titles, id: \.self) { Chip(text: $0, on: true) {}.allowsHitTesting(false) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func jobs(_ heading: String, _ titles: [String], reaches: Bool) -> some View {
+        if !titles.isEmpty {
+            VStack(alignment: .leading, spacing: 7) {
+                Text(heading).scaledFont(13, weight: .semibold)
+                ForEach(titles, id: \.self) { title in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: reaches ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(reaches ? Color.green : Color.red)
+                        Text(title)
+                    }
+                }
+            }
+        }
     }
 }
 

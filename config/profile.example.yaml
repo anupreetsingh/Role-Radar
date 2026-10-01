@@ -141,6 +141,9 @@ filters:
     - technical program management
     - associate product manager
     - product manager
+    # Business analysis.
+    - business analyst
+    - business systems analyst
     # Customer-facing engineering: forward deployed, AI deployment and solutions.
     - forward deployed engineer
     - forward deployment engineer
@@ -160,13 +163,13 @@ filters:
   exclude_keywords:
     - senior
     - sr
-    # "Member of Technical Staff" can be an early-career title.
-    - 're:^(?!.*\b(?:member|associate)\b.*\btechnical[\s/_-]+staff\b).*\bstaff\b'
+    # A word here never rules out an include keyword it's part of: "Member of Technical Staff"
+    # (an early-career title) stays, and so do product and technical program managers.
+    - staff
     - principal
     - distinguished
     - lead
-    # Permit technical program managers and product managers, exclude other managers.
-    - 're:^(?!.*\b(?:technical[\s/_-]+program|product)[\s/_-]+manager\b).*\bmanagers?\b'
+    - 're:\bmanagers?\b'
     - director
     - vice president
     - vp

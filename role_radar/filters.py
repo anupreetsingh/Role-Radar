@@ -3,7 +3,9 @@
 A job matches when ALL of these hold:
   1. at least one include keyword appears in the `match_on` fields
      (or there are no include keywords),
-  2. no exclude keyword appears in the `exclude_on` fields,
+  2. no exclude keyword appears in the `exclude_on` fields, except as part of an include
+     keyword found there: with "manager" excluded, "Product Manager" still matches the
+     include keyword "product manager", but "Software Engineering Manager" is excluded,
   3. its location matches one of `locations` (if any are configured),
   4. its employment type matches one of `employment_types` (if any are configured).
 
@@ -114,7 +116,7 @@ class JobFilter:
         return used
 
     def evaluate(self, job: JobPosting) -> MatchResult:
-        hit = self._search(self._exclude, job, self.exclude_on)
+        hit = self._excluded(job, self.exclude_on)
         if hit:
             return MatchResult(False, f"excluded by {hit!r}")
         if self._locations and not self._search(self._locations, job, ["location"]):
@@ -137,7 +139,7 @@ class JobFilter:
         request can be skipped.
         """
         unknown = {*unknown, *(name for name, get in FIELD_GETTERS.items() if not get(job))}
-        if self._search(self._exclude, job, [f for f in self.exclude_on if f not in unknown]):
+        if self._excluded(job, [f for f in self.exclude_on if f not in unknown]):
             return False
         if self._locations and "location" not in unknown and not self._search(self._locations, job, ["location"]):
             return False
@@ -146,6 +148,17 @@ class JobFilter:
         if self._include and not unknown.intersection(self.match_on):
             return bool(self._search(self._include, job, self.match_on))
         return True
+
+    def _excluded(self, job: JobPosting, fields: list[str]) -> str | None:
+        """The first exclude keyword in `fields`, not counting where it's part of an include keyword
+        found in the same field: the person asked for that title, word and all."""
+        texts = [(text, [m.span() for _, p in self._include for m in p.finditer(text)] if name in self.match_on else [])
+                 for name in fields if (text := FIELD_GETTERS[name](job))]
+        for keyword, pattern in self._exclude:
+            for text, asked in texts:
+                if any(not any(start <= m.start() and m.end() <= end for start, end in asked) for m in pattern.finditer(text)):
+                    return keyword
+        return None
 
     @staticmethod
     def _search(patterns: list[tuple[str, re.Pattern[str]]], job: JobPosting, fields: list[str]) -> str | None:

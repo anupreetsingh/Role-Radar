@@ -31,6 +31,25 @@ def test_title_matching(default_filter, title, expected):
     assert default_filter.evaluate(job(title)).matched is expected
 
 
+@pytest.mark.parametrize(
+    "title, expected",
+    [
+        ("Product Manager", True),  # "manager" is part of the target title that let it in
+        ("Technical Product Manager, AI", True),
+        ("Member of Technical Staff", True),
+        ("Software Engineering Manager", False),  # let in by "software engineering"; "manager" is outside it
+        ("Senior Product Manager", False),  # "senior" is outside "product manager"
+        ("Staff Software Engineer", False),
+        ("Product Manager / Engineering Manager", False),  # the second "manager" isn't part of a target title
+    ],
+)
+def test_a_target_title_shields_the_non_target_words_inside_it(title, expected):
+    f = JobFilter(include_keywords=["product manager", "software engineering", "software engineer", "member of technical staff"],
+                  exclude_keywords=["senior", "staff", r"re:\bmanagers?\b"])
+    assert f.evaluate(job(title)).matched is expected
+    assert f.could_match(job(title)) is expected
+
+
 def test_word_boundaries():
     f = JobFilter(include_keywords=["AI", "ML"])
     assert f.evaluate(job("AI Engineer"))

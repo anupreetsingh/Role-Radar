@@ -335,7 +335,7 @@ def cmd_matches(args: argparse.Namespace) -> int:
         for m in rows:
             where = f" ({m['location']})" if m.get("location") else ""
             note = "" if title == "Waiting to be sent" else ("  [recorded]" if m["final"] else "  [until the next digest]")
-            print(f"  {when(m['first_seen'])}  {m['company']}: {m['title']}{where}  {m['uid']}{note}")
+            print(f"  {when(m['found_at'])}  {m['company']}: {m['title']}{where}  {m['uid']}{note}")
     print("Sent alerts:" + ("" if state["sent"] else "  none yet"))
     for alert in state["sent"][:5]:
         jobs = alert["jobs"]
