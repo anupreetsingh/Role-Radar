@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -33,7 +34,7 @@ from role_radar.config import PROFESSIONS as PROFESSION_IDS
 from role_radar.config import CompanyConfig, combined, load_config, parse_raw, profession_list, profile_path
 from role_radar.filters import EDUCATION, JobFilter
 from role_radar.http_client import HttpClient
-from role_radar.scrapers import scraper_class_for
+from role_radar.scrapers import ats_name, scraper_class_for
 from role_radar.storage import to_iso, utcnow
 
 GENERATED = "# Written by Role Radar's setup."
@@ -619,6 +620,83 @@ def import_companies(config: Path, text: str, *, replace: bool = False, check: b
                       encoding="utf-8")
     report.total = len(current)
     return report
+
+
+# -- searching, turning off and adding companies (the app's Companies page) ----------------------
+
+
+def find_companies(config: Path, query: str = "", limit: int = 50, offset: int = 0, which: str = "all") -> dict[str, Any]:
+    """The profession's companies and the person's own whose name or job site contains every word of
+    `query`, those starting with it first, then A to Z; each says whether checks read it, and if not, why.
+    `which`: "off" for only those they turned off."""
+    settings = _read_yaml(profile_path(config)).get("settings") or {}
+    picked = {str(c) for c in settings.get("countries") or []}
+    off = {str(name) for name in settings.get("untracked") or []}
+    own = [c for c in _read_yaml(config).get("companies") or [] if isinstance(c, dict) and c.get("name") and c.get("url")]
+    mine = {str(c["name"]) for c in own}
+    listed = [c for c in profession_list(settings["profession"]) if str(c["name"]) not in mine] \
+        if settings.get("profession") in PROFESSIONS else []
+    words = query.casefold().split()
+    rows = [_company_row(c, is_own, off, picked) for c, is_own in [(c, True) for c in own] + [(c, False) for c in listed]
+            if all(w in f"{c['name']} {urlsplit(c['url']).hostname or ''}".casefold() for w in words)
+            and (which != "off" or str(c["name"]) in off)]
+    start = query.casefold().strip()
+    rows.sort(key=lambda r: (not r["name"].casefold().startswith(start), r["name"].casefold()))
+    return {"query": query, "total": len(rows), "results": rows[max(offset, 0):max(offset, 0) + max(limit, 0)],
+            "untracked": len(off)}
+
+
+def _company_row(company: dict[str, Any], own: bool, off: set[str], picked: set[str]) -> dict[str, Any]:
+    name, countries = str(company["name"]), list(company.get("countries") or [])
+    if company.get("enabled") is False:
+        why = "Role Radar can't read its job site yet"
+    elif name in off:
+        why = "you turned it off"
+    elif picked and countries and not picked & set(countries):
+        why = "it doesn't post jobs in your countries"
+    else:
+        why = None
+    return {"name": name, "url": company["url"], "site": ats_name(company["url"], company.get("ats")),
+            "countries": countries, "own": own, "readable": company.get("enabled") is not False,
+            "off": name in off, "tracked": why is None, "why": why}
+
+
+def set_tracked(config: Path, names: list[str], tracked: bool) -> None:
+    """Turn companies off (never checked) or back on, by name: settings.untracked in the profile."""
+    path = profile_path(config)
+    _check_generated(path)
+    profile = _read_yaml(path)
+    settings = dict(profile.get("settings") or {})
+    chosen = [str(n).strip() for n in names if str(n).strip()]
+    off = [str(n) for n in settings.get("untracked") or []]
+    off = [n for n in off if n not in chosen] if tracked else off + [n for n in chosen if n not in off]
+    if off:
+        settings["untracked"] = sorted(off, key=str.casefold)
+    else:
+        settings.pop("untracked", None)
+    _write_profile(path, profile.get("runtime") or MAC_ONLY, dict(profile.get("filters") or {}), settings)
+
+
+def add_company(config: Path, name: str, url: str) -> dict[str, Any]:
+    """Track a company of their own, from its careers page: its job board is read once to check it works.
+
+    {"status": "added", "name", "jobs"}; "listed" when the profession's list or their own has it
+    already (turned back on if they'd turned it off); "failed" with the reason it can't be read."""
+    name, url = name.strip(), url.strip()
+    if not name:
+        raise ValueError("give the company's name")
+    if not re.match(r"^https?://[^\s/]+\.[^\s/]+", url):
+        raise ValueError("give its careers page's address, starting with https://")
+    same = [r for r in find_companies(config, "", limit=10**6)["results"]
+            if _key(r["name"]) == _key(name) or r["url"].rstrip("/").lower() == url.rstrip("/").lower()]
+    if same:
+        if same[0]["off"]:
+            set_tracked(config, [same[0]["name"]], True)
+        return {"status": "listed", "name": same[0]["name"], "turned_on": same[0]["off"]}
+    report = import_companies(config, yaml.safe_dump([{"name": name, "url": url}]), check=True, directory={})
+    if report.added:
+        return {"status": "added", "name": name, "jobs": report.added[0].get("jobs")}
+    return {"status": "failed", "name": name, "reason": report.skipped[0]["reason"] if report.skipped else "not added"}
 
 
 async def _check_all(entries: list[dict[str, Any]], settings) -> list[tuple[dict[str, Any], int | None, str | None]]:

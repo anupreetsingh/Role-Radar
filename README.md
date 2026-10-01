@@ -35,7 +35,11 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
      on them all (`settings.fresh_start_at` in `profile.yaml` is when you switched).
    - **Countries** and **Companies:** the countries you want (United States, Canada, Australia,
      India), and optionally cities. Only companies that post jobs in those countries are
-     checked, and jobs alert from anywhere in them, or only from your cities.
+     checked, and jobs alert from anywhere in them, or only from your cities. On the Companies
+     page, **Find a company** searches the list: untick one to stop tracking it (with nothing
+     typed, it lists those turned off). **Add a company** tracks one that isn't listed, from its
+     careers page, after reading it once to check it can; **Ask for a company** sends one to the
+     maintainer's suggestions box for a later version (see below).
    - **Roles:** target roles, the job titles to look for, and non-target roles, words that rule
      a title out (Senior, Lead, Staff, Director...). Both are boxes grouped by kind, all ticked
      to start with: untick any you don't want, or add your own.
@@ -64,6 +68,21 @@ Its files live in `~/Library/Application Support/Role Radar`, and its log is
 sh scripts/package_app.sh      # → dist/Role-Radar-<version>-apple-silicon.zip
 gh release create v<version> dist/Role-Radar-<version>-apple-silicon.zip --title "Role Radar <version>"
 ```
+
+**Suggestions box.** The Companies page's requests go to a Lambda function URL that keeps them in
+a DynamoDB table, the same company once with how many asked (`deploy/suggestions`, its own stack,
+on demand, so it costs nothing at this size). Set it up once with the admin login, then put its
+`SuggestionsUrl` output in `role_radar/suggest.py` (`ENDPOINT`):
+
+```bash
+sam build -t deploy/suggestions/template.yaml && sam deploy --stack-name role-radar-suggestions \
+    --resolve-s3 --capabilities CAPABILITY_IAM --profile role-radar-admin --region us-east-1
+AWS_PROFILE=role-radar-admin role-radar suggestions            # what's waiting, most asked for first
+AWS_PROFILE=role-radar-admin role-radar suggestions done ID    # dealt with: added in a version, or not
+```
+
+A request that can't be sent (offline, or before `ENDPOINT` is set) waits in `suggestions.jsonl`
+beside the app's companies file and goes with the next one.
 
 The script puts a Python (python-build-standalone, via uv) and Role Radar inside the app,
 with the companies in `config/companies.yaml` as its directory of known employers and the icon in

@@ -52,7 +52,7 @@ from typing import Any
 
 import yaml
 
-from role_radar import __version__, aws, launchd
+from role_radar import __version__, aws, launchd, suggest
 from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend, require_filters, resolve_runtime
 from role_radar.config import PROFILE_SECTIONS, RuntimeSettings, combined, parse_raw, profile_path, split_profile
 from role_radar.instance import InstanceLock
@@ -376,7 +376,58 @@ def cmd_setup(args: argparse.Namespace) -> int:
         onboarding.save_discord(json.load(sys.stdin).get("webhook") or "")
     elif action == "recipients":
         onboarding.save_recipients(json.load(sys.stdin).get("also") or [])
+    elif action == "find":
+        data = json.load(sys.stdin)
+        print(json.dumps(onboarding.find_companies(config, str(data.get("query") or ""), int(data.get("limit") or 50),
+                                                   int(data.get("offset") or 0), str(data.get("which") or "all"))))
+        return 0
+    elif action == "track":
+        data = json.load(sys.stdin)
+        onboarding.set_tracked(config, list(data.get("names") or []), bool(data.get("tracked")))
+    elif action == "add":
+        data = json.load(sys.stdin)
+        result = onboarding.add_company(config, str(data.get("name") or ""), str(data.get("url") or ""))
+        if data.get("suggest") and result["status"] != "listed":
+            result["suggestion"] = suggest.suggest(config, result["name"], str(data.get("url") or ""),
+                                                   "added it to their own list" if result["status"] == "added"
+                                                   else f"couldn't add it: {result.get('reason')}")
+        print(json.dumps(result))
+        return 0
+    elif action == "suggest":
+        data = json.load(sys.stdin)
+        print(json.dumps(suggest.suggest(config, str(data.get("name") or ""), str(data.get("url") or ""),
+                                         str(data.get("note") or ""))))
+        return 0
     print(json.dumps(onboarding.show(config)))
+    return 0
+
+
+def cmd_suggestions(args: argparse.Namespace) -> int:
+    """The maintainer's view of the suggestions box (AWS credentials that can read its table)."""
+    if args.action == "done":
+        if not args.ids:
+            raise ValueError("say which, e.g. role-radar suggestions done careers.example.com/jobs")
+        suggest.mark_done(args.ids)
+        print(f"Marked {len(args.ids)} as done.")
+        return 0
+    rows = suggest.list_suggestions(everything=args.all)
+    if args.json:
+        print(json.dumps(rows))
+        return 0
+    if not rows:
+        print("No suggestions waiting." if not args.all else "No suggestions yet.")
+        return 0
+    for row in rows:
+        asked = row.get("requests", 1)
+        print(f"{row.get('name')}  ({asked} asked{', done' if row.get('status') == 'done' else ''}; "
+              f"last {row.get('last_at', '?')[:10]})")
+        print(f"    id: {row['id']}")
+        if row.get("url"):
+            print(f"    {row['url']}")
+        where = ", ".join(row.get("countries") or []) or "-"
+        print(f"    for {', '.join(row.get('professions') or []) or '-'} in {where}")
+        for note in (row.get("notes") or [])[-3:]:
+            print(f"    note {note}")
     return 0
 
 
@@ -729,15 +780,28 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", parents=[common], help="the packaged app's first-run setup (JSON in and out)")
     p.add_argument("action", nargs="?",
                    choices=["init", "show", "profession", "profile", "prompt", "companies", "email", "discord",
-                            "recipients"],
+                            "recipients", "find", "track", "add", "suggest"],
                    help="init: create the files; profession: pick one (JSON on stdin); profile: save titles, countries "
                         "etc. (JSON on stdin); prompt: print the AI prompt; "
                         "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin); "
                         "discord: save a Discord webhook (JSON on stdin); "
-                        "recipients: who else gets the alerts (JSON on stdin)")
+                        "recipients: who else gets the alerts (JSON on stdin); "
+                        'find: search the companies ({"query", "limit", "offset", "which": "off"}); '
+                        'track: turn companies on or off ({"names": [...], "tracked": false}); '
+                        'add: track a company of their own ({"name", "url", "suggest": true}); '
+                        'suggest: ask for a company on everyone\'s list ({"name", "url", "note"})')
     p.add_argument("--replace", action="store_true", help="companies: replace the list instead of adding to it")
     p.add_argument("--no-check", action="store_true", help="companies: don't read each new job board once first")
     p.set_defaults(func=cmd_setup)
+
+    p = sub.add_parser("suggestions", parents=[common],
+                       help="the companies people asked for in the app (the maintainer's AWS credentials)")
+    p.add_argument("action", nargs="?", choices=["list", "done"], default="list",
+                   help="list: what's waiting, most asked for first; done: mark some as dealt with")
+    p.add_argument("ids", nargs="*", help="done: the suggestions' ids, as listed")
+    p.add_argument("--all", action="store_true", help="list: those marked done too")
+    p.add_argument("--json", action="store_true", help="list: as JSON")
+    p.set_defaults(func=cmd_suggestions)
 
     p = sub.add_parser("ui", parents=[common], help="a local page with on/off switches for each runner")
     p.add_argument("--port", type=int, default=8765, help="port on 127.0.0.1 (default 8765; 0 picks a free one)")

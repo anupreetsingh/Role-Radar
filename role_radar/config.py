@@ -94,6 +94,9 @@ class Settings:
     # new one: the jobs open at that check are recorded without alerting (unless notify_on_first_run),
     # and matches still waiting from the old search aren't sent.
     fresh_start_at: str | None = None
+    # Companies the person turned off (by name, from the app's Companies page): never checked, whether
+    # from the profession's list or their own. Turning one back on takes it off this list.
+    untracked: list[str] = field(default_factory=list)
     http: HttpSettings = field(default_factory=HttpSettings)
 
     def __post_init__(self) -> None:
@@ -102,6 +105,9 @@ class Settings:
             raise ValueError(f"settings.profession must be one of {', '.join(PROFESSIONS)}, not {self.profession!r}")
         if self.fresh_start_at is not None:
             self.fresh_start_at = _utc_time(self.fresh_start_at, "settings.fresh_start_at")
+        if not isinstance(self.untracked, list):
+            raise ValueError("settings.untracked must be a list of company names")
+        self.untracked = [str(name) for name in self.untracked]
         if not math.isfinite(self.digest_interval_minutes) or self.digest_interval_minutes < 0:
             raise ValueError("settings.digest_interval_minutes must be a finite nonnegative number")
         self.check_interval_by_ats = _minutes_by_ats(self.check_interval_by_ats, "check_interval_by_ats")
@@ -279,14 +285,19 @@ def load_runtime(path: str | Path, profile: str | Path | None = None) -> Runtime
 
 def combined(path: str | Path, profile: str | Path | None = None) -> dict[str, Any]:
     """The companies file's contents with the profile's sections applied (what `config push` uploads),
-    and, when settings.profession picks one, that profession's company list after the file's own."""
+    and, when settings.profession picks one, that profession's company list after the file's own,
+    less the companies the person turned off (settings.untracked)."""
     path = Path(path)
     raw = _read_raw(path.read_text(encoding="utf-8"), str(path), as_json=path.suffix == ".json")
     raw = apply_profile(raw, read_profile(profile)) if profile else raw
-    profession = (raw.get("settings") or {}).get("profession")
+    settings = raw.get("settings") or {}
+    profession = settings.get("profession")
     if profession in PROFESSIONS:
         own = {str(c.get("name")) for c in raw["companies"] if isinstance(c, dict)}
         raw = {**raw, "companies": raw["companies"] + [c for c in profession_list(profession) if str(c["name"]) not in own]}
+    off = {str(name) for name in settings.get("untracked") or []}
+    if off:
+        raw = {**raw, "companies": [c for c in raw["companies"] if not isinstance(c, dict) or str(c.get("name")) not in off]}
     return raw
 
 

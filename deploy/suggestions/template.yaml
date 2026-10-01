@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Role Radar's suggestions box: the app's Companies page posts the companies people want on
+  everyone's lists to this function URL, and `role-radar suggestions` lists them. Its own stack,
+  apart from the checker's, so deploying it never touches the checker. Deploy from the project root:
+  sam build -t deploy/suggestions/template.yaml && sam deploy --stack-name role-radar-suggestions
+  --resolve-s3 --capabilities CAPABILITY_IAM
+
+Resources:
+  SuggestionsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain # the suggestions outlive the stack
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: role-radar-suggestions
+      # On demand: a handful of writes a month costs nothing, and the free 25 RCU/WCU belong to
+      # the checker's state table.
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  SuggestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.handler
+      Runtime: python3.12
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 5
+      # No reserved concurrency: an account whose quota is 10 can't reserve any (Lambda keeps 10 unreserved).
+      Environment:
+        Variables:
+          TABLE: !Ref SuggestionsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: dynamodb:UpdateItem
+              Resource: !GetAtt SuggestionsTable.Arn
+      FunctionUrlConfig:
+        AuthType: NONE # the app has no AWS credentials; the function only takes suggestions in
+
+  SuggestFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SuggestFunction}
+      RetentionInDays: 14
+
+Outputs:
+  SuggestionsUrl:
+    Description: Put this in role_radar/suggest.py (ENDPOINT).
+    Value: !GetAtt SuggestFunctionUrl.FunctionUrl

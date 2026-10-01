@@ -355,3 +355,62 @@ def test_setup_command_runs_the_whole_flow(tmp_path, monkeypatch, capsys):
     assert [a["name"] for a in report["added"]] == ["Stripe"]
     state = json.loads(run("show"))
     assert state["ready"] and state["companies"] == 1 and state["email"] == "me@gmail.com"
+
+
+# -- the Companies page: search, turn off, add their own ---------------------------------------
+
+
+def test_finding_companies_says_which_are_tracked_and_why_not(config, lists):
+    onboarding.save_profession(config, "tech")
+    onboarding.save_profile(config, ["software engineer"], ["senior"], [], 2, countries=["IN"])
+    found = onboarding.find_companies(config)
+    assert found["total"] == 5 and [r["name"] for r in found["results"]] == [
+        "Canva", "Flipkart Labs", "MathWorks", "Untagged Co", "US Only"]
+    why = {r["name"]: (r["tracked"], r["why"]) for r in found["results"]}
+    assert why["MathWorks"] == (True, None) and why["Untagged Co"] == (True, None)
+    assert why["Canva"] == (False, "Role Radar can't read its job site yet")
+    assert [r["name"] for r in found["results"] if not r["readable"]] == ["Canva"]
+    assert why["US Only"] == (False, "it doesn't post jobs in your countries")
+    assert [r["name"] for r in onboarding.find_companies(config, "labs")["results"]] == ["Flipkart Labs"]
+    assert [r["name"] for r in onboarding.find_companies(config, "U")["results"]][:2] == ["Untagged Co", "US Only"]  # starts with it first
+    assert [r["name"] for r in onboarding.find_companies(config, "lever math")["results"]] == ["MathWorks"]  # by its job site too
+    page = onboarding.find_companies(config, "", limit=2, offset=2)
+    assert page["total"] == 5 and [r["name"] for r in page["results"]] == ["MathWorks", "Untagged Co"]
+
+
+def test_a_company_turned_off_is_never_checked_until_turned_back_on(config, lists, monkeypatch):
+    onboarding.save_profession(config, "tech")
+    onboarding.save_profile(config, ["software engineer"], ["senior"], [], 2, countries=["IN"])
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"names": ["MathWorks"], "tracked": False})))
+    assert cli.main(["setup", "track", "--config", str(config)]) == 0
+    assert onboarding.show(config)["companies"] == 2
+    assert "MathWorks" not in [c.name for c in load_config(config, profile_path(config)).companies]
+    (row,) = onboarding.find_companies(config, "mathworks")["results"]
+    assert (row["off"], row["tracked"], row["why"]) == (True, False, "you turned it off")
+    onboarding.save_profile(config, ["software engineer"], ["senior"], [], 2, countries=["IN", "US"])  # kept
+    assert onboarding.find_companies(config, "mathworks")["results"][0]["off"]
+    assert [r["name"] for r in onboarding.find_companies(config, which="off")["results"]] == ["MathWorks"]
+    onboarding.set_tracked(config, ["MathWorks"], True)
+    assert onboarding.find_companies(config, "mathworks")["results"][0]["tracked"]
+    assert onboarding.find_companies(config)["untracked"] == 0
+
+
+def test_adding_a_company_of_their_own_reads_its_board_first(config, lists, boards):
+    onboarding.save_profession(config, "tech")
+    added = onboarding.add_company(config, "Good Co", "https://job-boards.greenhouse.io/good")
+    assert added["status"] == "added" and added["jobs"] == 2
+    (row,) = onboarding.find_companies(config, "good")["results"]
+    assert row["own"] and row["tracked"] and row["site"] == "greenhouse"
+    assert onboarding.add_company(config, "good co", "https://example.com/careers")["status"] == "listed"
+
+    onboarding.set_tracked(config, ["MathWorks"], False)
+    again = onboarding.add_company(config, "MathWorks", "https://jobs.lever.co/mathworks")
+    assert again == {"status": "listed", "name": "MathWorks", "turned_on": True}
+    assert onboarding.find_companies(config, "mathworks")["results"][0]["tracked"]
+
+    failed = onboarding.add_company(config, "Gone Co", "https://job-boards.greenhouse.io/gone")
+    assert failed["status"] == "failed" and "didn't answer" in failed["reason"]
+    custom = onboarding.add_company(config, "Own Site", "https://www.ownsite.example/careers")
+    assert custom["status"] == "failed" and "can read" in custom["reason"]
+    with pytest.raises(ValueError, match="https://"):
+        onboarding.add_company(config, "No Link", "ownsite careers page")
