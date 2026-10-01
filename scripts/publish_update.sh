@@ -5,7 +5,7 @@
 #   sh scripts/package_app.sh
 #   sh scripts/publish_update.sh [NOTES.md]      # DRY_RUN=1 writes dist/appcast.xml and stops there
 #
-# Signs dist/Role-Radar-<version>-apple-silicon.zip with the update key in this Mac's Keychain
+# Signs dist/Role-Radar-<version>-apple-silicon.dmg with the update key in this Mac's Keychain
 # (made once with `generate_keys --account role-radar`; macOS asks to let sign_update use it),
 # writes dist/appcast.xml naming it the newest version, and creates GitHub release v<version>
 # with both (SPARKLE_KEY_FILE: sign with a key exported by `generate_keys -x` instead, on another Mac).
@@ -17,20 +17,20 @@ set -eu
 repo="anupreetsingh/Role-Radar"  # as in package_app.sh's update_feed
 project="$(cd "$(dirname "$0")/.." && pwd)"
 version="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$project/role_radar/__init__.py")"
-name="Role-Radar-$version-apple-silicon.zip"
-zip="$project/dist/$name"
+name="Role-Radar-$version-apple-silicon.dmg"
+dmg="$project/dist/$name"
 notes="${1:-}"
 appcast="$project/dist/appcast.xml"
 
-[ -f "$zip" ] || { echo "No $zip: run scripts/package_app.sh first" >&2; exit 1; }
+[ -f "$dmg" ] || { echo "No $dmg: run scripts/package_app.sh first" >&2; exit 1; }
 [ -z "$notes" ] || [ -f "$notes" ] || { echo "No such notes file: $notes" >&2; exit 1; }
 sparkle="$(sh "$project/scripts/get_sparkle.sh")"
 
 echo "Signing $name..."
 if [ "${SPARKLE_KEY_FILE:-}" ]; then
-    signature="$("$sparkle/bin/sign_update" --ed-key-file "$SPARKLE_KEY_FILE" "$zip")"
+    signature="$("$sparkle/bin/sign_update" --ed-key-file "$SPARKLE_KEY_FILE" "$dmg")"
 else
-    signature="$("$sparkle/bin/sign_update" --account role-radar "$zip")"
+    signature="$("$sparkle/bin/sign_update" --account role-radar "$dmg")"
 fi  # sparkle:edSignature="..." length="..."
 case "$signature" in
     *edSignature=*length=*) ;;
@@ -71,8 +71,8 @@ if [ "${DRY_RUN:-}" ]; then
     exit 0
 fi
 if [ -n "$notes" ]; then
-    gh release create "v$version" "$zip" "$appcast" --repo "$repo" --title "Role Radar $version" --notes-file "$notes"
+    gh release create "v$version" "$dmg" "$appcast" --repo "$repo" --title "Role Radar $version" --notes-file "$notes"
 else
-    gh release create "v$version" "$zip" "$appcast" --repo "$repo" --title "Role Radar $version" --notes ""
+    gh release create "v$version" "$dmg" "$appcast" --repo "$repo" --title "Role Radar $version" --notes ""
 fi
 echo "Published v$version: copies of the app pick it up within six hours."

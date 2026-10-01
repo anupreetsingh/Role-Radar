@@ -86,6 +86,7 @@ cat > "$stage/Contents/Info.plist" <<EOF
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>RRPackaged</key><true/>
+  <key>RRDevBuild</key><true/>
 </dict>
 </plist>
 EOF

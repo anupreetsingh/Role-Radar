@@ -336,9 +336,90 @@ enum Place {
         ? ["ROLE_RADAR_HOME": support, "ROLE_RADAR_AGENT": agent, "ROLE_RADAR_KEYCHAIN": "com.roleradar.app"] : [:]
     static let log = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/" + (packaged ? agent + ".log" : "role-radar.log"))
-    /// Opened straight from Downloads, macOS runs a downloaded app from a hidden read-only copy
-    /// ("App Translocation"): the checker it sets up would break once that copy goes away.
-    static let translocated = packaged && Bundle.main.bundlePath.contains("/AppTranslocation/")
+    /// The dev build (build_dev_app.sh) runs from the repo's build/ folder.
+    static let devBuild = info["RRDevBuild"] as? Bool ?? false
+    /// The downloaded app opened from anywhere but Applications: from Downloads, macOS runs it from a hidden
+    /// read-only copy ("App Translocation"), and from its disk image it's gone once that's ejected, so the
+    /// checker it sets up would break, and it couldn't update itself.
+    static let misplaced = packaged && !devBuild
+        && !["/Applications/", NSHomeDirectory() + "/Applications/"].contains { Bundle.main.bundlePath.hasPrefix($0) }
+}
+
+/// Moving the downloaded app into Applications, as many Mac apps offer when opened from elsewhere: it's
+/// copied there, and the copy opened once this one has quit (its disk image ejected, if it ran from one).
+/// The original stays where it was: putting one in Downloads in the Trash would make macOS ask for access.
+@MainActor
+enum Mover {
+    static let destination = URL(fileURLWithPath: "/Applications/Role Radar.app")
+
+    /// On opening from elsewhere: offer to move it, or to open the copy in Applications if that's as new.
+    static func offer() {
+        guard Place.misplaced else { return }
+        Dock.show()
+        let installed = Bundle(url: destination)?.infoDictionary?["CFBundleShortVersionString"] as? String
+        let alert = NSAlert()
+        if let installed, installed.compare(Place.version, options: .numeric) != .orderedAscending {
+            alert.messageText = "Role Radar is in your Applications folder already"
+            alert.informativeText = "Open that one instead? This copy can go in the Trash."
+            alert.addButton(withTitle: "Open It")
+            alert.addButton(withTitle: "Not Now")
+            if alert.runModal() == .alertFirstButtonReturn { relaunch() }
+        } else {
+            alert.messageText = "Move Role Radar to your Applications folder?"
+            alert.informativeText = "It needs to be there to keep checking for jobs and to update itself."
+            alert.addButton(withTitle: "Move to Applications")
+            alert.addButton(withTitle: "Not Now")
+            if alert.runModal() == .alertFirstButtonReturn { move() }
+        }
+        Dock.hideIfNoWindows()
+    }
+
+    /// Copy it into Applications (an older copy there goes in the Trash), then open the copy.
+    static func move() {
+        let manager = FileManager.default
+        do {
+            if manager.fileExists(atPath: destination.path) {
+                try manager.trashItem(at: destination, resultingItemURL: nil)
+            }
+            try manager.copyItem(at: Bundle.main.bundleURL, to: destination)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Couldn't move Role Radar"
+            alert.informativeText = error.localizedDescription
+                + "\n\nDrag it onto Applications in Finder instead, then open it from there."
+            alert.runModal()
+            return
+        }
+        // It was opened (Open Anyway), so it's trusted: without the flag, macOS runs the copy where it is.
+        Model.runQuietly("/usr/bin/xattr", ["-dr", "com.apple.quarantine", destination.path])
+        relaunch()
+    }
+
+    /// Quit, then open the copy in Applications, ejecting the disk image this one ran from, if any.
+    private static func relaunch() {
+        let values = try? originalURL().resourceValues(forKeys: [.volumeIsReadOnlyKey, .volumeURLKey])
+        let volume = values?.volumeIsReadOnly == true ? values?.volume?.path : nil
+        let eject = volume.flatMap { $0.hasPrefix("/Volumes/") ? $0 : nil }
+        let script = "while /bin/kill -0 \(getpid()) 2>/dev/null; do /bin/sleep 0.2; done; "
+            + (eject.map { "/usr/bin/hdiutil detach \(quoted($0)) -quiet; " } ?? "")
+            + "/usr/bin/open \(quoted(destination.path))"
+        Model.runQuietly("/bin/sh", ["-c", script], wait: false)
+        NSApp.terminate(nil)
+    }
+
+    /// Where the app really is: run from a hidden copy (App Translocation), that copy's original.
+    private static func originalURL() -> URL {
+        let here = Bundle.main.bundleURL
+        typealias Original = @convention(c) (CFURL, UnsafeMutablePointer<Unmanaged<CFError>?>?) -> Unmanaged<CFURL>?
+        guard here.path.contains("/AppTranslocation/"),
+              let security = dlopen("/System/Library/Frameworks/Security.framework/Security", RTLD_LAZY),
+              let symbol = dlsym(security, "SecTranslocateCreateOriginalPathForURL") else { return here }
+        return unsafeBitCast(symbol, to: Original.self)(here as CFURL, nil)?.takeRetainedValue() as URL? ?? here
+    }
+
+    private static func quoted(_ path: String) -> String {
+        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
 }
 
 /// The packaged app is in the Dock while one of its windows is open, so it opens and closes like any
@@ -392,7 +473,7 @@ final class Updates: NSObject, ObservableObject {
 
     func start() {
 #if canImport(Sparkle)
-        guard controller == nil, Place.packaged, Place.info["SUFeedURL"] != nil else { return }
+        guard controller == nil, Place.packaged, !Place.misplaced, Place.info["SUFeedURL"] != nil else { return }
         let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: self)
         controller.updater.publisher(for: \.canCheckForUpdates).assign(to: &$canCheck)
         self.controller = controller
@@ -557,7 +638,7 @@ final class Model: ObservableObject {
     }
 
     /// The packaged app starts checking only once Setup is done (and it's in Applications); one built from the code always may.
-    var canStart: Bool { !Place.packaged || (!Place.translocated && (setup?.ready ?? false)) }
+    var canStart: Bool { !Place.packaged || (!Place.misplaced && (setup?.ready ?? false)) }
 
     /// Re-read the state, starting the Mac's checker first if it's switched on and not running.
     func refresh() async {
@@ -1837,11 +1918,14 @@ struct SetupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
-                if Place.translocated {
-                    Label("Move Role Radar to your Applications folder first (drag it from Downloads onto Applications "
-                          + "in Finder), then open it from there.", systemImage: "exclamationmark.triangle.fill")
-                        .scaledFont(13, weight: .medium).foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                if Place.misplaced {
+                    HStack(spacing: 12) {
+                        Label("Role Radar needs to be in your Applications folder to keep checking for jobs and to "
+                              + "update itself.", systemImage: "exclamationmark.triangle.fill")
+                            .scaledFont(13, weight: .medium).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Move to Applications") { Mover.move() }
+                    }
                 }
                 Text("Set Up Role Radar").scaledFont(20, weight: .semibold)
                 pageMarkers
@@ -2330,7 +2414,7 @@ struct SetupView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(!(setup?.ready ?? false) || Place.translocated)
+                .disabled(!(setup?.ready ?? false) || Place.misplaced)
             }
         }
     }
@@ -2737,6 +2821,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated { Updates.shared.start() }
+        DispatchQueue.main.async { Mover.offer() }  // once launched: opened from Downloads or its disk image
     }
 
     /// Quit (or logging out, or an update) stops the Mac's checker with the app.

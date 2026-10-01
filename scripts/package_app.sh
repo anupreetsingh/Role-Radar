@@ -1,6 +1,7 @@
 #!/bin/sh
 # Package Role Radar.app for someone else's Mac (Apple Silicon), with its own Python inside:
-# nothing to install, no AWS. Writes dist/Role-Radar-<version>-apple-silicon.zip.
+# nothing to install, no AWS. Writes dist/Role-Radar-<version>-apple-silicon.dmg: a disk image whose
+# window shows the app beside Applications to drag it onto (the same file is the update).
 #
 # The app keeps its files in ~/Library/Application Support/Role Radar, opens a Setup window on
 # first launch (a profession, its job titles and countries, a Gmail app password), and runs
@@ -12,6 +13,7 @@
 # It updates itself with Sparkle (scripts/get_sparkle.sh): it reads the latest GitHub release's
 # appcast.xml every few hours, and installs an update only if it's signed with the key whose
 # public half is below. scripts/publish_update.sh signs and publishes a version built here.
+# Opened from anywhere but Applications, the app offers to move itself there.
 set -eu
 
 # Where every copy looks for updates, and the key updates must be signed with (its private half is
@@ -22,7 +24,7 @@ update_key="l2iPW44nrwGWO2yH4EjdIKwl67g54tiEpmmwZzV6GL0="
 project="$(cd "$(dirname "$0")/.." && pwd)"
 python_build="cpython-3.13.2-macos-aarch64-none"   # python-build-standalone, via uv
 version="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$project/role_radar/__init__.py")"
-out="$project/dist/Role-Radar-$version-apple-silicon.zip"
+out="$project/dist/Role-Radar-$version-apple-silicon.dmg"
 
 command -v uv >/dev/null || { echo "Needs uv: https://docs.astral.sh/uv/" >&2; exit 1; }
 build="$(mktemp -d)"
@@ -115,10 +117,27 @@ done
 codesign --force --sign - "$app" >/dev/null
 codesign --verify --deep --strict "$app"
 
+echo "Making the disk image..."
 mkdir -p "$project/dist"
 rm -f "$out"
-ditto -c -k --sequesterRsrc --keepParent "$app" "$out"
-echo "Built $out ($(du -h "$out" | cut -f1), the app $(du -sh "$app" | cut -f1) unzipped)"
+# dmgbuild writes the window's layout itself (no Finder scripting): the app, an arrow, Applications.
+cat > "$build/dmg.py" <<'EOF'
+import os
+app = defines["app"]
+files = [app]
+symlinks = {"Applications": "/Applications"}
+icon = os.path.join(app, "Contents", "Resources", "AppIcon.icns")
+if not os.path.exists(icon):
+    del icon
+background = "builtin-arrow"  # 640 by 240, its arrow between the two icons
+window_rect = ((200, 200), (640, 280))
+icon_size = 112
+text_size = 13
+icon_locations = {os.path.basename(app): (140, 120), "Applications": (500, 120)}
+format = "ULFO"
+EOF
+uv run --quiet --no-project --with dmgbuild dmgbuild -s "$build/dmg.py" -D app="$app" "Role Radar" "$out" >/dev/null
+echo "Built $out ($(du -h "$out" | cut -f1), the app $(du -sh "$app" | cut -f1))"
 if [ "${KEEP_APP:-}" ]; then
     rm -rf "$KEEP_APP/Role Radar.app" && cp -R "$app" "$KEEP_APP/" && echo "Kept a copy in $KEEP_APP"
 fi

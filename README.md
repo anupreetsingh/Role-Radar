@@ -20,9 +20,11 @@ There are three ways to run it:
 
 For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 
-1. Download `Role-Radar-<version>-apple-silicon.zip` from the
+1. Download `Role-Radar-<version>-apple-silicon.dmg` from the
    [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest), open it, and
-   drag **Role Radar** into **Applications**.
+   drag **Role Radar** onto **Applications** in the window that opens. (Opened from anywhere
+   else, the app offers to move itself there: it has to be in Applications to keep checking and
+   to update itself.)
 2. Open Role Radar. The app isn't signed with a paid Apple developer account, so macOS first
    says it can't check it: click **Done**, then open **System Settings → Privacy & Security**,
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
@@ -74,7 +76,7 @@ Its settings, history and Keychain items live outside the app, so an update keep
 `__version__` in `role_radar/__init__.py` (every copy compares it with its own), then
 
 ```bash
-sh scripts/package_app.sh                 # → dist/Role-Radar-<version>-apple-silicon.zip
+sh scripts/package_app.sh                 # → dist/Role-Radar-<version>-apple-silicon.dmg
 sh scripts/publish_update.sh NOTES.md     # signs it, writes appcast.xml, creates GitHub release v<version>
 ```
 
@@ -625,8 +627,8 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` puts them back while they're listed (a week); `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
 | `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
-| `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.zip`: the app with its own Python, for someone else's Mac (see [Get the app](#get-the-app)). |
-| `scripts/publish_update.sh` | Signs the packaged zip with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from (`DRY_RUN=1` stops before publishing). |
+| `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.dmg`: the app with its own Python, for someone else's Mac, in a disk image whose window shows it beside Applications (see [Get the app](#get-the-app)). The same file is the update. |
+| `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from (`DRY_RUN=1` stops before publishing). |
 | `scripts/reset_app.sh` | Quits the packaged app and removes its checker, files, logs and Keychain items: its next launch is a first run. |
 | `scripts/build_menubar.sh` | Builds and opens **Role Radar.app**, a macOS menu bar app (in `~/Applications`) with the same two runner switches as native toggles, who's checking right now, each runner's last pass, Discord and email alert switches, the round in progress, how many matches are waiting to be sent, how many sites are failing, and a **Live Tracking** button. That opens a window with the matches waiting, skipped and sent (see [Live Tracking](#live-tracking)), Send Now, and the Activity section: checks per hour over the last 24 hours (the Mac and Lambda stacked; hover a bar for its numbers), and the day's checks, new jobs, new matches and alerts sent. Each pass adds its counts to an hourly row in the state store (`#stats`, kept two days), so the app reads 24 small rows a minute. The menu bar icon shows a laptop while the Mac is checking, a cloud while Lambda is, and a crossed-out antenna when nothing is. The app owns the Mac's checker (the login item, installed if needed): while it's open and the Mac is switched on, it starts the checker and restarts it within a minute if it stops; quitting the app stops it, and Lambda takes over. So quitting and reopening the app restarts the checker on the current code, and the checker starts at login only if the app does (its Open at Login). Rebuilding with this script restarts it too. Needs Xcode or the Command Line Tools. |
 
