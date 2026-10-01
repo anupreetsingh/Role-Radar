@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import re
 import uuid
 from pathlib import Path
@@ -54,6 +55,27 @@ def suggest(config: Path, name: str, url: str = "", note: str = "") -> dict[str,
     with waiting_file(config).open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry) + "\n")
     return send_waiting(config)
+
+
+def check_in(config: Path) -> bool:
+    """Tell the box this copy of the app is in use, for the user counts on the project's GitHub page:
+    a random id made once on this Mac (install-id, beside the companies file), the app's version and
+    macOS's. Nothing else. False if it couldn't be sent; the next one counts all the same."""
+    url = endpoint()
+    if not url:
+        return False
+    path = Path(config).with_name("install-id")
+    try:
+        install = str(uuid.UUID(path.read_text(encoding="utf-8").strip()))
+    except (OSError, ValueError):
+        install = str(uuid.uuid4())
+        path.write_text(install + "\n", encoding="utf-8")
+    try:
+        httpx.post(url.rstrip("/") + "/checkin", json={"id": install, "app": __version__, "os": platform.mac_ver()[0]},
+                   timeout=15, headers={"User-Agent": f"RoleRadar/{__version__}"}).raise_for_status()
+        return True
+    except httpx.HTTPError:
+        return False
 
 
 def send_waiting(config: Path) -> dict[str, Any]:

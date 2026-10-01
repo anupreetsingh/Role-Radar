@@ -353,6 +353,22 @@ enum Place {
         && !["/Applications/", NSHomeDirectory() + "/Applications/"].contains { Bundle.main.bundlePath.hasPrefix($0) }
 }
 
+/// The downloadable app's anonymous check-in (`role-radar checkin`): a random id made once on this Mac, with
+/// the app's and macOS's versions, sent when it opens and every 6 hours while it runs, for the user counts
+/// on the project's GitHub page. Nothing else leaves the Mac. Not from the dev build, nor an app built from the code.
+enum CheckIn {
+    static func start() {
+        guard Place.packaged, !Place.devBuild else { return }
+        Task.detached(priority: .background) {
+            try? await Task.sleep(for: .seconds(30))  // once Setup's files exist, and the network is up after a login
+            while !Task.isCancelled {
+                _ = await Model.cli(args: ["-m", "role_radar", "checkin", "--config", Place.config])
+                try? await Task.sleep(for: .seconds(6 * 3600))
+            }
+        }
+    }
+}
+
 /// Moving the downloaded app into Applications, as many Mac apps offer when opened from elsewhere: it's
 /// copied there, and the copy opened once this one has quit (its disk image ejected, if it ran from one).
 /// The original stays where it was: putting one in Downloads in the Trash would make macOS ask for access.
@@ -619,6 +635,7 @@ final class Model: ObservableObject {
                 try? await Task.sleep(for: .seconds(60))
             }
         }
+        CheckIn.start()
     }
 
     /// The packaged app's first steps: trust its own files, create its files, and open Setup until

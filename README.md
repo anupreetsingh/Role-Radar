@@ -1,5 +1,7 @@
 # Role Radar
 
+![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fdownloads) ![Weekly users](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fusers)
+
 Watches company careers pages and collects new jobs matching your criteria into a digest
 every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
 the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
@@ -73,6 +75,14 @@ hours (or with **Check for Updates…** in its menu) it reads the latest GitHub 
 `appcast.xml`, and offers a newer version if there is one. It installs an update only if it's
 signed with the update key, so a copy from the first release on never needs downloading again.
 Its settings, history and Keychain items live outside the app, so an update keeps them.
+
+**The badges at the top.** **Downloads** is how many times the app was downloaded from the
+Releases page, every version together. Updates fetch a copy of the disk image under another name
+(`...-update.dmg`), so they don't count. **Weekly users** is how many copies of the app ran in the
+last 7 days: when it opens, and every six hours while it runs, the app sends an anonymous check-in
+to the suggestions box (deploy/suggestions), with a random id made once on that Mac and the app's
+and macOS's versions. Nothing else: no name, email, settings or jobs. The dev build and the app
+built from the code never check in. Both counts refresh at most hourly.
 
 **Publishing a new version** (from the code, on an Apple Silicon Mac with uv and Xcode): bump
 `__version__` in `role_radar/__init__.py` (every copy compares it with its own), then

@@ -134,3 +134,96 @@ def test_the_box_turns_away_what_isnt_a_suggestion(box, body, status):
 
 def test_the_box_only_takes_posts(box):
     assert post(box, {"name": "X"}, method="GET")["statusCode"] == 405
+
+
+def test_the_app_checks_in_with_the_same_id_and_nothing_else(config, monkeypatch):
+    """The counts on the GitHub page: a random id made once on the Mac, the app's and macOS's versions."""
+    from role_radar import __version__
+
+    sent = []
+
+    def post(url, json=None, **kw):
+        sent.append((url, json))
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(suggest.httpx, "post", post)
+    monkeypatch.setenv("ROLE_RADAR_SUGGESTIONS_URL", "https://box.example/")
+    assert cli.main(["checkin", "--config", str(config)]) == 0
+    assert suggest.check_in(config)
+    (url, first), (_, second) = sent
+    assert url == "https://box.example/checkin" and set(first) == {"id", "app", "os"}
+    assert first["id"] == second["id"] and first["app"] == __version__
+    assert (config.parent / "install-id").read_text().strip() == first["id"]
+
+    def offline(url, **kw):
+        raise httpx.ConnectError("offline")
+
+    monkeypatch.setattr(suggest.httpx, "post", offline)
+    assert cli.main(["checkin", "--config", str(config)]) == 1  # quietly: the next one counts all the same
+
+
+def call(box, method, path, body=None):
+    module, _ = box
+    event = {"requestContext": {"http": {"method": method}}, "rawPath": path}
+    if body is not None:
+        event["body"] = json.dumps(body)
+    return module.handler(event)
+
+
+def make_table(client, name):
+    client.create_table(TableName=name, BillingMode="PAY_PER_REQUEST",
+                        AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
+                        KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}])
+
+
+def test_the_box_counts_weekly_users(box):
+    import uuid
+
+    _, client = box
+    make_table(client, "role-radar-installs")
+    mine, theirs = str(uuid.uuid4()), str(uuid.uuid4())
+    for install in (mine, mine, theirs):
+        assert call(box, "POST", "/checkin", {"id": install, "app": "2.1.2", "os": "15.1"})["statusCode"] == 200
+    assert call(box, "POST", "/checkin", {"id": "not-an-id"})["statusCode"] == 400
+    row = client.get_item(TableName="role-radar-installs", Key={"id": {"S": mine}})["Item"]
+    assert (row["checkins"]["N"], row["app"]["S"], row["os"]["S"]) == ("2", "2.1.2", "15.1")
+    assert json.loads(call(box, "GET", "/badge/users")["body"]) == {
+        "schemaVersion": 1, "label": "weekly users", "message": "2", "color": "blue", "cacheSeconds": 3600}
+    # A copy last seen weeks ago no longer counts.
+    client.update_item(TableName="role-radar-installs", Key={"id": {"S": theirs}}, UpdateExpression="SET last_seen = :old",
+                       ExpressionAttributeValues={":old": {"S": "2026-01-01T00:00:00Z"}})
+    assert json.loads(call(box, "GET", "/badge/users/")["body"])["message"] == "1"
+    # Suggestions work as before, and never land among the installs.
+    assert call(box, "POST", "/", {"name": "MNP"})["statusCode"] == 200
+    assert call(box, "GET", "/")["statusCode"] == 405
+    assert client.scan(TableName="role-radar-installs")["Count"] == 2
+    assert client.scan(TableName="role-radar-suggestions")["Count"] == 1
+
+
+def test_the_downloads_badge_counts_fresh_downloads_only(box, monkeypatch):
+    """The disk image as people download it, every version; not its ...-update.dmg copy, nor the appcast."""
+    module, client = box
+    make_table(client, "role-radar-stats")
+    releases = [{"assets": [{"name": "Role-Radar-2.1.2-apple-silicon.dmg", "download_count": 3},
+                            {"name": "Role-Radar-2.1.2-update.dmg", "download_count": 40},
+                            {"name": "appcast.xml", "download_count": 500}]},
+                {"assets": [{"name": "Role-Radar-2.1.0-apple-silicon.dmg", "download_count": 8}]}]
+    asked = []
+
+    def from_github():
+        asked.append(1)
+        return releases
+
+    monkeypatch.setattr(module, "_releases", from_github)
+    badge = lambda: json.loads(call(box, "GET", "/badge/downloads")["body"])  # noqa: E731
+    assert badge() == {"schemaVersion": 1, "label": "downloads", "message": "11", "color": "blue", "cacheSeconds": 3600}
+    releases[0]["assets"][0]["download_count"] = 5
+    assert badge()["message"] == "11" and len(asked) == 1  # GitHub is asked at most every REFRESH seconds
+    monkeypatch.setattr(module, "REFRESH", 0)
+    assert badge()["message"] == "13"
+
+    def down():
+        raise OSError("rate limited")
+
+    monkeypatch.setattr(module, "_releases", down)
+    assert badge()["message"] == "13"  # the last count, while GitHub can't answer

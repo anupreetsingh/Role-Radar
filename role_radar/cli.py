@@ -402,6 +402,11 @@ def cmd_setup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_checkin(args: argparse.Namespace) -> int:
+    """The downloadable app's anonymous check-in, when it opens and every 6 hours (suggest.check_in)."""
+    return 0 if suggest.check_in(context(args).config_path) else 1
+
+
 def cmd_suggestions(args: argparse.Namespace) -> int:
     """The maintainer's view of the suggestions box (AWS credentials that can read its table)."""
     if args.action == "done":
@@ -794,6 +799,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replace", action="store_true", help="companies: replace the list instead of adding to it")
     p.add_argument("--no-check", action="store_true", help="companies: don't read each new job board once first")
     p.set_defaults(func=cmd_setup)
+
+    p = sub.add_parser("checkin", parents=[common],
+                       help="the downloadable app's anonymous check-in, for the user counts on the GitHub page")
+    p.set_defaults(func=cmd_checkin)
 
     p = sub.add_parser("suggestions", parents=[common],
                        help="the companies people asked for in the app (the maintainer's AWS credentials)")
