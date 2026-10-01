@@ -28,7 +28,11 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
 3. The **Setup** window walks through these pages:
    - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
-     companies, built into the app and refreshed with each version (Tech's has about 4,800).
+     companies, built into the app and refreshed with each version (Tech's has about 7,800,
+     Accounting & Finance's about 3,900, Healthcare's about 1,800).
+     Changing it later deletes nothing: the other profession's saved jobs stay, and every
+     company's next check starts quietly, recording the jobs already open instead of alerting
+     on them all (`settings.fresh_start_at` in `profile.yaml` is when you switched).
    - **Countries** and **Companies:** the countries you want (United States, Canada, Australia,
      India), and optionally cities. Only companies that post jobs in those countries are
      checked, and jobs alert from anywhere in them, or only from your cities.
@@ -75,7 +79,8 @@ Two files in `config/` decide what Role Radar does. Edit both as you like:
 
 | File | In git | Holds |
 |---|---|---|
-| `companies.yaml` | yes | The companies to watch (about 4,800 to start from) and how often to check them |
+| `companies.yaml` | yes | The companies to watch (about 7,800 to start from) and how often to check them |
+| `accounting.yaml`, `healthcare.yaml` | yes | The Accounting & Finance and Healthcare professions' company lists, for the packaged app (built by `scripts/build_lists.py`) |
 | `profile.yaml` | no | You: the roles and places you want, the most years of experience a job may ask for, and where state and alert settings live. [profile.example.yaml](config/profile.example.yaml) shows every setting |
 
 **1. Get the code and install it** (Python 3.10 or newer). Keep it outside Desktop,
@@ -274,6 +279,7 @@ alert again. The previous version behaved the same way.
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
 | SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
+| Workable | `apply.workable.com/api/v1/widget/accounts/{account}` (every job in one request; 2 s apart, checked hourly) | no |
 | Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
 | MathWorks | Official RSS job feed, including EDG | no |
 | HRM Direct / ClearCompany | Public search-results table, including malformed job links | no |
@@ -455,7 +461,7 @@ recorded without alerting, with the reason (`dropped_for` on the stored job, and
 
 Where descriptions come from: the listing already has them for Ashby, Lever, amazon.jobs
 (basic qualifications), Google (minimum qualifications), Meta (from the job page it
-already reads) and TikTok. Greenhouse, Workday, Rippling, SmartRecruiters, Oracle HCM, Eightfold and Apple take one
+already reads) and TikTok. Greenhouse, Workday, Rippling, SmartRecruiters, Workable, Oracle HCM, Eightfold and Apple take one
 request per new match, at most `max_detail_requests` a check (the rest wait for the next
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.
@@ -856,7 +862,8 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
 - The defaults allow 16 requests in flight overall, 40 companies in flight, and one
   request per second per host. The shared ATS APIs are exceptions:
   `boards-api.greenhouse.io` gets 0.25 s, `api.lever.co` / `api.ashbyhq.com` get
-  0.3 s, and `ats.rippling.com` and `smartrecruiters.com` get 0.5 s. Override or add hosts under `settings.http.host_delays`; a key also covers its
+  0.3 s, `ats.rippling.com` and `smartrecruiters.com` get 0.5 s, and `apply.workable.com` 2 s
+  (it rate-limits at 2 requests a second, so Workable boards are checked hourly). Override or add hosts under `settings.http.host_delays`; a key also covers its
   subdomains, and subdomains under a parent-domain key share one rate. An HTTP 429
   pauses every host sharing that rate for the Retry-After time (or 60 s). Most boards
   take one request, so a full round of 1,000 companies takes a few minutes, and the

@@ -20,3 +20,6 @@ samconfig.toml
 config/profile.yaml
 # The professions' company lists, written by scripts/build_dev_app.sh (package_app.sh puts them in the app)
 role_radar/lists/
+
+# Local data too big or personal for git (board sweep results)
+data/

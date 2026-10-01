@@ -363,7 +363,7 @@ has one nearly as large ("Cambridge" and "Richmond" stay undecided). Workday's "
 At the first tagging, 4,402 companies posted in the US, 1,041 in Canada, 520 in Australia
 and 935 in India. Readers that ask their site for US jobs only (Workday country facets,
 Amazon, Apple, Google, TikTok, Eightfold) can only show US locations, so those companies
-were read once more without that limit (see below).
+were read once more without that limit (see [Board sweep](#board-sweep-and-the-profession-lists-september-2026)).
 
 ## Indian and Australian employers (September 2026)
 
@@ -378,7 +378,8 @@ request per candidate name), and their careers pages, each read once:
   title that day; they stay because they hire for the profile.
 - Added switched off (`enabled: false`, with `platform`), on job sites Role Radar can't
   read yet: SmartRecruiters (Canva, Zomato, Freshworks, ixigo, Nagarro, SEEK, Nearmap;
-  switched on the next day, see below), Workable (Postman, Innovaccer, Cars24, Rokt, Employment Hero), Darwinbox (Unacademy,
+  switched on the next day, see below), Workable (Postman, Innovaccer, Cars24, Rokt, Employment Hero;
+  Innovaccer and Rokt switched on the next day, see below), Darwinbox (Unacademy,
   CleverTap, Spinny, Airtel, Rapido, Tata 1mg, Go Digit, Ather Energy), TurboHire
   (Flipkart, Ola), MyNextHire (Swiggy, ShareChat), SuccessFactors (Wipro), Taleo
   (Cognizant), Zoho Recruit (Zoho), Recruitee (Lenskart), Freshteam (Hasura), Trakstar
@@ -422,6 +423,84 @@ added. Every check reads the whole listing (it isn't newest first), about 265 re
 round, spaced 0.5 s apart on `smartrecruiters.com`. Not added: AbbVie (1,802 jobs, 199
 requests a check; a candidate for the Healthcare list) and Visa (its SmartRecruiters page
 is empty; its Workday board is read).
+
+## Workable (September 2026)
+
+Workable boards (`apply.workable.com/{account}`) are read from the board's widget feed,
+`apply.workable.com/api/v1/widget/accounts/{account}`: every published job with its
+locations in one request (its count matched the careers page's own search on
+2026-09-30). A new match's description and requirements come from
+`/api/v2/accounts/{account}/jobs/{shortcode}`, one request each.
+
+Switched on 2026-09-30: Innovaccer (72 jobs; US, IN) and Rokt (16; US, CA, AU). Postman,
+Cars24 and Employment Hero had empty Workable boards; their careers pages load jobs in
+the browser, so they stay switched off (`platform: custom`) until that source is found.
+
+## Darwinbox (September 2026)
+
+Not readable. A Darwinbox career site (`{company}.darwinbox.in/ms/candidate/careers`) loads
+its jobs from `/ms/candidateapi/job?page=N`, and Cloudflare answers that with its "you have
+been blocked" page to anything but a browser; the sites publish no job sitemap. Reading them
+would mean posing as a browser, so Unacademy, CleverTap, Spinny, Airtel, Rapido, Tata 1mg,
+Go Digit and Ather Energy stay switched off (`platform: darwinbox`).
+
+## Board sweep and the profession lists (September 2026)
+
+To build each profession's list from real job data, and without reading thousands of boards
+from a home connection, `scripts/sweep_boards.py` ran once on a small EC2 instance on
+2026-09-30 (265 minutes, about 75,000 requests, no rate limiting). It read 20,742 boards:
+20,666 found in Common Crawl's URL index (queried with Athena) on the job sites Role Radar
+reads and not on the Tech list, plus 76 listed companies whose readers ask for US jobs only,
+read again without that limit. Greenhouse, Ashby, Lever, Rippling and BambooHR boards were
+read whole; Workday, iCIMS, Oracle and Eightfold boards as their newest page plus one page
+of results each for "engineer", "developer", "nurse" and "accountant". 17,700 answered.
+
+`scripts/build_lists.py` turned the results into lists. A board joins a profession's list
+when one of its jobs has one of that profession's target titles (the Setup boxes, less its
+"other kinds of work") in the US, Canada, Australia or India; its `countries` are every one
+of those its jobs are in. Left out: staffing agencies and job sites; boards of a company
+site already on the list (another Workday site of a listed tenant would repeat its jobs);
+and, for Tech, the employers removed before (defense, aerospace and space; the resume
+alignment) and 15 boards whose tech jobs mostly need a clearance. Where several boards
+share a name, the one with the most matching jobs stays. Names come from the Greenhouse
+API, the board page's title, or on Workday a job's legal entity with its internal code taken
+off ("10 Manhattan Associates, Inc." is Manhattan Associates); Oracle and Eightfold sites
+were named from their pages' titles (873 small requests), and 21 Oracle sites that name no
+one were left out. Workday entries read their newest 200 jobs (`max_jobs: 200`).
+
+| List | Companies | From the sweep | From the Tech list | US | CA | AU | IN |
+|---|---|---|---|---|---|---|---|
+| Tech (`companies.yaml`) | 6,981 | 2,111 new | (4,870 before) | 6,340 | 1,462 | 763 | 1,432 |
+| Accounting & Finance (`accounting.yaml`) | 3,430 | 2,036 | 1,394 | 3,243 | 903 | 469 | 765 |
+| Healthcare (`healthcare.yaml`) | 1,595 | 1,376 | 219 | 1,533 | 131 | 71 | 93 |
+
+The Tech list's companies joined the other two lists when their saved jobs (a state-table
+export) had the profession's titles, except those whose readers search for tech roles
+themselves (Amazon, Apple, Google, Meta, TikTok and custom pages). The 76 re-read companies
+got their `countries` from those jobs and their saved ones together; about 40 gained a
+country. Their readers still ask for US jobs only, so for now they show only US jobs
+wherever they're tagged.
+
+**Second sweep: SmartRecruiters and Workable.** The first sweep's Common Crawl query had
+already listed their boards (1,777 SmartRecruiters companies, 7,234 Workable accounts), so
+the same EC2 setup read them on 2026-09-30 (213 minutes, 23,234 requests; SmartRecruiters'
+big location groups only as far as two "Show more jobs" pages). 8,751 answered. Workable
+answered HTTP 429 after about 1,100 requests at 2 a second and none in three hours at one
+every 2 seconds, so the app now spaces `apply.workable.com` 2 s apart and checks Workable
+boards hourly; SmartRecruiters and Workable are also checked two companies at a time. 69
+SmartRecruiters companies group their jobs by department, whose cards carry no location,
+so they're left out. The build added:
+
+| List | Added | Now | US | CA | AU | IN |
+|---|---|---|---|---|---|---|
+| Tech | 834 (573 Workable, 261 SmartRecruiters) | 7,815 | 7,015 | 1,680 | 897 | 1,679 |
+| Accounting & Finance | 422 | 3,852 | 3,599 | 1,038 | 548 | 868 |
+| Healthcare | 229 | 1,824 | 1,735 | 167 | 98 | 114 |
+
+Not covered: job sites neither sweep searched (Darwinbox can't be read; Recruitee,
+Teamtailor, Breezy, Jobvite, Zoho Recruit, Keka, Taleo and SuccessFactors have no reader
+yet, though the first sweep's query listed their boards), and the Tech list's companies that
+post other professions' jobs but whose saved jobs didn't happen to include one.
 
 ## How the less conventional sources are covered
 
@@ -468,13 +547,12 @@ sponsorship.
 |---|---|
 | Epic | The public page embeds an open-job ID list and a larger position dictionary that includes unpublished/closed entries. A reader must intersect these and establish locations; category navigation links must not be treated as job postings. |
 | SafetyCulture | Resolve the primary listing feed. An embedded board for Mitti also appears on the site and must not be mislabeled as SafetyCulture. |
-| Postman | Resolve the current data source behind the open-positions page; older Greenhouse board names returned 404. |
+| Postman | Resolve the current data source behind the open-positions page; older Greenhouse board names returned 404, and its Workable board was empty on 2026-09-30. |
 | PhonePe | Resolve the current data source behind the jobs page; the guessed legacy board returned 404. |
 | Zoho | Validate its Zoho Recruit listing/RSS, including pagination, locations and stable IDs. |
 | PaperCut | Follow the current jobs board from its careers page and verify listing coverage. |
 | Tyler Technologies | Its custom page has individual listings; validate pagination and location extraction before enabling it. |
 | Octopus Deploy | Resolve the current board; the tested Ashby name was not valid. |
-| Rokt | The inspected careers route entered a redirect loop; establish a working canonical source. |
 
 ### Additional employer families to investigate
 
