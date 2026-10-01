@@ -296,6 +296,11 @@ def cmd_matches(args: argparse.Namespace) -> int:
     ctx = context(args)
     store = open_backend(ctx.runtime, "matches", ctx.clients).store
     picked = [tuple(pick) for pick in args.pick or []] + ([(args.company, args.uid)] if args.company and args.uid else [])
+    if args.stdin:  # the app's way for a big selection: a launched process takes at most 4,096 arguments
+        given = json.load(sys.stdin)
+        if not isinstance(given, list) or not all(isinstance(p, list) and len(p) == 2 for p in given):
+            raise ValueError('--stdin takes JSON: [["COMPANY", "UID"], ...]')
+        picked += [(str(company), str(uid)) for company, uid in given]
     if args.action in ("skip", "unskip", "send"):
         skip = args.action != "unskip"
         if args.all or (args.action == "send" and not picked):  # `send` alone sends them all, as before
@@ -714,6 +719,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("uid", nargs="?", help="the match's id, as listed")
     p.add_argument("--pick", nargs=2, action="append", metavar=("COMPANY", "UID"),
                    help="a match to skip, unskip or send; give it once for each")
+    p.add_argument("--stdin", action="store_true",
+                   help='read the matches from stdin as JSON, [["COMPANY", "UID"], ...]: for more than --pick can take '
+                        "(an app launching this passes at most 4,096 arguments)")
     p.add_argument("--all", action="store_true", help="skip, unskip or send every waiting match")
     p.add_argument("--json", action="store_true", help="print the lists as JSON (what the menu bar app reads)")
     p.set_defaults(func=cmd_matches)

@@ -1,6 +1,7 @@
 """Live Tracking: the list of matches waiting to be sent, skipping, "Send now", and digests during a long pass."""
 
 import asyncio
+import io
 import json
 from datetime import timedelta
 
@@ -312,6 +313,24 @@ def test_matches_command_sends_and_clears_picked_matches(config, capsys):  # noq
                      "--pick", first["company"], first["uid"], "--json", *run]) == 0
     live = json.loads(capsys.readouterr().out)  # clearing one on its way out stops it: the skip wins
     assert live["waiting"] == [] and {m["uid"] for m in live["skipped"]} == {first["uid"], second["uid"]}
+
+
+def test_matches_command_takes_a_big_selection_on_stdin(config, capsys, monkeypatch):  # noqa: F811
+    run = ["--config", str(config)]
+    assert cli.main(["switch", "discord", "off", *run]) == 0
+    assert cli.main(["switch", "email", "off", *run]) == 0
+    assert cli.main(["run", "--once", *run]) == 0
+    capsys.readouterr()
+    assert cli.main(["matches", "--json", *run]) == 0
+    waiting = json.loads(capsys.readouterr().out)["waiting"]
+    picks = [[m["company"], m["uid"]] for m in waiting] + [["Gone Co", "gone:1"]] * 3000  # far past 4,096 arguments
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(picks)))
+    assert cli.main(["matches", "skip", "--stdin", "--json", *run]) == 0
+    live = json.loads(capsys.readouterr().out)
+    assert live["waiting"] == [] and len(live["skipped"]) == len(waiting)
+    monkeypatch.setattr("sys.stdin", io.StringIO('{"company": "Acme"}'))
+    assert cli.main(["matches", "skip", "--stdin", *run]) == cli.EXIT_USAGE
 
 
 def test_matches_command_needs_a_match_to_skip(config):  # noqa: F811
