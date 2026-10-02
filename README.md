@@ -338,6 +338,7 @@ alert again. The previous version behaved the same way.
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
 | SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
 | Workable | `apply.workable.com/api/v1/widget/accounts/{account}` (every job in one request; 2 s apart, checked hourly) | no |
+| SuccessFactors | The career site's `/sitemap.xml` (a job feed, or a list of job links) and its classic `/search/` pages, newest first, for titles (the `/services/` API is closed to crawlers); set `ats: successfactors`, since these sites use the company's own domain; checked hourly | a new job known only by its link, once, if its link's words could match the filter |
 | Workday | `POST {host}/wday/cxs/{tenant}/{site}/jobs` (paginated) | only if the filter uses employment type, or uses location and the job is listed as "N Locations" |
 | MathWorks | Official RSS job feed, including EDG | no |
 | HRM Direct / ClearCompany | Public search-results table, including malformed job links | no |
@@ -524,7 +525,8 @@ recorded without alerting, with the reason (`dropped_for` on the stored job, and
 
 Where descriptions come from: the listing already has them for Ashby, Lever, amazon.jobs
 (basic qualifications), Google (minimum qualifications), Meta (from the job page it
-already reads) and TikTok. Greenhouse, Workday, Rippling, SmartRecruiters, Workable, Oracle HCM, Eightfold and Apple take one
+already reads), TikTok and SuccessFactors job feeds. Greenhouse, Workday, Rippling, SmartRecruiters, Workable,
+SuccessFactors (other sites), Oracle HCM, Eightfold and Apple take one
 request per new match, at most `max_detail_requests` a check (the rest wait for the next
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.

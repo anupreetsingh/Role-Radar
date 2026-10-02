@@ -6,8 +6,9 @@
 #   url       (required) public careers page
 #   ats       optional: bamboohr | greenhouse | lever | ashby | workday | icims | jibe |
 #             avature | hrmdirect | recruiterbox | eightfold | oracle_hcm | amazon |
-#             apple | google | meta | tiktok | mathworks | comsol | generic
-#             (auto-detected from the URL when omitted)
+#             apple | google | meta | tiktok | mathworks | comsol | smartrecruiters |
+#             workable | successfactors | generic
+#             (auto-detected from the URL when omitted; SuccessFactors sites need it)
 #   filters   optional; each key REPLACES the same key from your profile's filters
 #   options   optional scraper-specific settings (see each scraper's docstring)
 #   enabled   optional, default true
@@ -25939,11 +25940,6 @@ companies:
     platform: custom
     enabled: false
 
-  - name: Wipro
-    url: https://careers.wipro.com/
-    platform: successfactors
-    enabled: false
-
   - name: Cognizant
     url: https://cognizant.taleo.net/careersection/
     platform: taleo
@@ -42208,5 +42204,328 @@ companies:
     url: https://apply.workable.com/zipliens/
     ats: workable
     countries: [US]
+
+  # --- End of employers found by the board sweep ---
+
+  # --- Employers found by the board sweep (2026-10-02, SuccessFactors) ---
+  # SuccessFactors career sites that Simplify's new-grad and internship listings link to,
+  # each read once from the laptop.
+  # Kept if a job had a tech title in the US, Canada, Australia or India.
+  # Built by scripts/build_lists.py; see docs/company-coverage.md.
+
+  - name: Acuity Brands
+    url: https://careers.acuityinc.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Advanced Energy
+    url: https://jobs.advanced-energy.com/
+    ats: successfactors
+    countries: [US, IN]
+
+  - name: Aflac
+    url: https://careers.aflac.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Altice USA
+    url: https://www.optimumcareers.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: American Airlines
+    url: https://jobs.aa.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Aramark
+    url: https://aramarkcareers.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Arkema Global
+    url: https://jobs.arkema.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Assa Abloy
+    url: https://assaabloy.jobs2web.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Atos
+    url: https://jobs.atos.net/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: Bausch Lomb
+    url: https://careers.bauschlomb.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Belden
+    url: https://careers.belden.com/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: BMW Group
+    url: https://jobs.bmwgroup.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Capgemini Group
+    url: https://careers.capgemini.com/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: Cintas
+    url: https://careers.cintas.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: CMS Energy
+    url: https://careers.consumersenergy.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Commercial Metals
+    url: https://jobs.cmc.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: CommScope
+    url: https://jobs.commscope.com/
+    ats: successfactors
+    countries: [US, AU, IN]
+
+  - name: Corning
+    url: https://corningjobs.corning.com/
+    ats: successfactors
+    countries: [US, AU, IN]
+
+  - name: Dominion Energy
+    url: https://careers.dominionenergy.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Duke University
+    url: https://careers.duke.edu/
+    ats: successfactors
+    countries: [US]
+
+  - name: Edison International
+    url: https://apply.edisoncareers.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Entergy
+    url: https://jobs.entergy.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Epiroc
+    url: https://www.careerprofile.epiroc.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Erie Insurance Group
+    url: https://jobs.erieinsurance.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Ernst & Young
+    url: https://careers.ey.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: ExxonMobil
+    url: https://jobs.exxonmobil.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Farmers Insurance
+    url: https://jobs.farmersinsurance.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: GXO Logistics
+    url: https://jobs.gxo.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Halliburton
+    url: https://jobs.halliburton.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Heraeus Group
+    url: https://mycareer.heraeus.com/
+    ats: successfactors
+    countries: [US, IN]
+
+  - name: Hershey
+    url: https://careers.thehersheycompany.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: HF Sinclair
+    url: https://careers.hfsinclair.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Hyundai Motor Company
+    url: https://careers-americas.hyundai.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: JetBlue
+    url: https://careers.jetblue.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Leggett & Platt
+    url: https://careers.leggett.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Lincoln Financial
+    url: https://jobs.lincolnfinancial.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: MANN+HUMMEL
+    url: https://mann-hummel-careers.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: McDonald's
+    url: https://jobs.mcdonalds.com/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: Nestle
+    url: https://jobdetails.nestle.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Newell Brands
+    url: https://jobs.newellbrands.com/
+    ats: successfactors
+    countries: [US, AU, IN]
+
+  - name: NextEra Energy
+    url: https://jobs.nexteraenergy.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Norfolk Southern
+    url: https://jobs.nscorp.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: NRG Energy
+    url: https://careers.nrgenergy.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Nucor
+    url: https://jobs.nucor.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Owens Corning
+    url: https://careers.owenscorning.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Paccar
+    url: https://jobs.paccar.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Paramount Global
+    url: https://careers.paramount.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: PartnerRe
+    url: https://careers.partnerre.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: PG&E
+    url: https://careers.pge.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Phillips 66
+    url: https://careers.phillips66.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Primetals Technologies
+    url: https://mhicareers.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Public Service Enterprise Group
+    url: https://jobs.pseg.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Qorvo
+    url: https://careers.qorvo.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Qualitest
+    url: https://careers.quality-ai.com/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: Royal Caribbean Group
+    url: https://jobs.royalcaribbeangroup.com/
+    ats: successfactors
+    countries: [US, AU]
+
+  - name: Sonepar
+    url: https://career.sonepar.com/
+    ats: successfactors
+    countries: [US, CA, IN]
+
+  - name: Stulz
+    url: https://careers-us.stulz.com/
+    ats: successfactors
+    countries: [US]
+
+  - name: Super Micro Computer
+    url: https://jobs.supermicro.com/
+    ats: successfactors
+    countries: [US, IN]
+
+  - name: W.W. Grainger
+    url: https://jobs.grainger.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Westinghouse Electric Company
+    url: https://careers.westinghousenuclear.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Wipro
+    url: https://careers.wipro.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: XPO
+    url: https://jobs.xpo.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: Zurich Insurance
+    url: https://www.careers.zurich.com/
+    ats: successfactors
+    countries: [US, CA, AU]
 
   # --- End of employers found by the board sweep ---

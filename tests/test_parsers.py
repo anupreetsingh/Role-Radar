@@ -5,7 +5,7 @@ from datetime import date
 import httpx
 import pytest
 
-from role_radar.models import JobPosting
+from role_radar.models import JobPosting, html_to_text
 from role_radar.scrapers import SCRAPERS, scraper_class_for
 from role_radar.scrapers.base import ScraperError, parse_date
 from role_radar.storage import SeenJob
@@ -330,6 +330,102 @@ def test_workable_description_is_the_role_not_the_benefits():
     assert seen[-1] == "https://apply.workable.com/api/v2/accounts/acme/jobs/D1E02E0D44"
 
 
+def scrape_successfactors(sitemap, *, search=None, known=None, details=(), described=(), **options):
+    """Run the SuccessFactors reader on jobs.acme.example; search maps startrow → page (default: no rows)."""
+    seen = []
+    search = {"0": "<html><body>Loading…</body></html>"} if search is None else search
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == "/sitemap.xml":
+            return httpx.Response(200, text=sitemap)
+        if request.url.path == "/search/":
+            return httpx.Response(200, text=search.get(request.url.params["startrow"], "<table></table>"))
+        if "/job/" in request.url.path:
+            return httpx.Response(200, text=fixture_text("successfactors_job.html"))
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company(url="https://jobs.acme.example/")
+            cfg.options = options
+            scraper = SCRAPERS["successfactors"](cfg, http)
+            scraper.known = known or {}
+            result = await scraper.fetch_jobs()
+            wanted = {j.job_id for j in result.jobs if scraper.wants_details(j)}
+            for j in result.jobs:
+                if j.job_id in details:
+                    await scraper.fetch_details(j)
+            descriptions = {j.job_id: await scraper.fetch_description(j) for j in result.jobs if j.job_id in described}
+            return result, wanted, descriptions, seen
+
+    return asyncio.run(go())
+
+
+def test_successfactors_job_feed_lists_every_job_with_its_description():
+    result, wanted, descriptions, seen = scrape_successfactors(fixture_text("successfactors_feed.xml"), described={"1436476000"})
+    jobs = {j.job_id: j for j in result.jobs}
+    assert result.complete and list(jobs) == ["1436476000", "1434335900"] and not wanted
+    ai = jobs["1436476000"]
+    assert (ai.title, ai.location, ai.department) == ("Engineer, IT AI", "Fort Worth, TX, US", "Information Technology")
+    assert ai.url == "https://jobs.aa.com/job/Fort-Worth-Engineer%2C-IT-AI-TX-76101/1436476000/"
+    assert ai.uid == "acme:successfactors:1436476000"
+    assert jobs["1434335900"].title == "Cleaner & Porter"
+    assert "2 years of experience" in html_to_text(descriptions["1436476000"])
+    # The feed, then the search page, which this site fills in the browser: nothing more to read.
+    assert [u.split(".example", 1)[1] for u in seen] == [
+        "/sitemap.xml", "/search/?q=&sortColumn=referencedate&sortDirection=desc&startrow=0"]
+
+
+def test_successfactors_links_take_titles_from_the_search_pages():
+    page = fixture_text("successfactors_search.html")
+    result, wanted, _, seen = scrape_successfactors(fixture_text("successfactors_links.xml"), search={"0": page})
+    jobs = {j.job_id: j for j in result.jobs}
+    assert list(jobs) == ["1406504600", "1426527300", "1434181900", "1440000001"]
+    rebar = jobs["1406504600"]
+    assert (rebar.title, rebar.location, rebar.date_posted) == ("Rebar Project Manager", "Lexington, NC, US, 27292", date(2026, 10, 2))
+    assert rebar.url == "https://jobs.acme.example/job/Lexington-Rebar-Project-Manager-NC-27292/1406504600/"
+    swe = jobs["1440000001"]  # on the search page, not yet in the sitemap
+    assert swe.title == "Software Engineer, Data & AI" and swe.location == "Austin, TX, US, 73301"
+    assert not result.complete  # the sitemap is behind the search: a job missing from it may still be open
+    # Jobs on no page read keep their links' words; the first check's jobs aren't read one by one.
+    assert jobs["1426527300"].title == "Brandenburg Automation Controls Engineering Intern Summer 2027 KY 40108"
+    assert jobs["1426527300"].location is None and not wanted
+    # Untitled jobs remained, so the next page was read; it was empty, so reading stopped.
+    assert [u.rsplit("=", 1)[1] for u in seen if "/search/" in u] == ["0", "2"]
+
+
+def test_successfactors_reuses_known_jobs_and_reads_new_ones_page_when_they_could_match():
+    links = fixture_text("successfactors_links.xml")
+    first, _, _, _ = scrape_successfactors(links)
+    known = {j.uid: SeenJob(title=j.title, url=j.url, fingerprint=j.fingerprint, first_seen="x", location="Kept, KY")
+             for j in first.jobs if j.job_id != "1426527300"}
+    result, wanted, descriptions, seen = scrape_successfactors(links, known=known, details={"1426527300"},
+                                                               described={"1426527300"})
+    jobs = {j.job_id: j for j in result.jobs}
+    assert result.complete and jobs["1406504600"].location == "Kept, KY"  # stored title and location
+    assert wanted == {"1426527300"}  # the one new job
+    intern = jobs["1426527300"]
+    assert intern.title == "Automation & Controls Engineering Intern- Summer 2027"
+    assert intern.location == "Brandenburg, KY, US" and intern.date_posted == date(2026, 10, 2)
+    assert descriptions["1426527300"] == "Pursuing a degree in electrical engineering.\nNo experience required."
+    assert sum("/job/" in u for u in seen) == 1  # the description came with the details
+
+
+def test_successfactors_rejects_a_page_that_is_not_a_sitemap():
+    with pytest.raises(ScraperError, match="sitemap"):
+        scrape_successfactors("<html><body>Access Denied</body></html>")
+
+
+def test_successfactors_link_words_and_place():
+    from role_radar.scrapers.successfactors import link_location, link_words
+
+    assert link_words("Fort-Worth-Engineer%2C-IT-AI-TX-76101") == "Fort Worth Engineer IT AI TX 76101"
+    assert link_location("Fort-Worth-Engineer%2C-IT-AI-TX-76101", "Engineer, IT AI") == "Fort Worth, TX, 76101"
+    assert link_location("Pune-SOLUTION-ARCHITECT-L1%28CONTRACT%29-IND-411005", "Solution Architect L1(Contract)") == "Pune, IND, 411005"
+    assert link_location("Austin-Data-Analyst-TX-73301", "Software Engineer") is None
+
+
 def test_generic_json_ld():
     result = scrape("generic", "https://acme.example/careers", {"/careers": fixture_text("generic_jsonld.html")})
     (pe,) = result.jobs
@@ -377,6 +473,7 @@ def test_generic_empty_page_raises():
         ("https://ats.rippling.com/en-US/acme/jobs", "rippling"),
         ("https://careers.smartrecruiters.com/Acme", "smartrecruiters"),
         ("https://apply.workable.com/acme/", "workable"),
+        ("https://assaabloy.jobs2web.com/", "successfactors"),
         ("https://www.acme.com/careers", "generic"),
     ],
 )

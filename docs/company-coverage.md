@@ -436,6 +436,52 @@ Switched on 2026-09-30: Innovaccer (72 jobs; US, IN) and Rokt (16; US, CA, AU). 
 Cars24 and Employment Hero had empty Workable boards; their careers pages load jobs in
 the browser, so they stay switched off (`platform: custom`) until that source is found.
 
+## SuccessFactors (October 2026)
+
+SAP SuccessFactors career sites (Career Site Builder) run on each company's own domain
+(`jobs.aa.com`, `careers.ey.com`), so they're named with `ats: successfactors`. Their job
+search API (`/services/`) is disallowed by the sites' robots.txt; the reader uses what's
+open instead:
+
+- `/sitemap.xml`: every open job, in one request. On some sites it's a job feed (RSS items
+  with title, location, category and description: American Airlines, ExxonMobil, Corning,
+  Cintas); on most it's a list of job links, `/job/{city-title-state-zip}/{id}/`, whose
+  words hold the title and place but not where one ends and the other starts.
+- `/search/?q=&sortColumn=referencedate&sortDirection=desc&startrow=N`: the classic search
+  page, 10 to 100 jobs a page with title and location (and on some sites a date). The first
+  page is read every check, then further pages only while jobs without a title remain, at
+  most five a check. Newer site designs (Wipro, Seagate, L3Harris, Paramount) fill this
+  page in the browser, so there it lists nothing.
+- `/job/{slug}/{id}/`: a job's page (title, place, posting date, description), read once
+  for a new job known only by its link when its link's words could match the filter.
+
+A job already on record keeps its stored title and location. A site's first check is a
+baseline: jobs known only by their links are recorded under their links' words and their
+pages aren't read. Because each check downloads the whole sitemap (up to about 2 MB, for
+Cintas), these sites are checked hourly unless `check_interval_by_ats.successfactors` says
+otherwise.
+
+Where the sites came from: Simplify's new-grad and internship listings (about 36,600
+postings) linked to 79 career sites whose job links have the SuccessFactors shape, plus
+American Airlines and Wipro. Each site's robots.txt, sitemap and first search page were read
+once from the laptop on 2026-10-02: 78 were SuccessFactors sites (Gulfstream's and Dover's
+weren't, and one Qualitest site didn't answer). Lumen's internal-jobs site was left out.
+The other 76 were then read once more by `scripts/sweep_boards.py` (sitemap, two search
+pages, and one search for each sweep word; 508 requests, no failures or rate limiting), and
+`scripts/build_lists.py` added those with a matching job in a target country:
+
+| List | Added | Left out |
+|---|---|---|
+| Tech | 62, plus Wipro (switched on; it was waiting for this reader) | L3Harris, United Launch Alliance and Leonardo DRS (defense, as before) |
+| Accounting & Finance | 55 | |
+| Healthcare | 7 | |
+
+Two names were already taken by other employers' boards: the Tech list's Acuity is an
+insurer, so careers.acuityinc.com is listed as Acuity Brands, and its Capgemini is the
+Capgemini Insurance Workable board, so careers.capgemini.com is listed as Capgemini Group.
+(A company's name keys its saved jobs, so reusing one would make every job on the new site
+look new.)
+
 ## Darwinbox (September 2026)
 
 Not readable. A Darwinbox career site (`{company}.darwinbox.in/ms/candidate/careers`) loads

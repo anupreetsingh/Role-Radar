@@ -1,7 +1,7 @@
 # Role Radar's Accounting & Finance companies: employers that posted accounting and finance jobs (accountants, audit, tax, FP&A, payroll)
 # in the US, Canada, Australia or India. Each company's `countries` are where its jobs are,
 # and a person's picked countries decide which are checked. Built by scripts/build_lists.py
-# from a board sweep (2026-09-30, SmartRecruiters and Workable) and the Tech list's saved jobs; see docs/company-coverage.md.
+# from board sweeps (2026-09-30, SmartRecruiters and Workable; 2026-10-02, SuccessFactors) and the Tech list's saved jobs; see docs/company-coverage.md.
 
 companies:
   - name: 001-Dialysis Clinic, Inc.-Nashville, TN- Corporate Office
@@ -352,6 +352,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Acuity Brands
+    url: https://careers.acuityinc.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: AcuityMD
     url: https://job-boards.greenhouse.io/acuitymd
     ats: greenhouse
@@ -414,6 +419,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Advanced Energy
+    url: https://jobs.advanced-energy.com/
+    ats: successfactors
+    countries: [US, IN]
 
   - name: Advanced MedAesthetic Partners
     url: https://ats.rippling.com/advanced-medaesthetic-partners-inc/jobs
@@ -514,6 +524,11 @@ companies:
     url: https://job-boards.greenhouse.io/affirm
     ats: greenhouse
     countries: [US, CA, AU]
+
+  - name: Aflac
+    url: https://careers.aflac.com/
+    ats: successfactors
+    countries: [US]
 
   - name: Afresh
     url: https://job-boards.greenhouse.io/afresh
@@ -999,6 +1014,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Altice USA
+    url: https://www.optimumcareers.com/
+    ats: successfactors
+    countries: [US]
+
   - name: AMA Agencies
     url: https://albertamotorassociation.wd3.myworkdayjobs.com/AMA
     ats: workday
@@ -1051,6 +1071,11 @@ companies:
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: American Airlines
+    url: https://jobs.aa.com/
+    ats: successfactors
+    countries: [US]
 
   - name: American Bankers Association
     url: https://aba.wd1.myworkdayjobs.com/ABA
@@ -1523,6 +1548,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Aramark
+    url: https://aramarkcareers.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
   - name: Aravo Solutions
     url: https://apply.workable.com/aravo/
     ats: workable
@@ -1670,6 +1700,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Arkema Global
+    url: https://jobs.arkema.com/
+    ats: successfactors
+    countries: [US]
+
   - name: Arketa
     url: https://jobs.ashbyhq.com/arketa
     ats: ashby
@@ -1693,6 +1728,11 @@ companies:
     countries: [IN]
     options:
       max_jobs: 200
+
+  - name: Armstrong World Industries
+    url: https://jobs.armstrong.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Arnett & Burgess Energy Services
     url: https://apply.workable.com/abpipeliners/
@@ -1829,6 +1869,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Assa Abloy
+    url: https://assaabloy.jobs2web.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Asset Living
     url: https://job-boards.greenhouse.io/assetliving
@@ -2006,6 +2051,11 @@ companies:
   - name: ATOMS Careers page
     url: https://job-boards.greenhouse.io/cssmerge
     ats: greenhouse
+    countries: [US, CA, IN]
+
+  - name: Atos
+    url: https://jobs.atos.net/
+    ats: successfactors
     countries: [US, CA, IN]
 
   - name: AtriCure
@@ -2474,6 +2524,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Bausch Lomb
+    url: https://careers.bauschlomb.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Baxter International
     url: https://baxter.wd1.myworkdayjobs.com/baxter
     ats: workday
@@ -2606,6 +2661,11 @@ companies:
     url: https://beitzelcareers-beitzelpillar.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Belden
+    url: https://careers.belden.com/
+    ats: successfactors
+    countries: [US, CA, IN]
 
   - name: Belk Administration Company
     url: https://belk.wd1.myworkdayjobs.com/careers-corporate
@@ -3077,6 +3137,11 @@ companies:
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: BMW Group
+    url: https://jobs.bmwgroup.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: BNY
     url: https://eofe.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
@@ -3771,6 +3836,11 @@ companies:
   - name: Capco
     url: https://job-boards.greenhouse.io/capco
     ats: greenhouse
+    countries: [US, CA, IN]
+
+  - name: Capgemini Group
+    url: https://careers.capgemini.com/
+    ats: successfactors
     countries: [US, CA, IN]
 
   - name: Capital Bank
@@ -4507,6 +4577,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, AU, IN]
 
+  - name: Cintas
+    url: https://careers.cintas.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: CIP FS Global Services India
     url: https://cip.wd103.myworkdayjobs.com/CIPFS_Careers
     ats: workday
@@ -4853,6 +4928,11 @@ companies:
     ats: workable
     countries: [CA]
 
+  - name: CMS Energy
+    url: https://careers.consumersenergy.com/
+    ats: successfactors
+    countries: [US]
+
   - name: CNM Central New Mexico Community College
     url: https://chess.wd1.myworkdayjobs.com/CNMJOBS
     ats: workday
@@ -5089,6 +5169,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Commercial Metals
+    url: https://jobs.cmc.com/
+    ats: successfactors
+    countries: [US]
 
   - name: Common Securitization Solutions
     url: https://careers-usfintech.icims.com/jobs/search
@@ -5384,6 +5469,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Corning
+    url: https://corningjobs.corning.com/
+    ats: successfactors
+    countries: [US, AU, IN]
 
   - name: CORP-Corporate Office
     url: https://ngc.wd1.myworkdayjobs.com/northrop_grumman_external_site
@@ -6446,6 +6536,11 @@ companies:
     ats: workable
     countries: [CA]
 
+  - name: Dominion Energy
+    url: https://careers.dominionenergy.com/
+    ats: successfactors
+    countries: [US]
+
   - name: Donorbox
     url: https://job-boards.greenhouse.io/donorbox
     ats: greenhouse
@@ -6615,6 +6710,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Duke University
+    url: https://careers.duke.edu/
+    ats: successfactors
+    countries: [US]
 
   - name: Duluth Trading Company
     url: https://careers-duluthtrading.icims.com/jobs/search
@@ -7164,6 +7264,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Entergy
+    url: https://jobs.entergy.com/
+    ats: successfactors
+    countries: [US]
+
   - name: Enterprise
     url: https://us-erac.icims.com/jobs/search
     ats: icims
@@ -7234,6 +7339,11 @@ companies:
     countries: [US, CA, AU, IN]
     options:
       max_jobs: 200
+
+  - name: Epiroc
+    url: https://www.careerprofile.epiroc.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Epirus
     url: https://job-boards.greenhouse.io/epirus
@@ -7313,6 +7423,11 @@ companies:
     options:
       location: ''
 
+  - name: Erie Insurance Group
+    url: https://jobs.erieinsurance.com/
+    ats: successfactors
+    countries: [US]
+
   - name: Eriez
     url: https://apply.workable.com/eriez/
     ats: workable
@@ -7322,6 +7437,11 @@ companies:
     url: https://job-boards.greenhouse.io/ernestpackagingsolutions
     ats: greenhouse
     countries: [US]
+
+  - name: Ernst & Young
+    url: https://careers.ey.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: ERP•AI
     url: https://jobs.ashbyhq.com/erp.ai
@@ -7570,6 +7690,11 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: ExxonMobil
+    url: https://jobs.exxonmobil.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
   - name: Eye Care Partners
     url: https://job-boards.greenhouse.io/ecpcareers
     ats: greenhouse
@@ -7700,6 +7825,11 @@ companies:
   - name: Farm Credit Bank of Texas
     url: https://eozs.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_6/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Farmers Insurance
+    url: https://jobs.farmersinsurance.com/
+    ats: successfactors
     countries: [US]
 
   - name: Faropoint
@@ -8602,6 +8732,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: General Dynamics
+    url: https://jobs.nassco.com/
+    ats: successfactors
+    countries: [US]
+
   - name: General Dynamics Electric Boat
     url: https://careers-gdeb.icims.com/jobs/search
     ats: icims
@@ -9325,6 +9460,11 @@ companies:
     ats: ashby
     countries: [US]
 
+  - name: Halliburton
+    url: https://jobs.halliburton.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
   - name: Halter
     url: https://jobs.ashbyhq.com/halter
     ats: ashby
@@ -9700,6 +9840,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Hershey
+    url: https://careers.thehersheycompany.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Heven AeroTech
     url: https://job-boards.greenhouse.io/hevenaerotech
     ats: greenhouse
@@ -9716,6 +9861,11 @@ companies:
     url: https://fa-etqo-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US, AU, IN]
+
+  - name: HF Sinclair
+    url: https://careers.hfsinclair.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: hhaexchange
     url: https://jobs.lever.co/hhaexchange
@@ -10151,6 +10301,11 @@ companies:
     options:
       max_jobs: 3000
 
+  - name: Huntington Ingalls Industries
+    url: https://careers.huntingtoningalls.com/
+    ats: successfactors
+    countries: [US, AU]
+
   - name: Huron
     url: https://huron.wd1.myworkdayjobs.com/huroncareers
     ats: workday
@@ -10206,6 +10361,11 @@ companies:
     countries: [US, IN]
     options:
       max_jobs: 200
+
+  - name: Hyundai Motor Company
+    url: https://careers-americas.hyundai.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: i360technologies, Inc.
     url: https://job-boards.greenhouse.io/i360technologiesinc
@@ -10917,6 +11077,11 @@ companies:
     ats: ashby
     countries: [US, CA]
 
+  - name: JetBlue
+    url: https://careers.jetblue.com/
+    ats: successfactors
+    countries: [US]
+
   - name: JetBrains
     url: https://job-boards.greenhouse.io/jetbrains
     ats: greenhouse
@@ -11449,6 +11614,11 @@ companies:
     ats: rippling
     countries: [US, CA]
 
+  - name: L3Harris Technologies
+    url: https://jobs.l3harris.com/
+    ats: successfactors
+    countries: [US, CA, AU]
+
   - name: La Senza
     url: https://job-boards.greenhouse.io/lasenza
     ats: greenhouse
@@ -11602,6 +11772,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Leggett & Platt
+    url: https://careers.leggett.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Legion
     url: https://job-boards.greenhouse.io/legion
     ats: greenhouse
@@ -11643,6 +11818,11 @@ companies:
     url: https://uscareers-lennox.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Leonardo DRS
+    url: https://careers.leonardodrs.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Leverage Companies
     url: https://ats.rippling.com/leverage-companies/jobs
@@ -11772,6 +11952,11 @@ companies:
   - name: Lincoln Avenue Communities
     url: https://apply.workable.com/lincolnavenue/
     ats: workable
+    countries: [US]
+
+  - name: Lincoln Financial
+    url: https://jobs.lincolnfinancial.com/
+    ats: successfactors
     countries: [US]
 
   - name: Lincoln Property Company
@@ -12243,6 +12428,11 @@ companies:
     ats: oracle_hcm
     countries: [US, AU, IN]
 
+  - name: MANN+HUMMEL
+    url: https://mann-hummel-careers.com/
+    ats: successfactors
+    countries: [US]
+
   - name: MANSCAPED
     url: https://job-boards.greenhouse.io/manscaped
     ats: greenhouse
@@ -12515,6 +12705,11 @@ companies:
     url: https://edsv.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US, CA, AU, IN]
+
+  - name: McDonald's
+    url: https://jobs.mcdonalds.com/
+    ats: successfactors
+    countries: [US, CA, IN]
 
   - name: McGuireWoods
     url: https://staffcareers-mcguirewoods.icims.com/jobs/search
@@ -13627,6 +13822,11 @@ companies:
     ats: ashby
     countries: [US, CA]
 
+  - name: Nestle
+    url: https://jobdetails.nestle.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
   - name: Net at Work
     url: https://ats.rippling.com/netatwork/jobs
     ats: rippling
@@ -13724,6 +13924,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Newell Brands
+    url: https://jobs.newellbrands.com/
+    ats: successfactors
+    countries: [US, AU, IN]
+
   - name: Newmark
     url: https://hdow.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -13750,6 +13955,11 @@ companies:
     url: https://apply.workable.com/nextep-2/
     ats: workable
     countries: [US]
+
+  - name: NextEra Energy
+    url: https://jobs.nexteraenergy.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: NextGen Healthcare India
     url: https://nextgen.wd5.myworkdayjobs.com/nextgen_careers
@@ -14062,6 +14272,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: NRG Energy
+    url: https://careers.nrgenergy.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Nscale
     url: https://job-boards.greenhouse.io/nscaleoperationsukltd
     ats: greenhouse
@@ -14099,6 +14314,11 @@ companies:
     countries: [US, IN]
     options:
       max_jobs: 200
+
+  - name: Nucor
+    url: https://jobs.nucor.com/
+    ats: successfactors
+    countries: [US]
 
   - name: Numeral
     url: https://jobs.ashbyhq.com/numeral
@@ -14663,6 +14883,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Owens Corning
+    url: https://careers.owenscorning.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Owlet Baby Care
     url: https://apply.workable.com/owlet-baby-care-1/
     ats: workable
@@ -14682,6 +14907,11 @@ companies:
     url: https://jobs.ashbyhq.com/oyster
     ats: ashby
     countries: [US, CA, IN]
+
+  - name: Paccar
+    url: https://jobs.paccar.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Pacific Biosciences of California
     url: https://pacbio.wd12.myworkdayjobs.com/PacBio-
@@ -14841,6 +15071,11 @@ companies:
     ats: lever
     countries: [US, IN]
 
+  - name: Paramount Global
+    url: https://careers.paramount.com/
+    ats: successfactors
+    countries: [US]
+
   - name: ParentSquare
     url: https://ats.rippling.com/parentsquare/jobs
     ats: rippling
@@ -14884,6 +15119,11 @@ companies:
     url: https://fa-eqgc-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_6/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: PartnerRe
+    url: https://careers.partnerre.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Partnership HealthPlan of California
     url: https://careers-partnershiphp.icims.com/jobs/search
@@ -15156,6 +15396,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: PG&E
+    url: https://careers.pge.com/
+    ats: successfactors
+    countries: [US]
 
   - name: PGA
     url: https://pgahq.wd1.myworkdayjobs.com/PGAHQ
@@ -15656,6 +15901,11 @@ companies:
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: Primetals Technologies
+    url: https://mhicareers.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Primoris Renewable Energy
     url: https://prim.wd108.myworkdayjobs.com/Primoris
@@ -16870,6 +17120,11 @@ companies:
     url: https://jobs.ashbyhq.com/Rox-Data-Corp
     ats: ashby
     countries: [US, IN]
+
+  - name: Royal Caribbean Group
+    url: https://jobs.royalcaribbeangroup.com/
+    ats: successfactors
+    countries: [US, AU]
 
   - name: Royal Ocean Marine
     url: https://apply.workable.com/royal-ocean-marine/
@@ -18202,6 +18457,11 @@ companies:
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: Sonepar
+    url: https://career.sonepar.com/
+    ats: successfactors
+    countries: [US, CA, IN]
 
   - name: Sonic Automotive
     url: https://careers.smartrecruiters.com/sonicautomotive
@@ -21392,6 +21652,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Westinghouse Electric Company
+    url: https://careers.westinghousenuclear.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Westlake
     url: https://westlake.wd1.myworkdayjobs.com/westlake
     ats: workday
@@ -21726,6 +21991,11 @@ companies:
     ats: greenhouse
     countries: [US, AU, IN]
 
+  - name: XPO
+    url: https://jobs.xpo.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Xtium
     url: https://atsg.wd108.myworkdayjobs.com/XTIUMCareers
     ats: workday
@@ -21956,6 +22226,11 @@ companies:
     url: https://job-boards.greenhouse.io/zscaler
     ats: greenhouse
     countries: [US, CA, AU, IN]
+
+  - name: Zurich Insurance
+    url: https://www.careers.zurich.com/
+    ats: successfactors
+    countries: [US, CA, AU]
 
   - name: Zurn Elkay Water Solutions
     url: https://elkay.wd1.myworkdayjobs.com/Elkay_External

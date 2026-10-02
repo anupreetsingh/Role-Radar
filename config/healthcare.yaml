@@ -1,7 +1,7 @@
 # Role Radar's Healthcare companies: employers that posted healthcare jobs (nurses, doctors, pharmacists, therapists, technologists)
 # in the US, Canada, Australia or India. Each company's `countries` are where its jobs are,
 # and a person's picked countries decide which are checked. Built by scripts/build_lists.py
-# from a board sweep (2026-09-30, SmartRecruiters and Workable) and the Tech list's saved jobs; see docs/company-coverage.md.
+# from board sweeps (2026-09-30, SmartRecruiters and Workable; 2026-10-02, SuccessFactors) and the Tech list's saved jobs; see docs/company-coverage.md.
 
 companies:
   - name: 001-Dialysis Clinic, Inc.-Nashville, TN- Corporate Office
@@ -725,6 +725,11 @@ companies:
     url: https://apply.workable.com/aptus-health-care/
     ats: workable
     countries: [US]
+
+  - name: Aramark
+    url: https://aramarkcareers.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Ares Management
     url: https://aresmgmt.wd1.myworkdayjobs.com/External
@@ -3057,6 +3062,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Duke University
+    url: https://careers.duke.edu/
+    ats: successfactors
+    countries: [US]
+
   - name: Dungarvin
     url: https://careers.smartrecruiters.com/dungarvin
     ats: smartrecruiters
@@ -4642,6 +4652,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Huntington Ingalls Industries
+    url: https://careers.huntingtoningalls.com/
+    ats: successfactors
+    countries: [US, AU]
 
   - name: Huntsville Memorial Hospital
     url: https://apply.workable.com/huntsville-memorial-hospital/
@@ -6353,6 +6368,11 @@ companies:
     ats: ashby
     countries: [US]
 
+  - name: Nestle
+    url: https://jobdetails.nestle.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
   - name: Neuberger Berman
     url: https://nb.wd1.myworkdayjobs.com/NBCareers
     ats: workday
@@ -6894,6 +6914,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Owens Corning
+    url: https://careers.owenscorning.com/
+    ats: successfactors
+    countries: [US, CA]
+
   - name: Owensboro Health
     url: https://owensborohealth.wd1.myworkdayjobs.com/owensborohealth
     ats: workday
@@ -6905,6 +6930,11 @@ companies:
     url: https://ats.rippling.com/paarc-employment/jobs
     ats: rippling
     countries: [CA]
+
+  - name: Paccar
+    url: https://jobs.paccar.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Pacific Care Center
     url: https://ensign.wd1.myworkdayjobs.com/PacificCareCareerSite
@@ -10145,6 +10175,11 @@ companies:
     url: https://job-boards.greenhouse.io/westernveterinarypartnersllc
     ats: greenhouse
     countries: [US]
+
+  - name: Westinghouse Electric Company
+    url: https://careers.westinghousenuclear.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Westminster
     url: https://eexs.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Westminster/jobs

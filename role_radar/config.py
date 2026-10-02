@@ -30,6 +30,10 @@ from role_radar.http_client import HttpSettings
 RESERVED_PREFIX = "#"
 # The professions a person can pick; each has its own company list (onboarding.PROFESSIONS).
 PROFESSIONS = ("tech", "accounting", "healthcare")
+# Check intervals for job sites whose every check is a big download, in minutes, used unless
+# settings.check_interval_by_ats names the site (or check_interval_minutes is longer).
+# SuccessFactors sites send their whole listing (up to a few MB) each check.
+DEFAULT_CHECK_INTERVAL_BY_ATS = {"successfactors": 60.0}
 
 
 @dataclass
@@ -126,7 +130,10 @@ class Settings:
     def check_interval_for(self, ats: str | None) -> timedelta:
         """The check interval for companies on `ats` (a scraper name)."""
         minutes = self.check_interval_by_ats.get((ats or "").lower())
-        return timedelta(minutes=minutes) if minutes else self.check_interval
+        if minutes:
+            return timedelta(minutes=minutes)
+        built_in = DEFAULT_CHECK_INTERVAL_BY_ATS.get((ats or "").lower())
+        return max(self.check_interval, timedelta(minutes=built_in)) if built_in else self.check_interval
 
     def quick_interval_for(self, ats: str | None) -> timedelta | None:
         """How often companies on `ats` get a quick check, or None if they don't."""

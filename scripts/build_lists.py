@@ -66,7 +66,7 @@ NOT_STAFFING = re.compile(r"^(?:government of|city of|county of|state of|blue or
 # Employers taken off the Tech list before (docs/company-coverage.md: defense, aerospace and space;
 # the resume-alignment removals): distinctive names match at the start, short ones only whole.
 REMOVED_FROM_TECH = re.compile(
-    r"^(?:(?:lockheed|northrop|raytheon|general dynamics|l3harris|bae systems|leidos|science applications|"
+    r"^(?:(?:lockheed|northrop|raytheon|general dynamics|l3harris|leonardo drs|bae systems|leidos|science applications|"
     r"booz allen|mantech|peraton|huntington ingalls|textron|sierra nevada|kratos|mercury systems|anduril|"
     r"spacex|space exploration tech|blue origin|boeing|aerojet|united launch|technology service corporation|"
     r"amentum|vectrus|teledyne|vishay|texas instruments|marvell|globalfoundries|onsemi|zt systems|form energy|"
@@ -338,6 +338,8 @@ def main() -> None:
     parser.add_argument("--export", type=Path, help="directory of a DynamoDB export of the state table")
     parser.add_argument("--config", type=Path, default=Path("config"))
     parser.add_argument("--date", default="2026-09-30", help="when the sweep ran, for the files' notes")
+    parser.add_argument("--found", default="Boards on the job sites Role Radar reads, from Common Crawl's index, each read once\n"
+                        "from AWS.", help="where the boards came from and how they were read, for the Tech list's note")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -366,9 +368,9 @@ def main() -> None:
         if args.dry_run:
             continue
         if profession == "tech":
-            section = (f"\n  # --- Employers found by the board sweep ({args.date}) ---\n"
-                       f"  # Boards on the job sites Role Radar reads, from Common Crawl's index, each read once\n"
-                       f"  # from AWS; kept if a job had a tech title in the US, Canada, Australia or India.\n"
+            found = "".join(f"  # {line}\n" for line in args.found.splitlines())
+            section = (f"\n  # --- Employers found by the board sweep ({args.date}) ---\n" + found +
+                       f"  # Kept if a job had a tech title in the US, Canada, Australia or India.\n"
                        f"  # Built by scripts/build_lists.py; see docs/company-coverage.md.\n\n"
                        + dump(added) + "\n  # --- End of employers found by the board sweep ---\n")
             path.write_text(tech_text.rstrip("\n") + "\n" + section, encoding="utf-8")

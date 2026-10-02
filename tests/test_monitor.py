@@ -13,7 +13,7 @@ from role_radar.http_client import HttpClient, HttpSettings
 from role_radar.lease import LeaseLost, LocalLease
 from role_radar.notifications import DiscordNotifier, Notifier, format_digest, format_group, group_jobs
 from role_radar.storage import MemoryStateStore, MonitorState, from_iso
-from tests.conftest import Clock, fixture_json, job, make_client
+from tests.conftest import Clock, fixture_json, fixture_text, job, make_client
 
 T0 = datetime(2026, 9, 1, 12, tzinfo=timezone.utc)
 
@@ -214,6 +214,46 @@ def test_workday_details_fetched_only_when_filter_needs_them():
     outcome, fetched = workday_check(employment_types=["part time"])
     assert fetched == ["JR2000001", "JR2000002", "JR2000003"]  # the listing never has a time type
     assert outcome.matched == []
+
+
+def test_successfactors_new_link_only_job_is_read_only_when_it_could_match():
+    from role_radar.storage import SeenJob
+
+    sitemap = fixture_text("successfactors_links.xml")
+    fetched = []
+
+    def handler(request):
+        if request.url.path == "/sitemap.xml":
+            return httpx.Response(200, text=sitemap)
+        if request.url.path == "/search/":
+            return httpx.Response(200, text="<html>Loading…</html>")
+        fetched.append(request.url.path.rstrip("/").rsplit("/", 1)[-1])
+        return httpx.Response(200, text=fixture_text("successfactors_job.html"))
+
+    async def go(include, state):
+        cfg = CompanyConfig(name="Acme", url="https://jobs.acme.example/", ats="successfactors",
+                            filter=JobFilter(include_keywords=include, locations=["KY"]))
+        async with make_client(handler) as http:
+            return await monitor.check_company(cfg, http, state, Settings(), notify=True)
+
+    first = asyncio.run(go(["engineering"], MonitorState()))
+    assert fetched == [] and first.matched == []  # the first check's jobs are a baseline: no pages read
+    state = MonitorState(companies={"Acme": {
+        f"acme:successfactors:{i}": SeenJob(title="Old", url="u", fingerprint="f", first_seen="x") for i in ("1406504600", "1434181900")}})
+    outcome = asyncio.run(go(["engineering"], state))
+    assert fetched == ["1426527300"]  # the new job, whose link has the word
+    (match,) = outcome.matched
+    assert match.title == "Automation & Controls Engineering Intern- Summer 2027" and match.location == "Brandenburg, KY, US"
+    fetched.clear()
+    state.companies["Acme"].pop("acme:successfactors:1426527300")
+    assert asyncio.run(go(["nurse"], state)).matched == [] and fetched == []  # no "nurse" in the link: not read
+
+
+def test_successfactors_sites_are_checked_hourly_unless_set_otherwise():
+    assert Settings().check_interval_for("successfactors") == timedelta(minutes=60)
+    assert Settings(check_interval_by_ats={"successfactors": 15}).check_interval_for("successfactors") == timedelta(minutes=15)
+    assert Settings(check_interval_minutes=120).check_interval_for("successfactors") == timedelta(minutes=120)
+    assert Settings().check_interval_for("greenhouse") == timedelta(minutes=30)
 
 
 def test_notification_groups_same_title_across_locations():

@@ -10,7 +10,10 @@ RESULTS.jsonl gets one line per board, and a rerun skips the boards already in i
    "searches": {"engineer": {"total", "jobs"}, ...}, "facets": {name: [[value, count], ...]}}
 
 Greenhouse, Ashby, Lever, Rippling, BambooHR, SmartRecruiters and Workable boards are read whole
-(SmartRecruiters' big location groups only as far as two "Show more jobs" pages). Workday, iCIMS, Oracle and Eightfold boards can hold thousands, so they're read as the
+(SmartRecruiters' big location groups only as far as two "Show more jobs" pages). SuccessFactors
+career sites are read whole from their sitemaps (a job known only by its link counts its link's
+words as both title and place), plus one search page for each word in SEARCHES where the site's
+search pages list jobs. Workday, iCIMS, Oracle and Eightfold boards can hold thousands, so they're read as the
 newest page plus one page of results for each word in SEARCHES (one word per search: Workday
 finds only jobs matching every word of a search). Pacing is the app's own (settings.http in
 config/companies.yaml), with iCIMS portals sharing one spacing. When a platform's boards
@@ -43,9 +46,9 @@ from scripts.countries import TARGETS, default_classifier
 SEARCHES = ("engineer", "developer", "nurse", "accountant")
 WHOLE = {"greenhouse", "ashby", "lever", "rippling", "bamboohr", "smartrecruiters", "workable"}
 WORKERS = {"greenhouse": 12, "ashby": 12, "lever": 4, "rippling": 6, "bamboohr": 6, "oracle_hcm": 8,
-           "eightfold": 1, "icims": 4, "workday": 4, "smartrecruiters": 4, "workable": 4}
+           "eightfold": 1, "icims": 4, "workday": 4, "smartrecruiters": 4, "workable": 4, "successfactors": 6}
 # Reader settings for a sweep, where a sample of a board's titles is enough.
-SWEEP_OPTIONS = {"smartrecruiters": {"max_more_pages": 2}}
+SWEEP_OPTIONS = {"smartrecruiters": {"max_more_pages": 2}, "successfactors": {"max_pages": 2}}
 EXTRA_DELAYS = {"icims.com": 0.5, "jobs.ashbyhq.com": 0.5, "jobs.lever.co": 0.5}
 STOP_AFTER_429 = 3
 
@@ -181,6 +184,17 @@ class Sweep:
         for word in SEARCHES:
             found = await search(word)
             out["searches"][word] = {"total": len(found.jobs), "jobs": pairs(found.jobs)}
+
+    async def _successfactors(self, url: str, platform: str, out: dict[str, Any], board: dict[str, Any]) -> None:
+        reader = self.reader(url, platform, board=board)
+        result = await reader.fetch_jobs()
+        out.update(jobs=[[j.title, j.title if j.extra.get("from_link") else j.location] for j in result.jobs],
+                   total=len(result.jobs), searches={}, name=board.get("name"))
+        for word in SEARCHES:
+            found, total = await reader.search(word)
+            if not found and total is None:
+                break  # the site fills its search pages in the browser
+            out["searches"][word] = {"total": total, "jobs": pairs(found)}
 
     async def _icims(self, url: str, platform: str, out: dict[str, Any], board: dict[str, Any]) -> None:
         async def search(word: str):
