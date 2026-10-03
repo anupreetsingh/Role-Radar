@@ -2189,6 +2189,9 @@ struct SetupView: View {
     private var countriesPage: some View {
         VStack(alignment: .leading, spacing: 20) {
             section("Where do you want to work?", "Role Radar tracks the companies that post jobs in the countries you pick.") {
+                // Each country's count is what ticking it alone tracks: the companies posting there, and those
+                // whose job listings name no country (tracked whichever countries are picked).
+                let untagged = setup?.companies_untagged ?? 0
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(setup?.country_options ?? [], id: \.code) { country in
                         Toggle(isOn: Binding(get: { countries.contains(country.code) },
@@ -2196,15 +2199,19 @@ struct SetupView: View {
                             HStack(spacing: 8) {
                                 Text(country.name).scaledFont(14)
                                 if let n = setup?.companies_by_country?[country.code], n > 0 {
-                                    Text("\(n) companies").scaledFont(12).foregroundStyle(.secondary)
+                                    Text("\(n + untagged) companies").scaledFont(12).foregroundStyle(.secondary)
                                 }
                             }
                         }
                         .toggleStyle(.checkbox)
                     }
+                    if untagged > 0 {
+                        Text("Each count includes \(untagged) companies whose job listings don't name a country.")
+                            .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if let trackedCount {
-                    Label("\(trackedCount) companies post jobs in \(countryNames).", systemImage: "building.2")
+                    Label("\(trackedCount) companies to track in \(countryNames).", systemImage: "building.2")
                         .scaledFont(13, weight: .medium).foregroundStyle(trackedCount == 0 ? Color.orange : Color.primary)
                 }
             }
