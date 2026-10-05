@@ -812,6 +812,204 @@ companies:
     ats: greenhouse
     countries: [US, CA, AU]
 
+  # --- AI products and AI-powered business software ---
+
+  - name: Aleph
+    url: https://jobs.ashbyhq.com/aleph
+    ats: ashby
+    countries: [US, CA]
+
+  - name: AppZen
+    url: https://jobs.lever.co/appzen
+    ats: lever
+    countries: [US, IN]
+
+  - name: Beamery
+    url: https://jobs.ashbyhq.com/beamery
+    ats: ashby
+    countries: [US]
+
+  - name: Black Forest Labs
+    url: https://jobs.ashbyhq.com/black-forest-labs
+    ats: ashby
+    countries: [US]
+
+  - name: Corti
+    url: https://jobs.ashbyhq.com/corti
+    ats: ashby
+    countries: [US]
+
+  - name: Credo AI
+    url: https://jobs.ashbyhq.com/credo.ai
+    ats: ashby
+    countries: [US, IN]
+
+  - name: Darktrace
+    url: https://darktrace.wd3.myworkdayjobs.com/darktaceexternal
+    ats: workday
+    countries: [US]
+
+  - name: Domino Data Lab
+    url: https://job-boards.greenhouse.io/dominodatalab
+    ats: greenhouse
+    countries: [US, IN]
+
+  - name: Drivetrain
+    url: https://jobs.lever.co/drivetrain
+    ats: lever
+    countries: [US, CA, IN]
+
+  - name: Dust
+    url: https://jobs.ashbyhq.com/dust
+    ats: ashby
+    countries: [US]
+
+  - name: Findem
+    url: https://jobs.lever.co/findem
+    ats: lever
+    countries: [US, IN]
+
+  - name: FloQast
+    url: https://jobs.lever.co/floqast
+    ats: lever
+    countries: [US, AU, IN]
+
+  - name: Forter
+    url: https://job-boards.greenhouse.io/forter
+    ats: greenhouse
+    countries: [US, AU]
+
+  - name: HighRadius
+    url: https://job-boards.greenhouse.io/highradius
+    ats: greenhouse
+    countries: [US, IN]
+
+  - name: Hyperscience
+    url: https://jobs.ashbyhq.com/hyperscience
+    ats: ashby
+    countries: [US]
+
+  - name: Isomorphic Labs
+    url: https://job-boards.greenhouse.io/isomorphiclabs
+    ats: greenhouse
+    countries: [US]
+
+  - name: Kyriba
+    url: https://kyriba.wd5.myworkdayjobs.com/kyriba-careers
+    ats: workday
+    countries: [US, CA]
+
+  - name: Lucidworks
+    url: https://jobs.lever.co/lucidworks
+    ats: lever
+    countries: [US]
+
+  - name: OneStream
+    url: https://job-boards.greenhouse.io/onestream
+    ats: greenhouse
+    countries: [US, CA, AU]
+
+  - name: Owkin
+    url: https://jobs.ashbyhq.com/owkin
+    ats: ashby
+    countries: [US]
+
+  - name: People.ai
+    url: https://jobs.lever.co/people-ai
+    ats: lever
+    countries: [CA]
+
+  - name: Photoroom
+    url: https://jobs.ashbyhq.com/photoroom
+    ats: ashby
+    countries: [US]
+
+  - name: Poolside
+    url: https://jobs.ashbyhq.com/poolside
+    ats: ashby
+
+  - name: Rasa
+    url: https://jobs.ashbyhq.com/rasa
+    ats: ashby
+    countries: [US]
+
+  - name: Regie.ai
+    url: https://job-boards.greenhouse.io/regie
+    ats: greenhouse
+    countries: [US]
+
+  - name: Rev
+    url: https://jobs.ashbyhq.com/rev
+    ats: ashby
+    countries: [US]
+
+  - name: Rossum
+    url: https://jobs.ashbyhq.com/rossum.ai
+    ats: ashby
+
+  - name: SeekOut
+    url: https://job-boards.greenhouse.io/seekout
+    ats: greenhouse
+    countries: [US]
+
+  - name: Shield AI
+    url: https://jobs.lever.co/shieldai
+    ats: lever
+    countries: [US, AU, IN]
+
+  - name: SmarterDx
+    url: https://job-boards.greenhouse.io/smarterdx
+    ats: greenhouse
+    countries: [US]
+
+  - name: Speechmatics
+    url: https://job-boards.greenhouse.io/speechmatics
+    ats: greenhouse
+
+  - name: Stability AI
+    url: https://job-boards.greenhouse.io/stabilityai
+    ats: greenhouse
+    countries: [US]
+
+  - name: SuperAnnotate
+    url: https://jobs.lever.co/superannotate
+    ats: lever
+    countries: [US]
+
+  - name: Textio
+    url: https://job-boards.greenhouse.io/textio
+    ats: greenhouse
+    countries: [US]
+
+  - name: Tractable
+    url: https://jobs.ashbyhq.com/tractable
+    ats: ashby
+    countries: [US]
+
+  - name: Vic.ai
+    url: https://jobs.ashbyhq.com/vic.ai
+    ats: ashby
+    countries: [US]
+
+  - name: Viz.ai
+    url: https://jobs.ashbyhq.com/viz.ai
+    ats: ashby
+    countries: [US]
+
+  - name: Voxel51
+    url: https://job-boards.greenhouse.io/voxel51
+    ats: greenhouse
+
+  - name: Workiva
+    url: https://workiva.wd503.myworkdayjobs.com/careers
+    ats: workday
+    countries: [US, CA, AU]
+
+  - name: Zilliz
+    url: https://jobs.lever.co/zilliz
+    ats: lever
+    countries: [US]
+
   # --- Big tech, cloud, enterprise software and media ---
 
   - name: Adobe
