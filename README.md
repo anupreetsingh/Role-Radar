@@ -3,6 +3,7 @@
 ![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fdownloads) ![Weekly users](https://img.shields.io/endpoint?url=https%3A%2F%2Fjpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws%2Fbadge%2Fusers)
 
 [![Download for Mac](https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-2ea44f?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-apple-silicon.dmg)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-10_and_11-2ea44f?style=for-the-badge)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-windows-setup.exe)
 
 Watches company careers pages and collects new jobs matching your criteria into a digest
 every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
@@ -77,8 +78,9 @@ Its files live in `~/Library/Application Support/Role Radar`, and its log is
 
 For Windows 10 (version 1703 or later) or 11, on an Intel or AMD PC (Windows on ARM runs it too):
 
-1. Download `Role-Radar-windows-setup.exe` from the
-   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest) and open it. It
+1. Click **Download for Windows** at the top: it's always the newest version
+   (`Role-Radar-windows-setup.exe`, also on the
+   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest)). Open it. It
    isn't signed with a paid certificate, so Windows SmartScreen first says it "protected your PC":
    click **More info**, then **Run anyway**. You only do this once. It installs for you alone,
    with no administrator needed, into `%LOCALAPPDATA%\Programs\Role Radar`, adds it to the Start
