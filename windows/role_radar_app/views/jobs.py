@@ -126,6 +126,7 @@ def paint_box(painter: QPainter, widget: QWidget, area: QRect, state: Qt.CheckSt
         side = px(28)
         painter.drawEllipse(QRectF(area.center().x() - side / 2 + 1, area.center().y() - side / 2 + 1, side, side))
     check = QStyleOptionButton()
+    check.initFrom(widget)
     indicator = widget.style().pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth)
     check.rect = QRect(area.center().x() - indicator // 2 + 1, area.center().y() - indicator // 2 + 1, indicator, indicator)
     check.state = QStyle.StateFlag.State_Enabled | {Qt.CheckState.Checked: QStyle.StateFlag.State_On,

@@ -5,6 +5,7 @@ Login, the log, Quit, and updates. It closes when clicked away from, as Windows'
 
 from __future__ import annotations
 
+import time
 from typing import Callable
 
 from PySide6.QtCore import QPoint, QRect, Qt
@@ -25,6 +26,7 @@ class Panel(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.model = model
         self.open_window = open_window
+        self.hidden_at = 0.0  # when it last closed (time.monotonic)
 
         refresh = QToolButton()
         refresh.setText("↻")
@@ -126,6 +128,9 @@ class Panel(QWidget):
         self.login.setChecked(system.open_at_login())
         self.show()
         self.activateWindow()
+
+    def hideEvent(self, event) -> None:
+        self.hidden_at = time.monotonic()
 
     def _open(self, setup: bool) -> None:
         self.hide()

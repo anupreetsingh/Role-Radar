@@ -3,6 +3,7 @@ is checking. Click it for the panel; right-click for its menu; double-click for 
 
 from __future__ import annotations
 
+import time
 from typing import Callable
 
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
@@ -36,9 +37,11 @@ class Tray(QSystemTrayIcon):
 
     def _clicked(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            # Clicking the icon with the panel open closes it (as any click outside it does), and the
+            # click then arrives here too: that one mustn't open it again.
             if self.panel.isVisible():
                 self.panel.hide()
-            else:
+            elif time.monotonic() - self.panel.hidden_at > 0.3:
                 self.panel.show_at(self.geometry())
         elif reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.panel.hide()

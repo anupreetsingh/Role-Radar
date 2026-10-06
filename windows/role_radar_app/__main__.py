@@ -73,8 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     if QSystemTrayIcon.isSystemTrayAvailable():
         tray.show()
 
-    instance.message.connect(lambda message: quit_app() if message == "quit" else model.show_window(setup=not model.ready))
-    updates.quit_requested.connect(quit_app)
+    # Opened again: its window, on Setup until that's done, otherwise as it was.
+    instance.message.connect(lambda message: quit_app() if message == "quit"
+                             else model.show_window(setup=True if not model.ready else None))
+    updates.quit_requested.connect(app.quit, Qt.ConnectionType.QueuedConnection)  # asked from WinSparkle's thread
 
     def stopping() -> None:
         """Quit (or signing out, or an update) stops the checker with the app."""

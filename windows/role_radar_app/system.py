@@ -4,6 +4,7 @@ opening links and files. Elsewhere (a dev run on a Mac) opening at login does no
 
 from __future__ import annotations
 
+import getpass
 import sys
 from pathlib import Path
 
@@ -68,7 +69,8 @@ class SingleInstance(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.name = f"role-radar-{place.SUPPORT.name}".replace(" ", "-").lower()
+        # A pipe on Windows, which every user's apps share: so the name says whose it is.
+        self.name = f"role-radar-{place.SUPPORT.name}-{getpass.getuser()}".replace(" ", "-").lower()
         self._server: QLocalServer | None = None
 
     def tell_running(self, message: str) -> bool:
@@ -77,6 +79,10 @@ class SingleInstance(QObject):
         socket.connectToServer(self.name)
         if not socket.waitForConnected(1000):
             return False
+        if place.WINDOWS:  # Windows lets the program just opened bring a window forward; pass that on
+            import ctypes
+
+            ctypes.windll.user32.AllowSetForegroundWindow(-1)  # type: ignore[attr-defined]
         socket.write(message.encode() + b"\n")
         socket.waitForBytesWritten(1000)
         socket.disconnectFromServer()
