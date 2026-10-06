@@ -31,7 +31,7 @@ public sealed class SetupView : Grid
     private readonly HashSet<string> turning = []; // companies being turned on or off
     private readonly DispatcherTimer searchSoon = new() { Interval = TimeSpan.FromMilliseconds(300) };
 
-    private readonly StackPanel markers = new() { Orientation = Orientation.Horizontal };
+    private readonly WrapPanel markers = new(); // the steps, wrapping onto a second line with big text in a small window
     private readonly Trouble trouble;
     private readonly TextBlock loading = Ui.Secondary("Loading…", 13);
     private readonly FrameworkElement[] pages;
@@ -248,10 +248,13 @@ public sealed class SetupView : Grid
                 IsEnabled = busy is null && (i == 0 || setup?.Profession is not null),
             };
             marker.Click += (_, _) => _ = Go(index);
-            Ui.Add(markers, marker, 2);
+            marker.Margin = new Thickness(0, 0, 2, 2);
+            markers.Children.Add(marker);
             if (i < SetupRules.Pages.Length - 1)
             {
-                Ui.Add(markers, Ui.Glyph(Glyphs.ChevronRight, 9, Theme.Tertiary), 2);
+                var chevron = Ui.Glyph(Glyphs.ChevronRight, 9, Theme.Tertiary);
+                chevron.Margin = new Thickness(0, 0, 2, 2);
+                markers.Children.Add(chevron);
             }
         }
     }
