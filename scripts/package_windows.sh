@@ -1,7 +1,8 @@
 #!/bin/sh
 # Package Role Radar for Windows (10 version 1703 or later, or 11, 64-bit; Windows on ARM runs it too),
 # from this Mac. Writes dist/Role-Radar-<version>-windows-setup.exe: an installer with everything
-# inside, so there's nothing else to install, and no AWS.
+# inside, so there's nothing else to install, and no AWS. (--dev writes build/Role-Radar-Dev-<version>-
+# windows-setup.exe: a test copy, like the Mac's build/Role Radar Dev.app, not one to publish.)
 #
 #   sh scripts/package_windows.sh          # the app people download
 #   sh scripts/package_windows.sh --dev    # "Role Radar Dev", for trying it out on a Windows PC (a VM):
@@ -34,7 +35,7 @@ dev=""
 if [ "$dev" ]; then
     name="Role Radar Dev" key=RoleRadarDev checks=false
     [ "${DEV_CHECKS:-}" = 1 ] && checks=true
-    out="$project/dist/Role-Radar-Dev-$version-windows-setup.exe"
+    out="$project/build/Role-Radar-Dev-$version-windows-setup.exe"
 else
     name="Role Radar" key=RoleRadar checks=true
     out="$project/dist/Role-Radar-$version-windows-setup.exe"
@@ -116,7 +117,7 @@ uv run --quiet --no-project --with pefile python "$project/windows/build.py" che
 python3 "$project/windows/build.py" check-app
 
 echo "Making the installer..."
-mkdir -p "$project/dist"
+mkdir -p "$(dirname "$out")"
 rm -f "$out"
 makensis -V2 -DNAME="$name" -DVERSION="$version" -DKEY="$key" -DSOURCE="$stage" \
     -DICON="$project/windows/RoleRadar/Assets/AppIcon.ico" -DOUTFILE="$out" "$project/windows/installer.nsi" >/dev/null
