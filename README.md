@@ -5,9 +5,13 @@
 [![Download for Mac](https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-2ea44f?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-apple-silicon.dmg)
 [![Download for Windows](https://img.shields.io/badge/Download_for_Windows-10_and_11-2ea44f?style=for-the-badge)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-windows-setup.exe)
 
-Watches company careers pages and collects new jobs matching your criteria into a digest
-every 30 minutes. It's built for about 1,000 companies, each checked every 30 minutes. Your Mac does
-the work while `role-radar start` is running, and an AWS Lambda takes over whenever it isn't.
+Watches company careers pages and collects the new jobs that match what you're looking for.
+It comes with three company lists, one per profession: about 7,900 for Tech, 3,900 for
+Accounting & Finance and 1,800 for Healthcare, and you can add your own. Most companies are
+checked every 20 minutes. Workday boards get a full check every 6 hours and a quick look at
+their newest jobs every 20 minutes. A new match shows up in **Live Tracking** as soon as its
+company's check finishes. If you set up email or Discord, the matches are also sent every 10
+minutes.
 
 There are three ways to run it:
 
@@ -36,7 +40,7 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
 3. Its window walks through Setup's pages:
    - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
-     companies, built into the app and refreshed with each version (Tech's has about 7,800,
+     companies, built into the app and refreshed with each version (Tech's has about 7,900,
      Accounting & Finance's about 3,900, Healthcare's about 1,800).
      Changing it later deletes nothing: the other profession's saved jobs stay, and every
      company's next check starts quietly, recording the jobs already open instead of alerting
@@ -190,7 +194,7 @@ Two files in `config/` decide what Role Radar does. Edit both as you like:
 
 | File | In git | Holds |
 |---|---|---|
-| `companies.yaml` | yes | The companies to watch (about 7,800 to start from) and how often to check them |
+| `companies.yaml` | yes | The Tech companies to watch (about 7,900 to start from) and how often to check them |
 | `accounting.yaml`, `healthcare.yaml` | yes | The Accounting & Finance and Healthcare professions' company lists, for the packaged app (built by `scripts/build_lists.py`) |
 | `profile.yaml` | no | You: the roles and places you want, the most years of experience a job may ask for, and where state and alert settings live. [profile.example.yaml](config/profile.example.yaml) shows every setting |
 
@@ -220,7 +224,7 @@ ignores `profile.yaml`, so keep a copy somewhere safe.
 **3. Choose companies.** Remove the ones you don't care about from `config/companies.yaml`
 and add your own: a name and the careers page URL ([Supported sources](#supported-sources)
 lists the job boards it reads). The checks come from your home internet connection, so a
-shorter list is kinder to the sites; the full list includes about 820 Workday boards.
+shorter list is kinder to the sites; the full list includes about 1,500 Workday boards.
 
 **4. Set up email alerts**, kept in the Keychain. With Gmail, create an
 [app password](https://myaccount.google.com/apppasswords) (it needs 2-Step Verification),
@@ -255,7 +259,7 @@ matches collect in **Live Tracking**, and go out every 10 minutes if alerts are 
 
 **With an AI agent.** Point it at this section and tell it what you want, for example:
 "Set up Role Radar for me: I'm looking for data analyst and analytics engineer roles in
-Toronto or remote in Canada, with up to 3 years of experience; alerts to me@example.com."
+Toronto or remote in Canada, with up to 3 years of experience; alerts to `me@example.com`."
 It can do all of this except typing your email password: run
 `role-radar secrets set SMTP_PASSWORD` yourself, so the password never goes into the chat.
 
@@ -322,6 +326,7 @@ why each job matched or not.
 | Module | Role |
 |---|---|
 | `role_radar/cli.py` | The `role-radar` command |
+| `role_radar/onboarding.py` | `role-radar setup`: what the app's Setup window runs |
 | `role_radar/runner.py` | Holds the lease and runs passes: the laptop loop, `run --once`, Lambda |
 | `role_radar/monitor.py` | One pass: due companies → scrape → filter → queue → save, then any due digest |
 | `role_radar/digest.py` | Shared digest cadence, queued matches across companies, and delivery retries |
@@ -332,14 +337,19 @@ why each job matched or not.
 | `role_radar/storage.py` | `StateStore` interface + JSON and in-memory implementations |
 | `role_radar/config.py` | Loads and validates `companies.yaml` (JSON also accepted), with `profile.yaml` applied |
 | `role_radar/backends.py` | Picks the store, lease, config source and secrets from `runtime:` |
-| `role_radar/keychain.py` | Alert settings in the macOS Keychain |
+| `role_radar/keychain.py`, `wincred.py` | Alert settings in the macOS Keychain, or Windows Credential Manager |
 | `role_radar/aws.py` | boto3 helpers: the config file in S3, secrets in SSM |
 | `role_radar/models.py` | `JobPosting` dataclass, stable `uid` and `fingerprint` |
 | `role_radar/scrapers/` | One class per ATS plus `generic.py`; registry in `scrapers/__init__.py` |
 | `role_radar/filters.py` | Keyword, location and employment-type rules |
+| `role_radar/experience.py` | Reads the years of experience and degree a job asks for |
 | `role_radar/tracker.py` | New-job and removal detection |
 | `role_radar/notifications.py` | `Notifier` interface + Discord, email and console |
-| `role_radar/instance.py`, `launchd.py` | One `start` per machine; the macOS login item |
+| `role_radar/http_client.py`, `robots.py` | Every request: robots.txt (RFC 9309), per-host spacing, retries |
+| `role_radar/ui.py` | Switches and Live Tracking data for `role-radar ui` and the apps |
+| `role_radar/diagnostics.py` | `role-radar doctor`'s read-only checks |
+| `role_radar/suggest.py` | Sends company requests to the suggestions box |
+| `role_radar/instance.py`, `launchd.py`, `winchecker.py` | One `start` per machine; the Mac's launchd agent and Windows' background checker |
 | `lambda_handler.py` | The Lambda entry point |
 
 ### The lease: never duplicate, never skip
@@ -470,9 +480,10 @@ so an interrupted pass loses at most the companies still in flight. Those compan
 still due and get picked up next time.
 
 - A check that ran more than half an interval late (a company's first check, or catching
-  up after an outage) gets a random extra 0–30 minutes before its next check. Otherwise
-  a burst of catch-up checks would come due together every half hour forever. With it,
-  the checks spread out across the half hour after one round.
+  up after an outage) gets a random extra delay of up to one interval (0–20 minutes for
+  most companies) before its next check. Otherwise a burst of catch-up checks would come
+  due together every interval forever. With it, the checks spread out across the interval
+  after one round.
 - A failing company is still rescheduled, so it isn't retried on every pass. From the
   third failure in a row its interval doubles each time, up to every 4 hours. One
   success resets it.
@@ -494,7 +505,8 @@ menu bar app). A digest goes only to the channels switched on. With both off, si
 still checked and new matches saved; they go out in the first digest after one is
 switched back on. Jobs sent while a channel was off aren't sent to it later.
 
-The schedule targets `:00` and `:30`. Lambda sends on its first run after the boundary,
+Digests go out on the clock's interval boundaries: with 10 minutes, at `:00`, `:10`, `:20`
+and so on. Lambda sends on its first run after the boundary,
 after any checks in that run finish; its five-minute trigger can add a short delay.
 The laptop uses the same schedule. Pending jobs, the next send time and delivery
 receipts persist across restarts and handoffs. Failed channels retry at the next
@@ -505,7 +517,7 @@ The digest doesn't wait for a round of checks to end: while one is running it lo
 every 15 seconds, and sends when it's due. A company being checked at that moment is
 left for the next digest, so its matches aren't sent twice.
 
-Set the interval to `0` (also the default when omitted) to send immediately after
+`companies.yaml` sets 10. Set it to `0` (also the default when omitted) to send immediately after
 each company's check. Baselines and dry runs never send a digest.
 
 #### Live Tracking
@@ -562,7 +574,7 @@ config that puts `description` in `match_on` or `exclude_on` is rejected at load
 
 ### Experience filter
 
-With `max_experience_years: 2` (the default filters set it), each new title match's
+With `max_experience_years: 2` (the example profile's setting; the app asks in Setup), each new title match's
 description is read once, before it's alerted. A match asking for more years is
 recorded without alerting, with the reason (`dropped_for` on the stored job, and a
 "not alerting" log line). How [experience.py](role_radar/experience.py) reads it:
@@ -584,26 +596,27 @@ request per new match, at most `max_detail_requests` a check (the rest wait for 
 check). Other sources have no description, so their matches are kept. Set
 `max_experience_years: null` in a company's `filters` to skip reading its descriptions.
 
-The default role list follows the candidate's resume: application development
+In the code, the role list in [profile.example.yaml](config/profile.example.yaml) is an
+example tuned to one person's resume: application development
 (including full stack, frontend and backend), platforms/cloud, distributed systems,
 compilers, performance and graphics, AI/LLM/ML and applied research, data engineering
 and data science, GRC engineering, test automation, technical program and product
 management, and forward-deployed and solutions engineering
 ([why](docs/company-coverage.md#resume-alignment-september-2026)).
-It targets potential opportunities for a spring-2026 MS CS graduate; matching a title
+Replace it with the roles you want (the app's Setup does this for you). Matching a title
 does not establish eligibility. Review the posting's experience, specialized skills,
 degree, graduation window and work authorization requirements separately. Program
 roles in particular need this review. Graduation years and "new grad" are not
 required in titles, so unlabelled early-career openings can match.
 
-The defaults exclude senior and leadership titles, while permitting Technical Program
+The example excludes senior and leadership titles, while permitting Technical Program
 Manager and Product Manager. "Member of Technical Staff" is also allowed.
-They also exclude off-profile titles the broad keywords catch: ERP/CRM platform
+It also excludes off-profile titles the broad keywords catch: ERP/CRM platform
 developers (ServiceNow, SAP, Salesforce and similar), technical-writing "developers",
 and hardware or manufacturing titles (firmware, FPGA, ASIC, CNC, technician and
 similar). Continental Finance inherits the role list and retains its
 "Mid/Senior Software Developer" exception for review, but otherwise excludes the same
-titles as the defaults. The location rules target the
+titles as the example. The example's location rules target the
 US, Canada, Australia and India, including common region/city formats. Unqualified
 Remote/Worldwide listings are retained for eligibility review; other remote regions
 are not automatically included. Location-text matching is approximate and does not
@@ -703,7 +716,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` puts them back while they're listed (a week); `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
+| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `discord` (a channel's webhook, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.dmg`: the app with its own Python, for someone else's Mac, in a disk image whose window shows it beside Applications (see [Get the app](#get-the-app)). The same file is the update. |
 | `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from, with the disk image as `Role-Radar-apple-silicon.dmg` for people and `Role-Radar-<version>-update.dmg` for updates (`DRY_RUN=1` stops before publishing). |
 | `scripts/build_dev_app.sh` | Builds **Role Radar Dev** into `build/` from the working tree, beside any installed Role Radar and apart from it (its own files, checker and Keychain items), checking no job sites unless built with `DEV_CHECKS=1`. `--open` opens it. |
@@ -845,11 +858,13 @@ pick one:
 - Record everything that's open now without alerting (recommended for many companies):
   `role-radar run --once --baseline --local-config`. `--local-config` reads your local
   file, since nothing has been pushed yet.
-- Or skip this and get alerted about current matches too (`notify_on_first_run: true`,
-  the default).
+- Or skip this and let each company's first check record its open jobs as it comes due
+  (`notify_on_first_run: false` in `companies.yaml`; set it to `true` to be alerted about
+  current matches too).
 
 The first full write covers every job at every company. At 25 WCU that's throttled
-(throttled requests are retried), so 1,000 companies can take an hour or more.
+(throttled requests are retried), so the full list of about 7,900 companies can take
+several hours.
 Switching the table to on-demand for the day avoids that (see
 [Throttling](#throttling-and-on-demand-capacity)). Switch back afterwards. If
 `run --once --baseline` reports companies that failed to save, run it again. Both
@@ -872,15 +887,18 @@ laptop takes over.
 
 After the credits run out, everything here stays within AWS's always-free allowances
 except Lambda, S3 requests (fractions of a cent) and point-in-time recovery (about $0.20
-per GB-month of the table). With ~4,500 companies, a Lambda pass takes a few minutes
-(mostly waiting out the Workday request spacing), so while the laptop runner is off
-Lambda uses roughly 1–1.6M GB-s a month at 1 GB: **about $10–16 a month** over the free
-400,000 GB-s. While the laptop runs, Lambda costs next to nothing. The $5 budget emails
-you at 80% of actual spend, or if the month is forecast to exceed $5.
+per GB-month of the table). Lambda bills for the time it spends waiting out request
+spacing (mostly Workday's), so its cost depends on how many companies it checks and how
+much of the day the laptop covers. Measured over three days in late September 2026, with
+the laptop covering part of each day, it used 27,000–41,000 GB-s a day. A full month at that
+pace is 0.8–1.2M GB-s, **about $5–11 a month** over the free 400,000 GB-s. If Lambda ran
+around the clock (one run always in progress) it would be about 2.6M GB-s, roughly $30.
+While the laptop runs, Lambda costs next to nothing. The $5 budget emails you at 80% of
+actual spend, or if the month is forecast to exceed $5.
 
 | Service | This project's use | Always-free allowance (checked 2026-09-26) |
 |---|---|---|
-| Lambda (arm64, 1 GB) | 8,640 runs/month. When the laptop is off, with ~4,500 companies, about 2–3 minutes each: roughly 1–1.6M GB-s. Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
+| Lambda (arm64, 1 GB) | 8,640 runs/month. Measured: 0.8–1.2M GB-s a month with the laptop covering part of the day (see above). Since Aug 1, 2025, cold-start INIT time is billed as duration too; it counts against the same allowance. | 1M requests + 400,000 GB-s per month ([pricing](https://aws.amazon.com/lambda/pricing/), [INIT billing](https://aws.amazon.com/blogs/compute/aws-lambda-standardizes-billing-for-init-phase/)) |
 | DynamoDB (provisioned) | 25 RCU / 25 WCU, a few MB. A check costs about 4 WCU (transactional writes cost 2 per item) and 6 RCU | 25 WCU, 25 RCU, 25 GB per region ([pricing](https://aws.amazon.com/dynamodb/pricing/provisioned/), [transactions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)) |
 | EventBridge Scheduler | 8,640 invocations/month | 14M per month ([pricing](https://aws.amazon.com/eventbridge/pricing/)) |
 | CloudWatch | A few GB of logs/month (kept 14 days), 2 alarms, 2 custom metrics | 5 GB of logs, 10 alarms, 10 custom metrics ([pricing](https://aws.amazon.com/cloudwatch/pricing/)) |
@@ -895,8 +913,8 @@ other provisioned tables in the same account and region.
 
 ### Throttling and on-demand capacity
 
-Provisioned capacity is what keeps DynamoDB free. At 1,000 companies it averages about
-3 WCU and 4 RCU per second, with bursts. DynamoDB banks up to 5 minutes of unused
+Provisioned capacity is what keeps DynamoDB free. The load grows with the number of
+checks per second (about 4 WCU and 6 RCU each, as above), with bursts. DynamoDB banks up to 5 minutes of unused
 capacity for bursts ([burst capacity](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/burst-adaptive-capacity.html)),
 and throttled requests are retried with backoff. If passes still slow down, or
 the log shows saves failing, check the table's `WriteThrottleEvents` /
@@ -906,8 +924,8 @@ the log shows saves failing, check the table's `WriteThrottleEvents` /
 sam deploy --guided --profile admin   # answer BillingMode: PAY_PER_REQUEST (and later back to PROVISIONED)
 ```
 
-On-demand never throttles, but at this workload it costs about **$5 a month**
-($0.625 per million writes, $0.125 per million reads in us-east-1). DynamoDB allows
+On-demand never throttles, but it bills every request ($0.625 per million writes,
+$0.125 per million reads in us-east-1), which is several dollars a month at this workload. DynamoDB allows
 switching to on-demand up to four times per 24 hours, and back to provisioned at any time
 ([switching](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-switching-capacity-modes.html)).
 
@@ -930,7 +948,7 @@ restricted policy alone does not include these deployment inspection permissions
 The command reports missing credentials, a disabled schedule, blocked Lambda
 concurrency, stale run history, an unpushed config, and missing or incomplete channels.
 It never sends an alert or prints secret values. Local JSON mode alone does not enable
-Lambda; follow [Deploy to AWS](#deploy-to-aws) to connect the shared backends.
+Lambda; follow [Add AWS](#add-aws-keep-checking-while-your-mac-is-off) to connect the shared backends.
 
 Once channel settings are populated in the configured source, verify delivery:
 
@@ -979,7 +997,7 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   alarm, budget and policy. It keeps the table and bucket; delete those by hand
   (turn off the table's deletion protection first) if you really want the state gone.
 
-## Scaling to 1,000 companies
+## Scaling to thousands of companies
 
 - The defaults allow 16 requests in flight overall, 40 companies in flight, and one
   request per second per host. The shared ATS APIs are exceptions:
@@ -988,17 +1006,19 @@ settings must be in SSM; values in a local `.env` file are not used by Lambda. F
   (it rate-limits at 2 requests a second, so Workable boards are checked hourly). Override or add hosts under `settings.http.host_delays`; a key also covers its
   subdomains, and subdomains under a parent-domain key share one rate. An HTTP 429
   pauses every host sharing that rate for the Retry-After time (or 60 s). Most boards
-  take one request, so a full round of 1,000 companies takes a few minutes, and the
-  schedule spreads that round over the half hour.
+  take one request, so a round is paced by the busiest shared host: the ~2,000 Ashby and
+  ~2,100 Greenhouse boards take about 10 minutes each, side by side, which fits in the
+  20-minute interval, and the schedule spreads each round across it.
 - Workday is the exception: one request per 20 jobs, and every company's tenant sits
   on the same service, which answers bursts from one IP with HTTP 429. The config
   spaces all `myworkdayjobs.com` tenants as one host (0.5 s), checks at most two
   Workday companies at a time (`settings.company_concurrency_by_ats`), and checks
-  them every six hours (`settings.check_interval_by_ats`). With ~820 Workday
-  companies (most capped at their newest 200 jobs) that is about 9,000 requests per
-  round, about 0.4 requests/s on average. Quick checks (`settings.quick_check_by_ats`)
-  add about one request per company every 20 minutes, about 0.7 requests/s, and run
-  before a pass's full checks.
+  them every six hours (`settings.check_interval_by_ats`). With ~1,500 Workday
+  companies (most capped at their newest 200 jobs) that is roughly 17,000 requests per
+  round, about 0.8 requests/s on average. Quick checks (`settings.quick_check_by_ats`)
+  add about one request per company every 20 minutes, about 1.3 requests/s, and run
+  before a pass's full checks. Together that is close to the 2 requests/s the 0.5 s
+  spacing allows, so adding many more Workday boards means checking them less often.
 - Detail requests are made only when a filter needs a field the listing lacks, only for
   unseen jobs that could still match, and at most `max_detail_requests` per company per
   check. Any left over are fetched at the next check.
