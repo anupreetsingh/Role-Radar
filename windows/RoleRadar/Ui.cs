@@ -49,6 +49,7 @@ public static class Glyphs
     public const string Send = "";
     public const string CheckMark = "";
     public const string Completed = "";
+    public const string Circle = ""; // an empty ring, the size of Completed's
     public const string Warning = "";
     public const string Cancel = "";
     public const string Info = "";
@@ -313,6 +314,9 @@ public sealed class HintAdorner : System.Windows.Documents.Adorner
             new Typeface(box.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), box.FontSize, brush,
             VisualTreeHelper.GetDpi(this).PixelsPerDip);
         var left = box.Padding.Left + box.BorderThickness.Left + 2;
+        // Inside the box: a hint longer than the box is cut off rather than drawn past it.
+        drawing.PushClip(new RectangleGeometry(new Rect(0, 0, Math.Max(0, box.ActualWidth - box.Padding.Right - box.BorderThickness.Right), box.ActualHeight)));
         drawing.DrawText(formatted, new Point(left, (box.ActualHeight - formatted.Height) / 2));
+        drawing.Pop();
     }
 }

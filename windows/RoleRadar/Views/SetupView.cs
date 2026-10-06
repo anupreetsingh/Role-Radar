@@ -49,16 +49,17 @@ public sealed class SetupView : Grid
     private readonly Dictionary<string, CheckBox> countryBox = new();
     private readonly TextBlock untaggedNote = Ui.Secondary("", 12);
     private readonly TextBlock trackedNote = Ui.Text("", 13, FontWeights.Medium);
-    private readonly TextBox cities = new() { MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Left };
+    // Text boxes get a width: left-aligned with only a MaxWidth, a WPF box shrinks to its text (nothing, when empty).
+    private readonly TextBox cities = new() { Width = 460, HorizontalAlignment = HorizontalAlignment.Left };
     // page 3
     private readonly StackPanel companiesHead = Ui.Column(6), byCountry = Ui.Column(6), results = Ui.Column(6);
     private readonly StackPanel findSection;
-    private readonly TextBox query = new() { MaxWidth = 320, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox query = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBlock foundNote = Ui.Secondary("", 11);
     private readonly TextBlock findProblem = Ui.Text("", 11, brush: Theme.Critical);
     private readonly Button more;
-    private readonly TextBox newCompany = new() { MaxWidth = 320, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly TextBox newCareers = new() { MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox newCompany = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox newCareers = new() { Width = 420, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ActionRow addRow;
     // page 4
     private readonly TitleBoxes targets, skips;
@@ -70,13 +71,13 @@ public sealed class SetupView : Grid
     private readonly TextBlock yearsNote = Ui.Secondary("", 12);
     private readonly List<RadioButton> degrees = [];
     // page 6
-    private readonly TextBox address = new() { MaxWidth = 320, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly PasswordBox password = new() { MaxWidth = 320, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox address = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly PasswordBox password = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ActionRow emailRow, alsoRow, testEmail, discordRow, testDiscord;
     private readonly StackPanel emailSaved;
-    private readonly TextBox also = new() { AcceptsReturn = true, Height = 64, MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBox also = new() { AcceptsReturn = true, Height = 64, Width = 420, HorizontalAlignment = HorizontalAlignment.Left, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock recipients = Ui.Secondary("", 11);
-    private readonly PasswordBox webhook = new() { MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly PasswordBox webhook = new() { Width = 420, HorizontalAlignment = HorizontalAlignment.Left };
 
     /// <summary>Start Checking (or Done): the window turns into Live Tracking.</summary>
     public event Action? Finished;
@@ -238,7 +239,7 @@ public sealed class SetupView : Grid
         {
             var index = i;
             var label = Ui.Row(5,
-                done[i] ? Ui.Glyph(Glyphs.Completed, 12, Theme.Success) : Ui.Text($"{i + 1}.", 12, brush: i == page ? Theme.Text : Theme.Secondary),
+                Ui.Glyph(done[i] ? Glyphs.Completed : Glyphs.Circle, 12, done[i] ? Theme.Success : i == page ? Theme.Text : Theme.Tertiary),
                 Ui.Text(SetupRules.Pages[i], 12, i == page ? FontWeights.SemiBold : FontWeights.Normal, i == page ? Theme.Text : Theme.Secondary));
             var marker = new Button
             {
@@ -404,7 +405,7 @@ public sealed class SetupView : Grid
             searchSoon.Stop();
             searchSoon.Start(); // once they pause typing
         };
-        foreach (var part in new UIElement[] { query, foundNote, results, more, findProblem })
+        foreach (var part in new UIElement[] { Ui.Row(6, Ui.Glyph(Glyphs.Search, 13, Theme.Secondary), query), foundNote, results, more, findProblem })
         {
             Ui.Add(findSection, part, 10);
         }
@@ -875,7 +876,7 @@ public sealed class TitleBoxes : StackPanel
     private readonly List<string> own = [];
     private readonly StackPanel chips = Ui.Column(10);
     private readonly TextBlock? count;
-    private readonly TextBox field = new() { MaxWidth = 280, MinWidth = 220 };
+    private readonly TextBox field = new() { Width = 280 };
     private readonly Button add, opener;
     private readonly StackPanel adder;
 
