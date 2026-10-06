@@ -201,13 +201,16 @@ def test_the_box_counts_weekly_users(box):
 
 
 def test_the_downloads_badge_counts_fresh_downloads_only(box, monkeypatch):
-    """The disk image as people download it, every version (older releases named it by version); not its
-    ...-update.dmg copy, nor the appcast."""
+    """The disk image and the Windows installer as people download them, every version (older releases named
+    the disk image by version); not their ...-update copies, nor the feeds."""
     module, client = box
     make_table(client, "role-radar-stats")
     releases = [{"assets": [{"name": "Role-Radar-apple-silicon.dmg", "download_count": 3},
                             {"name": "Role-Radar-2.1.3-update.dmg", "download_count": 40},
-                            {"name": "appcast.xml", "download_count": 500}]},
+                            {"name": "appcast.xml", "download_count": 500},
+                            {"name": "Role-Radar-windows-setup.exe", "download_count": 4},
+                            {"name": "Role-Radar-2.3.0-windows-update.exe", "download_count": 60},
+                            {"name": "appcast-windows.xml", "download_count": 900}]},
                 {"assets": [{"name": "Role-Radar-2.1.0-apple-silicon.dmg", "download_count": 8}]}]
     asked = []
 
@@ -217,14 +220,14 @@ def test_the_downloads_badge_counts_fresh_downloads_only(box, monkeypatch):
 
     monkeypatch.setattr(module, "_releases", from_github)
     badge = lambda: json.loads(call(box, "GET", "/badge/downloads")["body"])  # noqa: E731
-    assert badge() == {"schemaVersion": 1, "label": "downloads", "message": "11", "color": "blue", "cacheSeconds": 3600}
+    assert badge() == {"schemaVersion": 1, "label": "downloads", "message": "15", "color": "blue", "cacheSeconds": 3600}
     releases[0]["assets"][0]["download_count"] = 5
-    assert badge()["message"] == "11" and len(asked) == 1  # GitHub is asked at most every REFRESH seconds
+    assert badge()["message"] == "15" and len(asked) == 1  # GitHub is asked at most every REFRESH seconds
     monkeypatch.setattr(module, "REFRESH", 0)
-    assert badge()["message"] == "13"
+    assert badge()["message"] == "17"
 
     def down():
         raise OSError("rate limited")
 
     monkeypatch.setattr(module, "_releases", down)
-    assert badge()["message"] == "13"  # the last count, while GitHub can't answer
+    assert badge()["message"] == "17"  # the last count, while GitHub can't answer

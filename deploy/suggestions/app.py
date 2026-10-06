@@ -5,12 +5,13 @@ The same company (by its careers page, else by name) is kept once, counting how 
 `role-radar suggestions` lists them. No suggestion is read back here: the box only takes them in.
 
 It also serves the two badges on the project's GitHub page, in shields.io's endpoint format:
-- GET /badge/downloads: how many times the app's disk image was downloaded from the Releases page,
-  every version together: Role-Radar-apple-silicon.dmg (the README's Download button), or
-  in older releases Role-Radar-<version>-apple-silicon.dmg. Updates fetch a copy named ...-update.dmg
+- GET /badge/downloads: how many times the app was downloaded from the Releases page, every version
+  and both apps together: the Mac's disk image, Role-Radar-apple-silicon.dmg (the README's Download
+  button; in older releases Role-Radar-<version>-apple-silicon.dmg), and the Windows installer,
+  Role-Radar-windows-setup.exe. Updates fetch copies named ...-update.dmg and ...-windows-update.exe
   (scripts/publish_update.sh), so they don't count.
 - GET /badge/users: how many copies of the app ran in the last 7 days. Each copy POSTs /checkin when
-  it opens and every 6 hours: {"id": a random id made once on that Mac, "app", "os"}, one row per id
+  it opens and every 6 hours: {"id": a random id made once on that computer, "app", "os"}, one row per id
   in the installs table.
 """
 
@@ -33,7 +34,8 @@ INSTALLS = os.environ.get("INSTALLS", "role-radar-installs")
 INSTALL_ID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 WEEK = 7 * 86400
 REPO = os.environ.get("REPO", "anupreetsingh/Role-Radar")
-DOWNLOAD = re.compile(r"^Role-Radar-([0-9.]+-)?apple-silicon\.dmg$")  # as people download it, not as updates do
+# As people download them, not as updates do.
+DOWNLOAD = re.compile(r"^Role-Radar-([0-9.]+-)?(apple-silicon\.dmg|windows-setup\.exe)$")
 REFRESH = 1800  # seconds between asking GitHub; the badge shows the count kept in between
 LIMITS = {"name": 120, "url": 500, "note": 1000, "profession": 20, "app": 40}
 MAX_BODY = 8000
@@ -152,7 +154,7 @@ def _badge(label: str, count: int | None) -> dict[str, Any]:
 
 
 def downloads() -> int | None:
-    """Downloads of the app from the Releases page, every version together. GitHub is asked at most every
+    """Downloads of the app from the Releases page, every version and both apps together. GitHub is asked at most every
     REFRESH seconds; the count is kept in the stats table, so a slow or rate-limited GitHub shows the last one."""
     global _db
     _db = _db or boto3.client("dynamodb")
