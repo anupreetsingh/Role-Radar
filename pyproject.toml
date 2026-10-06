@@ -33,5 +33,5 @@ include = ["role_radar*"]
 role_radar = ["templates/*.yaml"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "windows"]  # windows/: the Windows app (role_radar_app), tested where Qt is installed
 testpaths = ["tests"]
