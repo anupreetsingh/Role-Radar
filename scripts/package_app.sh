@@ -57,22 +57,7 @@ site="$("$py" -I -c 'import role_radar, os; print(os.path.dirname(role_radar.__f
 
 # Each profession's company list (config.profession_list): Tech is the companies file, the others sit
 # beside it. The app checks the picked profession's list, narrowed to the person's countries.
-mkdir -p "$site/lists"
-"$py" - "$project/config" "$site/lists" <<'EOF'
-import sys, yaml
-from pathlib import Path
-source, target = Path(sys.argv[1]), Path(sys.argv[2])
-for profession, name in (("tech", "companies.yaml"), ("accounting", "accounting.yaml"), ("healthcare", "healthcare.yaml")):
-    if not (source / name).exists():
-        print(f"  {profession}: no list yet")
-        continue
-    companies = yaml.load((source / name).read_text(encoding="utf-8"), Loader=yaml.CSafeLoader)["companies"]
-    keep = [{k: v for k, v in c.items() if k != "filters"} for c in companies]
-    with open(target / f"{profession}.yaml", "w", encoding="utf-8") as fh:
-        fh.write(f"# Role Radar's {profession} companies, with the countries each posts jobs in; built from config/{name}.\n")
-        yaml.safe_dump({"companies": keep}, fh, sort_keys=False, allow_unicode=True, width=200)
-    print(f"  {profession}: {sum(c.get('enabled', True) for c in keep)} companies ({len(keep)} with those switched off)")
-EOF
+"$py" "$project/scripts/write_lists.py" "$site/lists"
 
 # Leave out what the app never uses, then compile everything once: Python never writes into the app.
 lib="$resources/python/lib/python3.13"

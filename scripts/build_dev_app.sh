@@ -58,23 +58,7 @@ EOF
 chmod +x "$stage/Contents/Resources/python/bin/python3"
 
 # The professions' company lists, as package_app.sh writes them into the app.
-"$python" - "$project/config" "$project/role_radar/lists" <<'EOF'
-import sys, yaml
-from pathlib import Path
-source, target = Path(sys.argv[1]), Path(sys.argv[2])
-target.mkdir(exist_ok=True)
-for profession, name in (("tech", "companies.yaml"), ("accounting", "accounting.yaml"), ("healthcare", "healthcare.yaml")):
-    if not (source / name).exists():
-        (target / f"{profession}.yaml").unlink(missing_ok=True)
-        print(f"  {profession}: no list yet")
-        continue
-    companies = yaml.load((source / name).read_text(encoding="utf-8"), Loader=yaml.CSafeLoader)["companies"]
-    keep = [{k: v for k, v in c.items() if k != "filters"} for c in companies]
-    with open(target / f"{profession}.yaml", "w", encoding="utf-8") as fh:
-        fh.write(f"# Role Radar's {profession} companies, from config/{name} (scripts/build_dev_app.sh).\n")
-        yaml.safe_dump({"companies": keep}, fh, sort_keys=False, allow_unicode=True, width=200)
-    print(f"  {profession}: {sum(c.get('enabled', True) for c in keep)} companies")
-EOF
+"$python" "$project/scripts/write_lists.py" "$project/role_radar/lists"
 
 cat > "$stage/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
