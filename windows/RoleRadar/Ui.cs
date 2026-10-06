@@ -292,12 +292,19 @@ public sealed class HintAdorner : System.Windows.Documents.Adorner
         }
         box.GotKeyboardFocus += (_, _) => InvalidateVisual();
         box.LostKeyboardFocus += (_, _) => InvalidateVisual();
+        // A box on a page that isn't shown keeps its hint off the screen: the layer would draw it anyway.
+        box.IsVisibleChanged += (_, _) =>
+        {
+            Visibility = box.IsVisible ? Visibility.Visible : Visibility.Collapsed;
+            InvalidateVisual();
+        };
+        Visibility = box.IsVisible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     protected override void OnRender(DrawingContext drawing)
     {
         var empty = box is TextBox text ? text.Text.Length == 0 : box is PasswordBox password && password.Password.Length == 0;
-        if (!empty)
+        if (!empty || !box.IsVisible)
         {
             return;
         }
