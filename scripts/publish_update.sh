@@ -103,7 +103,7 @@ if [ "${WINDOWS:-1}" != 0 ]; then
     cp "$setup" "$windows_update"
     signature="$(sign "$setup")"
     # WinSparkle runs the installer silently (/S): it quits the app, replaces it, and opens the new one.
-    # Windows 10 version 1703 or later: the first with the Unicode library Qt uses (icu.dll).
+    # Windows 10 version 1703 or later, as the README says.
     cat > "$windows_appcast" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
