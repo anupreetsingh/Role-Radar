@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The app's windows, opened for real on the real role-radar and checked: `dotnet test windows/RoleRadar.Tests`,
+       on Windows only (the CI's Windows job runs it, and keeps the pictures it takes). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms> <!-- the app's tray icon, which the app's assembly carries -->
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);WPF0001;WFO0003</NoWarn> <!-- as the app's: ThemeMode, and the tray icon's DPI -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <ProjectReference Include="..\RoleRadar\RoleRadar.csproj" />
+    <Compile Include="..\RoleRadar.Core.Tests\RealCli.cs" Link="RealCli.cs" /> <!-- the real role-radar, as the core's tests run it -->
+  </ItemGroup>
+</Project>

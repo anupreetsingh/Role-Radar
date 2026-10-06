@@ -32,8 +32,9 @@ jobs:
 
   windows:
     # Everything again on Windows, where the Windows app runs the checker (its Windows parts for real:
-    # Credential Manager, the lock, stopping it), and the Windows app: built, its core tested, and
-    # every text size and theme name it uses checked.
+    # Credential Manager, the lock, starting and stopping it), and the Windows app: built, its core
+    # tested against the real role-radar, its windows opened and checked (pictures of them are kept
+    # with the run, as windows-screenshots), and every text size and theme name it uses checked.
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,4 +59,13 @@ jobs:
         run: |
           dotnet build windows/RoleRadar.sln -c Release
           dotnet test windows/RoleRadar.Core.Tests -c Release --no-build
+          dotnet test windows/RoleRadar.Tests -c Release --no-build
           python windows/build.py check-app
+
+      - name: Keep the pictures of the Windows app's windows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-screenshots
+          path: build/windows-screenshots
+          if-no-files-found: ignore

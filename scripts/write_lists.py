@@ -5,7 +5,8 @@ countries they post jobs in, without anyone's filters. A profession with no list
     python scripts/write_lists.py TARGET_DIR
 
 Run by scripts/package_app.sh and scripts/package_windows.sh (into the app's role_radar/lists),
-and by scripts/build_dev_app.sh and scripts/run_windows_app.sh (into the repo's, git-ignored).
+by scripts/build_dev_app.sh (into the repo's, git-ignored), and by the Windows app's tests (into a folder
+of their own).
 """
 
 from __future__ import annotations

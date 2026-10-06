@@ -166,7 +166,13 @@ Mac too: `windows/RoleRadar.sln` opens in Visual Studio. It shares everything el
 the checker, its rules and its files are `role_radar`'s, and every read and write goes through the
 same role-radar commands, so a change there reaches both apps. `windows/RoleRadar.Core` holds its
 state, rules and words, in plain .NET, so its tests (`dotnet test windows/RoleRadar.Core.Tests`) run
-on the Mac; `windows/RoleRadar` is the app's windows, tray icon and updates. `scripts/package_windows.sh`
+on the Mac, some of them on the real role-radar commands (with the `.venv` below): a reply missing a field
+the app reads fails there, not as a blank in the app. `windows/RoleRadar` is the app's windows, tray icon
+and updates; `windows/RoleRadar.Tests` opens them on Windows (the CI), on the real commands, and checks
+each Setup page, Live Tracking tab and the tray panel in the smallest window, with the biggest text and
+dark too (no text box too narrow to type in, no hint drawn for a box that isn't shown, nothing cut off at
+the right edge). Each run keeps pictures of them, `windows-screenshots` on its page under the repo's
+Actions, so a change to the windows can be seen without a Windows PC. `scripts/package_windows.sh`
 needs the .NET 10 SDK, uv and NSIS (`brew install makensis`), and puts in the installer
 (`windows/installer.nsi`) the app with .NET inside, WinSparkle, and in `python\` the checker: Python's
 embeddable package with Role Radar, run by `Role Radar Checker.exe` (`windows/launcher`, built with zig,
@@ -725,6 +731,7 @@ pip install -e '.[aws]' -r requirements-dev.txt
 
 python -m pytest                                  # tests (AWS is faked with moto)
 dotnet test windows/RoleRadar.Core.Tests          # the Windows app's (the .NET 10 SDK)
+dotnet test windows/RoleRadar.Tests               # its windows, on Windows: pictures in build/windows-screenshots
 role-radar list-matches                           # every job matching now (no state, no alerts)
 role-radar run --once --dry-run -v                # check due companies, print alerts, save nothing
 role-radar run --once --all --dry-run             # the same for every company, due or not
