@@ -2,8 +2,8 @@
 
   role-radar start               run until you quit (Ctrl+C): take the lease and check
                                  companies as they come due; Lambda covers while it's off
-  role-radar stop                ask a running `start` to quit (while the menu bar app is
-                                 open, it starts it again within a minute, on the current code)
+  role-radar stop                ask a running `start` to quit (while the menu bar or Windows app
+                                 is open, it starts it again within a minute, on the current code)
   role-radar status              lease holder, last passes, companies due, recent alerts
   role-radar doctor              check config, secrets and AWS deployment without sending alerts
   role-radar notifications test  send a test to configured notification channels
@@ -18,7 +18,8 @@
   role-radar config push         upload the companies file, with your profile applied, to runtime.config_url
   role-radar config pull         restore a lost profile.yaml from what `config push` uploaded
   role-radar secrets [set|delete NAME]
-                                 alert settings in this Mac's Keychain (runtime.secrets: keychain)
+                                 alert settings in this computer's keychain: the Mac's Keychain, or
+                                 Windows Credential Manager (runtime.secrets: keychain)
   role-radar setup [init|show|profession|profile|prompt|companies|email|discord|recipients]
                                  the packaged app's first-run setup (JSON on stdin and stdout)
   role-radar migrate --from dynamodb:TABLE --to sqlite:PATH   (or json:PATH, either way)
@@ -48,11 +49,11 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
-from role_radar import __version__, aws, launchd, suggest
+from role_radar import __version__, aws, launchd, suggest, winchecker
 from role_radar.backends import AwsClients, ConfigSource, NotifierSource, open_backend, require_filters, resolve_runtime
 from role_radar.config import PROFILE_SECTIONS, RuntimeSettings, combined, parse_raw, profile_path, split_profile
 from role_radar.instance import InstanceLock
@@ -105,7 +106,10 @@ def make_runner(ctx: Context, holder: str) -> Runner:
 
 
 def _handle_signals(stop: asyncio.Event) -> None:
-    """First Ctrl+C / SIGTERM / SIGHUP: finish what's in flight, then release. Second: quit now."""
+    """First Ctrl+C / SIGTERM / SIGHUP: finish what's in flight, then release. Second: quit now.
+
+    On Windows, which has neither signal, `role-radar stop` leaves a stop file instead (instance.py).
+    """
     loop = asyncio.get_running_loop()
     task = asyncio.current_task()
 
@@ -117,8 +121,23 @@ def _handle_signals(stop: asyncio.Event) -> None:
             log.info("Finishing the companies in progress, then releasing the lease (Ctrl+C again to quit now)")
             stop.set()
 
+    if sys.platform == "win32":
+        _watching.add(loop.create_task(_watch_for_stop(on_signal)))
+        return
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         loop.add_signal_handler(sig, on_signal)
+
+
+_watching: set[asyncio.Task] = set()  # the stop file watchers, kept from the garbage collector
+
+
+async def _watch_for_stop(on_stop: Callable[[], None], every: float = 1.0) -> None:
+    """Windows: `role-radar stop` has asked this instance to quit, as SIGTERM does elsewhere."""
+    lock = InstanceLock()
+    while True:
+        await asyncio.sleep(every)
+        if lock.stop_requested():
+            on_stop()
 
 
 # -- commands -------------------------------------------------------------------
@@ -263,10 +282,7 @@ def cmd_switch(args: argparse.Namespace) -> int:
             raise ValueError("say on or off, e.g. role-radar switch lambda off")
         store.save_switch(args.name, args.state == "on")
     if args.start and switch_on(store.load_switches(), "laptop") and not InstanceLock().running_pid():
-        if sys.platform != "darwin":
-            raise ValueError("--start uses the macOS login item")
-        if not launchd.start():
-            _install_login_item(ctx)
+        _start_checker(ctx)
         _wait_for_start()
     if args.json:
         state = ui.snapshot(backend, InstanceLock().running_pid, storage=ctx.runtime.storage)
@@ -436,6 +452,20 @@ def cmd_suggestions(args: argparse.Namespace) -> int:
     return 0
 
 
+def _start_checker(ctx: Context) -> None:
+    """Start `role-radar start` in the background: the login item on macOS (launchd), a process of its
+    own on Windows (winchecker)."""
+    if sys.platform == "darwin":
+        if not launchd.start():
+            _install_login_item(ctx)
+    elif sys.platform == "win32":
+        if not ctx.config_path:
+            raise ValueError("the checker needs your config file: pass --config PATH")
+        winchecker.start(ctx.config_path.resolve())
+    else:
+        raise ValueError("--start starts the checker on macOS and Windows; elsewhere, run role-radar start yourself")
+
+
 def _wait_for_start(timeout: float = 10.0) -> None:
     """Give a just-started `role-radar start` a moment to take its lock, so the state shown includes it."""
     deadline = time.monotonic() + timeout
@@ -526,7 +556,8 @@ def cmd_secrets(args: argparse.Namespace) -> int:
         if args.value is None and not sys.stdin.isatty():
             raise ValueError(f"type the value in a terminal (role-radar secrets set {args.name}), or pass it after the name")
         keychain.write(args.name, args.value)
-        print(f"Saved {args.name} in the Keychain. A running checker uses it for its next alert.")
+        where = "Windows Credential Manager" if sys.platform == "win32" else "the Keychain"
+        print(f"Saved {args.name} in {where}. A running checker uses it for its next alert.")
     elif args.action == "delete":
         print(f"Deleted {args.name}." if keychain.delete(args.name) else f"{args.name} wasn't set.")
     else:
@@ -763,7 +794,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("name", nargs="?", choices=SWITCHES)
     p.add_argument("state", nargs="?", choices=["on", "off"])
     p.add_argument("--start", action="store_true",
-                   help="if the laptop is switched on, make sure role-radar start is running (via the login item)")
+                   help="if the laptop is switched on, make sure role-radar start is running (in the background: "
+                        "the login item on macOS, a process of its own on Windows)")
     p.add_argument("--json", action="store_true", help="print the switches, who's checking and last passes as JSON")
     p.set_defaults(func=cmd_switch)
 
@@ -828,7 +860,8 @@ def build_parser() -> argparse.ArgumentParser:
     pull.add_argument("--force", action="store_true", help="replace an existing profile.yaml")
     pull.set_defaults(func=cmd_config_pull)
 
-    p = sub.add_parser("secrets", parents=[common], help="alert settings in this Mac's Keychain (runtime.secrets: keychain)")
+    p = sub.add_parser("secrets", parents=[common],
+                       help="alert settings in this computer's keychain (runtime.secrets: keychain)")
     secrets_sub = p.add_subparsers(dest="action", metavar="ACTION")
     s_set = secrets_sub.add_parser("set", parents=[common], help="save one (without VALUE: typed hidden, twice)")
     s_set.add_argument("name", metavar="NAME", help="EMAIL_TO, SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, DISCORD_WEBHOOK_URL...")
