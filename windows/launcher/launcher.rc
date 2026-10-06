@@ -1,5 +1,5 @@
-// Role Radar.exe's resources: its icon, its manifest, and the name and version Windows shows for it
-// (Task Manager, the tray's settings, Startup apps). scripts/package_windows.sh fills in the @...@ parts.
+// Role Radar Checker.exe's resources: its icon, its manifest, and the name and version Windows shows for
+// it (Task Manager). scripts/package_windows.sh fills in the @...@ parts.
 #include <windows.h>
 
 1 ICON "AppIcon.ico"
@@ -19,11 +19,11 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Role Radar"
-            VALUE "FileDescription", "@NAME@"
+            VALUE "FileDescription", "@NAME@ checker"
             VALUE "FileVersion", "@VERSION@"
-            VALUE "InternalName", "@NAME@"
+            VALUE "InternalName", "Role Radar Checker"
             VALUE "LegalCopyright", "MIT License"
-            VALUE "OriginalFilename", "@NAME@.exe"
+            VALUE "OriginalFilename", "Role Radar Checker.exe"
             VALUE "ProductName", "@NAME@"
             VALUE "ProductVersion", "@VERSION@"
         END

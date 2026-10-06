@@ -1,10 +1,9 @@
-/* Role Radar.exe: the Windows app's own program. It runs the Python beside it (python313.dll) on the
- * app (role_radar_app), or, given "-m MODULE ...", on that module as python.exe would: the checker,
- * and each role-radar command the app runs. So every Role Radar process is "Role Radar" in Task
- * Manager, with its icon, never "Python", and none opens a console window. (It's a GUI program: a
- * command's output still reaches the app, which reads it through a pipe.)
+/* Role Radar Checker.exe: runs the Python beside it (python313.dll) as python.exe would, on the arguments
+ * given: "-m role_radar start ..." (the checker) and each role-radar command the app runs. So every
+ * Role Radar process is named Role Radar in Task Manager, with its icon, never "Python", and none opens
+ * a console window. (It's a GUI program: a command's output still reaches the app, through a pipe.)
  *
- * Python runs in UTF-8 mode (-X utf8), and python313._pth beside it isolates it: only the app's own
+ * Python runs in UTF-8 mode (-X utf8), and python313._pth beside it isolates it: only Role Radar's own
  * folder and packages are on its path, whatever Python-related settings this PC has.
  * Built by scripts/package_windows.sh, with zig (x86_64-windows-gnu). */
 
@@ -37,9 +36,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR line, int show
         return fail(L"Role Radar couldn't start its Python (python313.dll). Reinstall Role Radar.");
     }
 
-    /* Python's arguments: UTF-8 mode, then the app unless a module was given. */
-    int app = !(count > 1 && wcscmp(given[1], L"-m") == 0);
-    wchar_t **args = calloc((size_t)count + 6, sizeof *args);
+    /* Python's arguments: UTF-8 mode, then those given. */
+    wchar_t **args = calloc((size_t)count + 3, sizeof *args);
     if (!args) {
         return fail(L"Role Radar ran out of memory starting.");
     }
@@ -47,10 +45,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR line, int show
     args[n++] = given[0];
     args[n++] = L"-X";
     args[n++] = L"utf8";
-    if (app) {
-        args[n++] = L"-m";
-        args[n++] = L"role_radar_app";
-    }
     for (int i = 1; i < count; i++) {
         args[n++] = given[i];
     }

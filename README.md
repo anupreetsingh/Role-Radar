@@ -113,8 +113,8 @@ to the suggestions box (deploy/suggestions), with a random id made once on that 
 app's and the system's versions. Nothing else: no name, email, settings or jobs. The dev builds and
 the app built from the code never check in. Both counts refresh at most hourly.
 
-**Publishing a new version** (from the code, on an Apple Silicon Mac with uv, Xcode and NSIS,
-`brew install makensis`): bump `__version__` in `role_radar/__init__.py` (every copy compares it
+**Publishing a new version** (from the code, on an Apple Silicon Mac with uv, Xcode, the .NET 10 SDK
+and NSIS, `brew install makensis`): bump `__version__` in `role_radar/__init__.py` (every copy compares it
 with its own), then
 
 ```bash
@@ -159,20 +159,22 @@ into `build/`: the same app run on the repo's code, but an app of its own (`com.
 `sh scripts/reset_app.sh` wipes the dev build's setup so its next launch is a first run (`--installed`
 wipes the downloaded app's instead, its settings and job history included).
 
-**The Windows app** (`windows/`) is built on the Mac too. It's Python and Qt
-(`windows/role_radar_app`), and shares everything else with the Mac app: the checker, its rules
-and its files are `role_radar`'s, and every read and write goes through the same role-radar
-commands, so a change there reaches both apps. `scripts/package_windows.sh` puts Python's
-embeddable package inside, with Role Radar, the app and the parts of Qt it uses (`windows/build.py`
-picks them, and checks that everything they load is there), `Role Radar.exe` (`windows/launcher`,
-built with zig: every process it runs is named Role Radar, never Python, and opens no console
-window), WinSparkle and the installer (`windows/installer.nsi`). Its checker is a background
-process of its own (`role_radar/winchecker.py`, where the Mac's is a launchd agent). To try changes
-out, `sh scripts/run_windows_app.sh` runs it from the repo as **Role Radar Dev**, on this Mac too
-(in the menu bar), with its own files and credentials and no job sites checked (`RR_DEV_CHECKS=1`
-for one that checks), and `sh scripts/package_windows.sh --dev` makes a Role Radar Dev installer for
-a Windows PC or VM, beside an installed Role Radar. `tests/test_windows_app.py` clicks through it
-offscreen, and the CI runs every test on Windows too.
+**The Windows app** (`windows/`) is a C# app (WPF on .NET 10, with Windows 11's look), built on the
+Mac too: `windows/RoleRadar.sln` opens in Visual Studio. It shares everything else with the Mac app:
+the checker, its rules and its files are `role_radar`'s, and every read and write goes through the
+same role-radar commands, so a change there reaches both apps. `windows/RoleRadar.Core` holds its
+state, rules and words, in plain .NET, so its tests (`dotnet test windows/RoleRadar.Core.Tests`) run
+on the Mac; `windows/RoleRadar` is the app's windows, tray icon and updates. `scripts/package_windows.sh`
+needs the .NET 10 SDK, uv and NSIS (`brew install makensis`), and puts in the installer
+(`windows/installer.nsi`) the app with .NET inside, WinSparkle, and in `python\` the checker: Python's
+embeddable package with Role Radar, run by `Role Radar Checker.exe` (`windows/launcher`, built with zig,
+so no process shows as Python or opens a console window). `windows/build.py` checks, from the Mac, that
+every program in it finds what it loads and every theme name the app uses exists, and draws the app's
+icons from the Mac icon's glyph. The checker is a background process of its own
+(`role_radar/winchecker.py`, where the Mac's is a launchd agent). To try changes out,
+`sh scripts/package_windows.sh --dev` makes a **Role Radar Dev** installer for a Windows PC or VM: an app
+of its own beside an installed Role Radar (its own files and credentials) that checks no job sites
+(`DEV_CHECKS=1` for one that does). The CI builds it and runs every test on Windows too.
 
 ## Run it on your Mac
 
@@ -719,8 +721,8 @@ the lease.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[aws]' -r requirements-dev.txt
 
-python -m pytest                                  # tests (AWS is faked with moto; the Windows app's
-                                                  # need Qt: pip install -r windows/requirements.txt)
+python -m pytest                                  # tests (AWS is faked with moto)
+dotnet test windows/RoleRadar.Core.Tests          # the Windows app's (the .NET 10 SDK)
 role-radar list-matches                           # every job matching now (no state, no alerts)
 role-radar run --once --dry-run -v                # check due companies, print alerts, save nothing
 role-radar run --once --all --dry-run             # the same for every company, due or not

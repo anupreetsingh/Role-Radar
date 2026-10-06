@@ -1,0 +1,14 @@
+<!-- Role Radar for Windows. Windows 11's look comes from the Fluent theme (App.xaml.cs), with the app's
+     own pieces in Styles.xaml. It runs in the tray until it's quit: closing its window keeps it going. -->
+<Application x:Class="RoleRadar.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Styles.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

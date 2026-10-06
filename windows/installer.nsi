@@ -3,18 +3,23 @@
 ; It installs for the signed-in user only, so it never asks for an administrator: the app goes in
 ; %LOCALAPPDATA%\Programs\<name>, with a Start menu shortcut (and one on the desktop, the first time),
 ; and in Settings > Apps, to remove it. Then it opens the app.
-; An update (WinSparkle runs it silently, with /S) asks the running app and its checker to quit
-; first, replaces the app whole, and opens the new version. Settings, job history and alert settings
-; live elsewhere (%LOCALAPPDATA%\<name>, Credential Manager), so an update keeps them; removing the
-; app asks whether they go too.
+; An update (WinSparkle runs it silently, with /S) asks the running app and its checker to quit first,
+; replaces the app whole, and opens the new version. Settings, job history and alert settings live
+; elsewhere (%LOCALAPPDATA%\<name>, Credential Manager), so an update keeps them; removing the app asks
+; whether they go too.
 ;
-; From package_windows.sh: NAME ("Role Radar", or "Role Radar Dev"), EXE, VERSION, HOME (the files'
-; folder), KEY (the Settings > Apps entry), SOURCE (the staged app), ICON and OUTFILE.
+; From package_windows.sh: NAME ("Role Radar", or "Role Radar Dev": its files' folder and Credential
+; Manager service too), VERSION, KEY (its Settings > Apps entry), SOURCE (the staged app), ICON, OUTFILE.
 
 Unicode true
 ManifestDPIAware true
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+
+!define EXE "RoleRadar.exe"
+!define UNINSTALL "Software\Microsoft\Windows\CurrentVersion\Uninstall\${KEY}"
+!define RUN "Software\Microsoft\Windows\CurrentVersion\Run"
+!define CREDENTIALS "EMAIL_TO EMAIL_FROM SMTP_HOST SMTP_PORT SMTP_SECURITY SMTP_USERNAME SMTP_PASSWORD DISCORD_WEBHOOK_URL"
 
 Name "${NAME}"
 OutFile "${OUTFILE}"
@@ -30,10 +35,6 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "Role Radar"
 VIAddVersionKey "LegalCopyright" "MIT License"
 
-!define UNINSTALL "Software\Microsoft\Windows\CurrentVersion\Uninstall\${KEY}"
-!define RUN "Software\Microsoft\Windows\CurrentVersion\Run"
-!define CREDENTIALS "EMAIL_TO EMAIL_FROM SMTP_HOST SMTP_PORT SMTP_SECURITY SMTP_USERNAME SMTP_PASSWORD DISCORD_WEBHOOK_URL"
-
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${EXE}"
@@ -47,11 +48,12 @@ VIAddVersionKey "LegalCopyright" "MIT License"
 Var Updating  ; an earlier version is installed
 
 ; Ask the running app to quit, and its checker to finish the companies in flight (up to 90 seconds);
-; then end any Role Radar program still running (only this user's: others' can't be ended from here).
+; then end any program still running from this app's folder (the app, its checker), and only those.
 !macro StopRunning
   IfFileExists "$INSTDIR\${EXE}" 0 +2
     nsExec::Exec '"$INSTDIR\${EXE}" --quit'
-  nsExec::Exec 'taskkill /F /IM "${EXE}"'
+  System::Call 'Kernel32::SetEnvironmentVariable(t "RR_FOLDER", t "$INSTDIR\")'
+  nsExec::Exec `powershell -NoProfile -NonInteractive -Command "Get-Process | Where-Object { $$_.Path -and $$_.Path.StartsWith($$env:RR_FOLDER, 'OrdinalIgnoreCase') } | Stop-Process -Force"`
   Sleep 500
 !macroend
 
@@ -60,8 +62,8 @@ Section "Install"
   IfFileExists "$INSTDIR\${EXE}" 0 +2
     StrCpy $Updating 1
   !insertmacro StopRunning
+  RMDir /r "$INSTDIR"  ; the last version goes whole, so none of its files is left behind
   SetOutPath "$INSTDIR"
-  RMDir /r "$INSTDIR\Lib"  ; the last version's packages go whole, so none of its files is left behind
   File /r "${SOURCE}\*.*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
@@ -100,7 +102,7 @@ Section "Uninstall"
   MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 \
     "Also delete your ${NAME} settings, job history and alert settings?$\n$\nKeep them to pick up where you left off if you install it again." \
     IDNO done
-  RMDir /r "$LOCALAPPDATA\${HOME}"
+  RMDir /r "$LOCALAPPDATA\${NAME}"
   ; Its alert settings in Credential Manager ("<name>/EMAIL_TO" and the rest).
   StrCpy $0 "${CREDENTIALS} "
   next:
@@ -115,7 +117,7 @@ Section "Uninstall"
       StrCpy $2 $0 $1
       IntOp $1 $1 + 1
       StrCpy $0 $0 "" $1
-      nsExec::Exec 'cmdkey /delete:"${HOME}/$2"'
+      nsExec::Exec 'cmdkey /delete:"${NAME}/$2"'
       Goto next
   done:
 SectionEnd

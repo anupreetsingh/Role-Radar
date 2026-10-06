@@ -1,0 +1,17 @@
+<Project>
+  <!-- What every project here shares. The version is Role Radar's (role_radar/__init__.py): the
+       packaging script passes it in (-p:Version=...), so a build from Visual Studio says 0.0.0. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion> <!-- "2.2.1", not "2.2.1+<commit>" -->
+    <Company>Role Radar</Company>
+    <Product>Role Radar</Product>
+    <Copyright>MIT License</Copyright>
+    <!-- Builds on a Mac too (scripts/package_windows.sh); it runs only on Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+</Project>

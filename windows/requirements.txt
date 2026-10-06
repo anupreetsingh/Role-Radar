@@ -1,3 +1,0 @@
-# The Windows app's own dependency, pinned: scripts/package_windows.sh bundles exactly this, and the
-# CI's Windows job tests with it. (Role Radar's own dependencies are in pyproject.toml.)
-PySide6-Essentials==6.11.2

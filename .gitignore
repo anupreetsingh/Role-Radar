@@ -12,6 +12,9 @@ venv/
 *.egg-info/
 build/
 dist/
+# The Windows app's builds (dotnet)
+windows/**/bin/
+windows/**/obj/
 .aws-sam/
 seen_jobs.json
 samconfig.toml
