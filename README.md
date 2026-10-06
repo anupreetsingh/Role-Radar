@@ -10,7 +10,7 @@ the work while `role-radar start` is running, and an AWS Lambda takes over whene
 
 There are three ways to run it:
 
-- **Download the app.** Nothing to install: a Setup window asks your profession (Tech,
+- **Download the app,** for a Mac or Windows. Nothing to install: a Setup window asks your profession (Tech,
   Accounting & Finance or Healthcare), the job titles and countries you want, and sends alerts
   from your Gmail. See [Get the app](#get-the-app).
 - **On your Mac only, from the code.** Everything, from the jobs it has seen to your email
@@ -73,6 +73,29 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 Its files live in `~/Library/Application Support/Role Radar`, and its log is
 `~/Library/Logs/com.roleradar.app.checker.log`.
 
+### On Windows
+
+For Windows 10 (version 1703 or later) or 11, on an Intel or AMD PC (Windows on ARM runs it too):
+
+1. Download `Role-Radar-windows-setup.exe` from the
+   [Releases page](https://github.com/anupreetsingh/Role-Radar/releases/latest) and open it. It
+   isn't signed with a paid certificate, so Windows SmartScreen first says it "protected your PC":
+   click **More info**, then **Run anyway**. You only do this once. It installs for you alone,
+   with no administrator needed, into `%LOCALAPPDATA%\Programs\Role Radar`, adds it to the Start
+   menu (and the desktop), and opens it.
+2. Its window walks through the same Setup pages as on the Mac, and **Start Checking** turns it
+   into **Live Tracking**: its new jobs, those marked as seen and the alerts sent are tabs.
+   Role Radar lives in the notification area by the clock (on Windows 11 it may be under the ^
+   arrow; drag it onto the taskbar to keep it in sight): click it for its panel, right-click for
+   its menu. Closing the window leaves it there, still checking. It opens at login and checks
+   while the PC is on.
+
+Its files live in `%LOCALAPPDATA%\Role Radar` (its log is `checker.log` there), and its alert
+settings in Windows Credential Manager. Settings → Apps removes it, asking whether its settings
+and job history go too. It updates itself as the Mac app does, with
+[WinSparkle](https://winsparkle.org), the Windows Sparkle: from the latest release's
+`appcast-windows.xml`, signed with the same update key, installing the update and reopening.
+
 **Updates.** The app updates itself with [Sparkle](https://sparkle-project.org): every six
 hours (or with **Check for Updates…** in its menu) it reads the latest GitHub release's
 `appcast.xml`, and offers a newer version if there is one. It installs an update only if it's
@@ -80,24 +103,29 @@ signed with the update key, so a copy from the first release on never needs down
 Its settings, history and Keychain items live outside the app, so an update keeps them.
 
 **The badges at the top.** **Downloads** is how many times people downloaded the app, every
-version together: **Download for Mac**, the link beside the repo's About and the Releases page all
-fetch the same file, the newest release's `Role-Radar-apple-silicon.dmg`. Updates fetch a copy of
-the disk image under another name (`...-update.dmg`), and checking for one reads `appcast.xml`, so
-neither counts. **Weekly users** is how many copies of the app ran in the
+version and both apps together: **Download for Mac**, the link beside the repo's About and the
+Releases page all fetch the same file, the newest release's `Role-Radar-apple-silicon.dmg`, and
+Windows' is `Role-Radar-windows-setup.exe`. Updates fetch copies under other names
+(`...-update.dmg`, `...-windows-update.exe`), and checking for one reads a feed, so neither counts.
+**Weekly users** is how many copies of the app ran in the
 last 7 days: when it opens, and every six hours while it runs, the app sends an anonymous check-in
-to the suggestions box (deploy/suggestions), with a random id made once on that Mac and the app's
-and macOS's versions. Nothing else: no name, email, settings or jobs. The dev build and the app
-built from the code never check in. Both counts refresh at most hourly.
+to the suggestions box (deploy/suggestions), with a random id made once on that computer and the
+app's and the system's versions. Nothing else: no name, email, settings or jobs. The dev builds and
+the app built from the code never check in. Both counts refresh at most hourly.
 
-**Publishing a new version** (from the code, on an Apple Silicon Mac with uv and Xcode): bump
-`__version__` in `role_radar/__init__.py` (every copy compares it with its own), then
+**Publishing a new version** (from the code, on an Apple Silicon Mac with uv, Xcode and NSIS,
+`brew install makensis`): bump `__version__` in `role_radar/__init__.py` (every copy compares it
+with its own), then
 
 ```bash
 sh scripts/package_app.sh                 # → dist/Role-Radar-<version>-apple-silicon.dmg
-sh scripts/publish_update.sh NOTES.md     # signs it, writes appcast.xml, creates GitHub release v<version>
+sh scripts/package_windows.sh             # → dist/Role-Radar-<version>-windows-setup.exe
+sh scripts/publish_update.sh NOTES.md     # signs both, writes their feeds, creates GitHub release v<version>
 ```
 
-Publish as a normal release, not a pre-release: every copy reads the latest release. The update
+Publish as a normal release, not a pre-release: every copy reads the latest release, so every
+release carries both apps (`WINDOWS=0` publishes the Mac app alone, and Windows copies see no
+update until a release has theirs again). The update
 key is made once on the Mac that publishes (`build/sparkle/<version>/bin/generate_keys --account
 role-radar`, after `sh scripts/get_sparkle.sh`); its public half is `update_key` in
 `scripts/package_app.sh`, and the private half stays in that Mac's Keychain. Keep a copy
@@ -130,6 +158,21 @@ into `build/`: the same app run on the repo's code, but an app of its own (`com.
 (`DEV_CHECKS=1` for one that does), so an installed Role Radar in use is never touched.
 `sh scripts/reset_app.sh` wipes the dev build's setup so its next launch is a first run (`--installed`
 wipes the downloaded app's instead, its settings and job history included).
+
+**The Windows app** (`windows/`) is built on the Mac too. It's Python and Qt
+(`windows/role_radar_app`), and shares everything else with the Mac app: the checker, its rules
+and its files are `role_radar`'s, and every read and write goes through the same role-radar
+commands, so a change there reaches both apps. `scripts/package_windows.sh` puts Python's
+embeddable package inside, with Role Radar, the app and the parts of Qt it uses (`windows/build.py`
+picks them, and checks that everything they load is there), `Role Radar.exe` (`windows/launcher`,
+built with zig: every process it runs is named Role Radar, never Python, and opens no console
+window), WinSparkle and the installer (`windows/installer.nsi`). Its checker is a background
+process of its own (`role_radar/winchecker.py`, where the Mac's is a launchd agent). To try changes
+out, `sh scripts/run_windows_app.sh` runs it from the repo as **Role Radar Dev**, on this Mac too
+(in the menu bar), with its own files and credentials and no job sites checked (`RR_DEV_CHECKS=1`
+for one that checks), and `sh scripts/package_windows.sh --dev` makes a Role Radar Dev installer for
+a Windows PC or VM, beside an installed Role Radar. `tests/test_windows_app.py` clicks through it
+offscreen, and the CI runs every test on Windows too.
 
 ## Run it on your Mac
 
@@ -676,7 +719,8 @@ the lease.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[aws]' -r requirements-dev.txt
 
-python -m pytest                                  # tests (AWS is faked with moto)
+python -m pytest                                  # tests (AWS is faked with moto; the Windows app's
+                                                  # need Qt: pip install -r windows/requirements.txt)
 role-radar list-matches                           # every job matching now (no state, no alerts)
 role-radar run --once --dry-run -v                # check due companies, print alerts, save nothing
 role-radar run --once --all --dry-run             # the same for every company, due or not

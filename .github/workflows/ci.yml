@@ -1,7 +1,7 @@
 name: CI
 
-# Tests only. Monitoring runs on the laptop (`role-radar start`) and on AWS Lambda
-# (deploy/aws/template.yaml); state lives in DynamoDB, not in this repo.
+# Tests only. Monitoring runs on the laptop (`role-radar start`), in the Mac and Windows apps, and on
+# AWS Lambda (deploy/aws/template.yaml); state lives in DynamoDB or on the computer, not in this repo.
 on:
   push:
   pull_request:
@@ -26,6 +26,29 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q
+
+  windows:
+    # Everything again on Windows, where the Windows app runs the checker: its Windows parts for real
+    # (Credential Manager, the lock, stopping it), and the app itself, clicked through offscreen.
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13" # the Windows app's Python
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            windows/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt -r windows/requirements.txt
 
       - name: Run tests
         run: python -m pytest -q

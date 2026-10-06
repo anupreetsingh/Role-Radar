@@ -181,6 +181,7 @@ def test_migrate_waits_for_the_lease(config, table):
     assert cli.main(["migrate", "--from", source, "--to", f"dynamodb:{table[1]}", "--config", str(config)]) == 4
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="launchd is macOS's (Windows' checker: test_windows.py)")
 def test_login_item_writes_an_agent_the_app_starts_without_keepalive(config, tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(launchd.Path, "home", lambda: tmp_path)
