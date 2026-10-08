@@ -135,6 +135,59 @@ def test_avature_follows_next_link_and_ignores_duplicate_apply_links():
     assert result.jobs[0].title == "Compiler Engineer"
 
 
+def test_avature_newest_first_stops_at_a_page_with_nothing_new():
+    from role_radar.storage import SeenJob
+    # Siemens: 6 jobs a page, newest first, the city/state/country each in a span of their own.
+    def card(ident, place='<span class="list-item-jobCity">Wendell</span><span class="separator">, </span>'
+                          '<span class="list-item-jobCountry">United States of America</span>'):
+        return (f'<article class="article article--result 1"><h3><a class="link" href="https://jobs.siemens.com/en_US/externaljobs/JobDetail/{ident}">'
+                f'Software Engineer {ident}</a></h3><span class="list-item-location">\n    {place}\n</span> '
+                f'<span class="list-item-jobId">Job ID: {ident}</span></article>')
+    seen = []
+    def handler(request):
+        offset = int(request.url.params.get("folderOffset", "0"))
+        seen.append(offset)
+        body = card(100 - offset) + card(99 - offset, "Multiple Locations")
+        return httpx.Response(200, text=body + f'<a href="/en_US/externaljobs/SearchJobs/?folderSort=postedDate&amp;folderSortDirection=DESC&amp;folderOffset={offset + 2}">Next &gt;&gt;</a>')
+
+    url = "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/?folderSort=postedDate&folderSortDirection=DESC"
+    async def go(known):
+        async with make_client(handler) as http:
+            cfg = company("Siemens", url=url)
+            cfg.options = {"max_pages": 3}
+            scraper = SCRAPERS["avature"](cfg, http)
+            scraper.known = known
+            return scraper, await scraper.fetch_jobs()
+
+    scraper, first = asyncio.run(go({}))
+    assert seen == [0, 2, 4] and not first.complete  # a first check reads every page it may
+    assert first.jobs[0].location == "Wendell, United States of America"
+    assert scraper.missing_fields(first.jobs[1]) == {"location"} and not scraper.missing_fields(first.jobs[0])
+
+    seen.clear()
+    known = {j.uid: SeenJob(title=j.title, url=j.url, fingerprint=j.fingerprint, first_seen="x") for j in first.jobs[2:]}
+    _, later = asyncio.run(go(known))
+    assert seen == [0, 2] and not later.complete  # the second page held nothing new
+
+
+def test_avature_job_page_gives_places_and_description():
+    page = '''<div class="article__content__view__field"><div class="article__content__view__field__label">Location(s)</div>
+      <div class="article__content__view__field__value"><ul class="list list--bullet list--locations">
+      <li class="list__item"> Beijing - Beijing Shi - China </li><li class="list__item"> Austin - Texas - United States of America </li></ul></div></div>
+      <div class="article__content__view__field tf_replaceFieldVideoTokens"><div class="article__content__view__field__value">
+      <div><p>You have 3+ years of experience.</p></div></div></div>'''
+    async def go():
+        async with make_client(lambda r: httpx.Response(200, text=page)) as http:
+            scraper = SCRAPERS["avature"](company("Siemens", url="https://jobs.siemens.com/en_US/externaljobs/SearchJobs/"), http)
+            multi = job(url="https://jobs.siemens.com/en_US/externaljobs/JobDetail/1", location="Multiple Locations")
+            await scraper.fetch_details(multi)
+            single = job(url="https://jobs.siemens.com/en_US/externaljobs/JobDetail/2", location="Austin, Texas, United States of America")
+            return multi, await scraper.fetch_description(single)
+    multi, description = asyncio.run(go())
+    assert multi.location == "Beijing, Beijing Shi, China; Austin, Texas, United States of America"
+    assert "3+ years of experience" in multi.extra["description"] and "3+ years of experience" in description
+
+
 @pytest.mark.parametrize("ats,url", [("icims", "https://example.icims.com/jobs/search"), ("avature", "https://example.avature.net/careers/SearchJobs/")])
 def test_missing_listing_structure_is_error(ats, url):
     with pytest.raises(ScraperError):
