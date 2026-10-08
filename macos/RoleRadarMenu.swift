@@ -175,6 +175,7 @@ struct LiveState: Decodable {
             let title: String?
             let location: String?
             let url: String?
+            let first_seen: String?  // missing from alerts logged before it was kept
         }
 
         let sent_at: String
@@ -1682,44 +1683,70 @@ struct SeenJobRow: View, Equatable {
 
     var body: some View {
         MatchRow(title: match.title, company: match.company, location: match.location, url: match.url,
-                 when: "", since: ("Seen", match.skipped_at), dimmed: true,
+                 when: "", since: ("Found", match.found),
                  action: ("Mark as New", "Put it back in New jobs", markNew), busy: busy, picked: picks.box(match.id))
     }
 }
 
-/// Live Tracking's jobs, with the bar that acts on them: New jobs (the stack), Seen (folded), and the
-/// alerts sent. Equatable on what it shows, so it's drawn again only when that changes.
-/// A search above the bar narrows New jobs; the bar's buttons then act on the jobs it shows.
-struct JobList: View, Equatable {
-    let model: Model  // for its actions; not watched
-    let waiting: [LiveState.Match]
-    let skipped: [LiveState.Match]
-    let sent: [LiveState.Alert]
-    let alertsOff: Bool
-    let canAlert: Bool
-    let busy: Set<String>
-    @State private var opened: Set<String> = []  // sent alerts unfolded: each starts folded
-    @State private var picks = Picks()  // new jobs ticked, to mark as seen or send together
-    @State private var showSeen = false  // the Seen section is folded until opened
-    @State private var seenPicks = Picks()  // seen jobs ticked, to mark as new together
-    @State private var seenShown = 100  // the Seen section lists this many, newest first
-    @State private var query = ""  // New jobs shown: those with every word of it (all of them when empty)
+/// Jobs marked as seen together, as the Seen tab folds them: each within a minute of the next, so a
+/// Mark All as Seen is one group however long the marking took.
+struct SeenGroup: Equatable {
+    let id: String  // when its first job was marked: it stays as later ones join
+    let at: Date?  // when its last one was
+    let jobs: [LiveState.Match]  // newest found first, as they were on the stack
 
-    nonisolated static func == (a: JobList, b: JobList) -> Bool {
-        a.waiting == b.waiting && a.skipped == b.skipped && a.sent == b.sent && a.alertsOff == b.alertsOff
-            && a.canAlert == b.canAlert && a.busy == b.busy
+    static let gap: TimeInterval = 60
+
+    /// The seen jobs in groups, the latest marked first.
+    static func of(_ seen: [LiveState.Match]) -> [SeenGroup] {
+        let marked = seen.map { (match: $0, at: When.date($0.skipped_at ?? $0.found)) }
+            .sorted { ($0.at ?? .distantPast) > ($1.at ?? .distantPast) }
+        var groups: [SeenGroup] = []
+        var run: [(match: LiveState.Match, at: Date?)] = []
+        func close() {
+            guard let first = run.last else { return }
+            groups.append(SeenGroup(id: "seen@" + (first.match.skipped_at ?? first.match.found), at: run[0].at,
+                                    jobs: run.map(\.match).sorted { $0.found > $1.found }))
+        }
+        for job in marked {
+            if let newer = run.last, !together(newer.at, job.at) {
+                close()
+                run = []
+            }
+            run.append(job)
+        }
+        close()
+        return groups
     }
 
-    /// The jobs with every word of `query` starting a word of their title, company or place, ignoring
-    /// case and accents: "eng" finds Engineer and "montreal" Montréal, but "ai" doesn't find Maintain.
-    static func matching(_ jobs: [LiveState.Match], _ query: String) -> [LiveState.Match] {
-        let fold = { (text: String) in text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil) }
-        let words = query.split(whereSeparator: \.isWhitespace).map { fold(String($0)) }
-        guard !words.isEmpty else { return jobs }
-        return jobs.filter { match in
-            let text = fold([match.title, match.company, match.location ?? ""].joined(separator: " "))
-            return words.allSatisfy { startsAWord($0, in: text) }
-        }
+    private static func together(_ newer: Date?, _ older: Date?) -> Bool {
+        guard let newer, let older else { return newer == nil && older == nil }
+        return newer.timeIntervalSince(older) <= gap
+    }
+}
+
+/// A search of Live Tracking's jobs: those with every word of it starting a word of their title, company
+/// or place, ignoring case and accents: "eng" finds Engineer and "montreal" Montréal, but "ai" doesn't
+/// find Maintain. With no words, every job.
+struct JobSearch {
+    let words: [String]
+
+    init(_ query: String) {
+        words = query.split(whereSeparator: \.isWhitespace).map { Self.fold(String($0)) }
+    }
+
+    var isEmpty: Bool { words.isEmpty }
+
+    func finds(_ title: String?, _ company: String?, _ location: String?) -> Bool {
+        guard !words.isEmpty else { return true }
+        let text = Self.fold([title, company, location].compactMap { $0 }.joined(separator: " "))
+        return words.allSatisfy { Self.startsAWord($0, in: text) }
+    }
+
+    func finds(_ match: LiveState.Match) -> Bool { finds(match.title, match.company, match.location) }
+
+    private static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 
     private static func startsAWord(_ word: String, in text: String) -> Bool {
@@ -1730,32 +1757,110 @@ struct JobList: View, Equatable {
         }
         return false
     }
+}
 
-    private var searching: Bool { !query.allSatisfy(\.isWhitespace) }
+/// One of Live Tracking's tabs, with its count of jobs (or alerts).
+struct ListTab: View {
+    let title: String
+    let count: Int
+    let on: Bool
+    let pick: () -> Void
+    @State private var hovering = false
 
     var body: some View {
-        let shown = Self.matching(waiting, query)
-        return VStack(spacing: 0) {
-            // Fixed above the list, as in Gmail: always in reach, and rows never scroll under it.
-            searchField
+        Button(action: pick) {
+            HStack(spacing: 6) {
+                Text(title).scaledFont(13, weight: .semibold)
+                    .foregroundStyle(on ? HierarchicalShapeStyle.primary : .secondary)
+                Text(count.formatted()).scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+            }
+            .padding(.horizontal, 12).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(on ? 0.1 : hovering ? 0.05 : 0)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+}
+
+/// Live Tracking's jobs, a tab each: New jobs (the stack), Seen, and Sent alerts, the last two folded
+/// in groups (the jobs marked as seen together, an alert's jobs). Each tab has a search of its own, and a
+/// bar that acts on the jobs it shows. Equatable on what it shows, so it's drawn again only when that changes.
+struct JobList: View, Equatable {
+    enum Tab { case new, seen, sent }
+
+    let model: Model  // for its actions; not watched
+    let waiting: [LiveState.Match]
+    let skipped: [LiveState.Match]
+    let sent: [LiveState.Alert]
+    let alertsOff: Bool
+    let canAlert: Bool
+    let busy: Set<String>
+    @State private var tab = Tab.new
+    @State private var picks = Picks()  // new jobs ticked, to mark as seen or send together
+    @State private var seenPicks = Picks()  // seen jobs ticked, to mark as new together
+    // Each tab's search: the jobs with every word of it (all of them when empty).
+    @State private var newQuery = ""
+    @State private var seenQuery = ""
+    @State private var sentQuery = ""
+    @State private var seenOpen: Set<String> = []  // seen jobs whose group is unfolded: each starts folded
+    @State private var opened: Set<String> = []  // sent alerts unfolded: each starts folded
+    // A search unfolds the groups and alerts with jobs it finds: those folded again during it.
+    @State private var seenShut: Set<String> = []
+    @State private var sentShut: Set<String> = []
+
+    nonisolated static func == (a: JobList, b: JobList) -> Bool {
+        a.waiting == b.waiting && a.skipped == b.skipped && a.sent == b.sent && a.alertsOff == b.alertsOff
+            && a.canAlert == b.canAlert && a.busy == b.busy
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Fixed above the list, as in Gmail: always in reach, and rows never scroll under them.
+            tabs
                 .padding(.horizontal, 16).padding(.top, 10)
-            stackHeader(shown)
-                .padding(.leading, 16).padding(.trailing, 20).padding(.vertical, 10)  // its box in line with the rows
-                .contentShape(Rectangle())
-                .modifier(ArrowCursor())
-            Divider()
-            list(shown)
+            searchField
+                .padding(.horizontal, 16).padding(.top, 8)
+            switch tab {
+            case .new: newJobs
+            case .seen: seenJobs
+            case .sent: sentAlerts
+            }
+        }
+    }
+
+    private var tabs: some View {
+        HStack(spacing: 4) {
+            ListTab(title: "New Jobs", count: waiting.count, on: tab == .new) { tab = .new }
+            ListTab(title: "Seen", count: skipped.count, on: tab == .seen) { tab = .seen }
+            ListTab(title: "Sent Alerts", count: sent.count, on: tab == .sent) { tab = .sent }
+            Spacer()
+        }
+    }
+
+    private var query: Binding<String> {
+        switch tab {
+        case .new: return $newQuery
+        case .seen: return $seenQuery
+        case .sent: return $sentQuery
         }
     }
 
     private var searchField: some View {
-        HStack(spacing: 6) {
+        let query = self.query
+        let prompt = switch tab {
+        case .new: "Search new jobs by title, company or place"
+        case .seen: "Search seen jobs by title, company or place"
+        case .sent: "Search sent alerts by title, company or place"
+        }
+        return HStack(spacing: 6) {
             Image(systemName: "magnifyingglass").scaledFont(12).foregroundStyle(.secondary)
-            TextField("Search new jobs by title, company or place", text: $query)
+            TextField(prompt, text: query)
                 .textFieldStyle(.plain).scaledFont(13)
-                .onExitCommand { query = "" }
-            if !query.isEmpty {
-                Button { query = "" } label: {
+                .onExitCommand { query.wrappedValue = "" }
+            if !query.wrappedValue.isEmpty {
+                Button { query.wrappedValue = "" } label: {
                     Image(systemName: "xmark.circle.fill").scaledFont(12).foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -1765,11 +1870,57 @@ struct JobList: View, Equatable {
         .padding(.horizontal, 8).padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
         // Ticks are for the jobs on screen: a new search starts with none, so a hidden job is never acted on.
-        .onChange(of: query) { picks.ids = [] }
+        .onChange(of: newQuery) { picks.ids = [] }
+        .onChange(of: seenQuery) {
+            seenPicks.ids = []
+            seenShut = []
+        }
+        .onChange(of: sentQuery) { sentShut = [] }
     }
 
-    private func list(_ shown: [LiveState.Match]) -> some View {
-        List {
+    /// A tab below the search: its bar, then its list, at the top again for each new search.
+    private func page<Bar: View, Rows: View>(search: String, @ViewBuilder bar: () -> Bar,
+                                             @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .leading) {
+                // Every bar as tall as one with a box and buttons, so the list doesn't move between tabs,
+                // or when a box comes and goes.
+                HStack {
+                    SelectBox(on: .constant(false))
+                    Button("Mark as Seen") {}.controlSize(.small)
+                }
+                .hidden()
+                HStack(spacing: 8) { bar() }
+            }
+            .padding(.leading, 16).padding(.trailing, 20).padding(.vertical, 10)  // its box in line with the rows
+            .contentShape(Rectangle())
+            .modifier(ArrowCursor())
+            Divider()
+            List { rows() }
+                .listStyle(.inset)
+                .id(search)
+        }
+    }
+
+    private func count(_ text: String) -> some View {
+        Text(text).scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+    }
+
+    private static func jobs(_ count: Int) -> String { "\(count.formatted()) job\(count == 1 ? "" : "s")" }
+
+    private func nothingFound(_ what: String, _ query: String) -> some View {
+        Text("No \(what) match \u{201C}\(query.trimmingCharacters(in: .whitespaces))\u{201D}.")
+            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+    }
+
+    // -- New jobs: the stack ---------------------------------------------------------
+
+    private var newJobs: some View {
+        let search = JobSearch(newQuery)
+        let shown = search.isEmpty ? waiting : waiting.filter(search.finds)
+        return page(search: newQuery) {
+            stackHeader(shown, searching: !search.isEmpty)
+        } rows: {
             if alertsOff {
                 Label(canAlert ? "Alerts are off: new jobs collect here, newest on top. Mark the ones "
                                        + "you've seen, or send some as alerts."
@@ -1783,8 +1934,7 @@ struct JobList: View, Equatable {
                     Text("No new jobs. They appear here as soon as their company is checked.")
                         .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
                 } else if shown.isEmpty {
-                    Text("No new jobs match \u{201C}\(query.trimmingCharacters(in: .whitespaces))\u{201D}.")
-                        .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                    nothingFound("new jobs", newQuery)
                 }
                 ForEach(shown) { match in
                     NewJobRow(match: match, picks: picks, busy: busy.contains(match.id), canAlert: canAlert,
@@ -1792,94 +1942,12 @@ struct JobList: View, Equatable {
                         .equatable()
                 }
             }
-            Section {
-                if showSeen {
-                    if skipped.isEmpty {
-                        Text("Jobs you mark as seen go here for a week, and are never sent. Mark one as new to "
-                             + "put it back.")
-                            .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
-                    }
-                    ForEach(skipped.prefix(seenShown)) { match in
-                        SeenJobRow(match: match, picks: seenPicks, busy: busy.contains(match.id),
-                                   markNew: { Task { await model.skip(match, false) } })
-                            .equatable()
-                            .listRowBackground(Color.primary.opacity(0.04))
-                    }
-                    if skipped.count > seenShown {
-                        Button("Show \(min(100, skipped.count - seenShown)) More") { seenShown += 100 }
-                            .controlSize(.small).padding(.vertical, 4)
-                    }
-                }
-            } header: {
-                seenHeader
-            }
-            Section {
-                if sent.isEmpty {
-                    Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
-                }
-                // One flat run of rows, each with an id of its own: an alert, then its jobs while it's open.
-                // The list (an outline view underneath) took only the first unfolding or two when the jobs
-                // sat inside the alert's row, or in a ForEach nested in it; the rest showed only once that
-                // row was drawn again, when its "min. ago" next changed, up to a minute after the click.
-                ForEach(sentRows) { row in
-                    switch row {
-                    case .alert(let alert):
-                        alertHeader(alert)
-                    case .job(_, _, let job):
-                        MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url, when: "")
-                            .padding(.leading, 20)
-                    }
-                }
-            } header: {
-                header("Sent alerts", sent.count) { EmptyView() }
-            }
-        }
-        .listStyle(.inset)
-    }
-
-    /// Seen jobs' header: unfold them; once unfolded, a box to select those shown, and Mark as New for
-    /// the selected ones.
-    private var seenHeader: some View {
-        let shown = skipped.prefix(seenShown)
-        let chosen = shown.filter { seenPicks.ids.contains($0.id) }
-        let all = Binding(get: { !shown.isEmpty && chosen.count == shown.count },
-                          set: { on in seenPicks.ids = on ? Set(shown.map(\.id)) : [] })
-        return HStack(spacing: 6) {
-            if showSeen && !shown.isEmpty {
-                SelectBox(on: all, mixed: !chosen.isEmpty && chosen.count < shown.count)
-                    .padding(.leading, -6)
-                    .help(chosen.isEmpty ? "Select all" : "Deselect all")
-            }
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { showSeen.toggle() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right").scaledFont(10, weight: .semibold).foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(showSeen ? 90 : 0))
-                    Text("Seen").scaledFont(12, weight: .semibold)
-                    Text(showSeen && !chosen.isEmpty ? "\(chosen.count) selected" : skipped.count.formatted())
-                        .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help(showSeen ? "Hide the jobs marked as seen" : "Show the jobs marked as seen")
-            if showSeen && !chosen.isEmpty {
-                Button("Mark as New") {
-                    seenPicks.ids = []
-                    Task { await model.markNew(chosen) }
-                }
-                .controlSize(.small)
-                .disabled(busy.contains("new"))
-                .help("Put them back in New jobs")
-            }
         }
     }
 
-    /// New jobs' header: a box to select those shown, and what to do with the selected ones (or all of
+    /// New jobs' bar: a box to select those shown, and what to do with the selected ones (or all of
     /// them; with a search, all it shows, the count on the button).
-    private func stackHeader(_ shown: [LiveState.Match]) -> some View {
+    private func stackHeader(_ shown: [LiveState.Match], searching: Bool) -> some View {
         let open = shown.filter { $0.send_at == nil }
         let chosen = open.filter { picks.ids.contains($0.id) }
         let targets = chosen.isEmpty ? (searching ? open : nil) : chosen
@@ -1893,10 +1961,8 @@ struct JobList: View, Equatable {
                     .padding(.leading, -6)  // in line with the jobs' boxes
                     .help(chosen.isEmpty ? "Select all" : "Deselect all")
             }
-            Text("New jobs").scaledFont(12, weight: .semibold)
-            Text(!chosen.isEmpty ? "\(chosen.count) selected"
-                 : searching ? "\(shown.count.formatted()) of \(waiting.count.formatted())" : waiting.count.formatted())
-                .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+            count(!chosen.isEmpty ? "\(chosen.count.formatted()) selected"
+                  : searching ? "\(shown.count.formatted()) of \(Self.jobs(waiting.count))" : Self.jobs(waiting.count))
             Spacer()
             Group {
                 Button(chosen.isEmpty ? "Mark \(some) as Seen" : "Mark as Seen") {
@@ -1923,67 +1989,235 @@ struct JobList: View, Equatable {
         return items
     }
 
-    /// A row of the Sent alerts section: an alert, or one of an open alert's jobs.
+    // -- Seen: folded by when they were marked ---------------------------------------------
+
+    /// A row of the Seen tab: a group of jobs marked together, or one of an unfolded group's jobs.
+    private enum SeenRow: Identifiable {
+        case group(SeenGroup, found: Int, open: Bool)
+        case job(LiveState.Match)
+
+        var id: String {
+            switch self {
+            case .group(let group, _, _): return group.id
+            case .job(let match): return match.id
+            }
+        }
+    }
+
+    /// The Seen tab's rows, and the jobs on screen (in unfolded groups) and found (all, without a search).
+    /// A search shows only the groups with jobs it finds, unfolded, and only those jobs.
+    private func seenRows(_ search: JobSearch) -> (rows: [SeenRow], shown: [LiveState.Match], found: Int) {
+        var rows: [SeenRow] = []
+        var shown: [LiveState.Match] = []
+        var found = 0
+        for group in SeenGroup.of(skipped) {
+            let jobs = search.isEmpty ? group.jobs : group.jobs.filter(search.finds)
+            guard !jobs.isEmpty else { continue }
+            found += jobs.count
+            let open = search.isEmpty ? group.jobs.contains { seenOpen.contains($0.id) } : !seenShut.contains(group.id)
+            rows.append(.group(group, found: jobs.count, open: open))
+            if open {
+                rows += jobs.map(SeenRow.job)
+                shown += jobs
+            }
+        }
+        return (rows, shown, found)
+    }
+
+    private var seenJobs: some View {
+        let search = JobSearch(seenQuery)
+        let seen = seenRows(search)
+        return page(search: seenQuery) {
+            seenHeader(seen.shown, found: seen.found, searching: !search.isEmpty)
+        } rows: {
+            Section {
+                if skipped.isEmpty {
+                    Text("Jobs you mark as seen go here for a week, and are never sent. Mark one as new to "
+                         + "put it back.")
+                        .scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                } else if seen.rows.isEmpty {
+                    nothingFound("seen jobs", seenQuery)
+                }
+                // One flat run of rows, as in Sent alerts (see there).
+                ForEach(seen.rows) { row in
+                    switch row {
+                    case .group(let group, let found, let open):
+                        seenFold(group, found: found, open: open, searching: !search.isEmpty)
+                    case .job(let match):
+                        SeenJobRow(match: match, picks: seenPicks, busy: busy.contains(match.id),
+                                   markNew: { markNew([match]) })
+                            .equatable()
+                            .padding(.leading, 20)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Seen's bar: a box to select the jobs shown (in unfolded groups), and Mark as New for the selected ones.
+    private func seenHeader(_ shown: [LiveState.Match], found: Int, searching: Bool) -> some View {
+        let chosen = shown.filter { seenPicks.ids.contains($0.id) }
+        let all = Binding(get: { !shown.isEmpty && chosen.count == shown.count },
+                          set: { on in seenPicks.ids = on ? Set(shown.map(\.id)) : [] })
+        return HStack(spacing: 8) {
+            if !shown.isEmpty {
+                SelectBox(on: all, mixed: !chosen.isEmpty && chosen.count < shown.count)
+                    .padding(.leading, -6)  // in line with the jobs' boxes
+                    .help(chosen.isEmpty ? "Select all" : "Deselect all")
+            }
+            count(!chosen.isEmpty ? "\(chosen.count.formatted()) selected"
+                  : searching ? "\(found.formatted()) of \(Self.jobs(skipped.count))" : Self.jobs(skipped.count))
+            Spacer()
+            Button("Mark as New") {
+                seenPicks.ids = []
+                markNew(chosen)
+            }
+            .controlSize(.small)
+            .disabled(chosen.isEmpty || busy.contains("new"))
+            .help("Put them back in New jobs")
+        }
+    }
+
+    private func markNew(_ jobs: [LiveState.Match]) {
+        seenOpen.subtract(jobs.map(\.id))  // marked as seen again later, they start folded
+        if jobs.count == 1, let job = jobs.first {
+            Task { await model.skip(job, false) }
+        } else {
+            Task { await model.markNew(jobs) }
+        }
+    }
+
+    private func seenFold(_ group: SeenGroup, found: Int, open: Bool, searching: Bool) -> some View {
+        fold(open: open, help: "these jobs") {
+            let ids = Set(group.jobs.map(\.id))
+            if open { seenPicks.ids.subtract(ids) }  // a folded job is never acted on
+            if searching {
+                if open { seenShut.insert(group.id) } else { seenShut.remove(group.id) }
+            } else if open {
+                seenOpen.subtract(ids)
+            } else {
+                seenOpen.formUnion(ids)
+            }
+        } label: {
+            let jobs = searching ? "\(found.formatted()) of \(Self.jobs(group.jobs.count))" : Self.jobs(group.jobs.count)
+            foldLabel("eye.fill", group.at, [jobs, "marked as seen"])
+        }
+    }
+
+    // -- Sent alerts --------------------------------------------------------------------
+
+    /// A row of the Sent alerts tab: an alert, or one of an open alert's jobs.
     private enum SentRow: Identifiable {
-        case alert(LiveState.Alert)
+        case alert(LiveState.Alert, found: Int, open: Bool)
         case job(alert: String, index: Int, LiveState.Alert.Job)
 
         var id: String {
             switch self {
-            case .alert(let alert): return alert.id
+            case .alert(let alert, _, _): return alert.id
             case .job(let alert, let index, _): return "\(alert)#\(index)"
             }
         }
     }
 
-    private var sentRows: [SentRow] {
-        sent.flatMap { alert -> [SentRow] in
-            guard opened.contains(alert.id) else { return [.alert(alert)] }
-            return [.alert(alert)] + alert.jobs.enumerated().map { .job(alert: alert.id, index: $0.offset, $0.element) }
+    /// The Sent alerts tab's rows, and the jobs found. A search shows only the alerts with jobs it finds,
+    /// unfolded, and only those jobs.
+    private func sentRows(_ search: JobSearch) -> (rows: [SentRow], found: Int) {
+        var rows: [SentRow] = []
+        var found = 0
+        for alert in sent {
+            let jobs = alert.jobs.enumerated().filter { search.finds($0.element.title, $0.element.company, $0.element.location) }
+            guard !jobs.isEmpty || search.isEmpty else { continue }
+            found += jobs.count
+            let open = search.isEmpty ? opened.contains(alert.id) : !sentShut.contains(alert.id)
+            rows.append(.alert(alert, found: jobs.count, open: open))
+            if open { rows += jobs.map { SentRow.job(alert: alert.id, index: $0.offset, $0.element) } }
+        }
+        return (rows, found)
+    }
+
+    private var sentAlerts: some View {
+        let search = JobSearch(sentQuery)
+        let sentJobs = sent.reduce(0) { $0 + $1.jobs.count }
+        let shown = sentRows(search)
+        return page(search: sentQuery) {
+            count(search.isEmpty ? "\(sent.count.formatted()) alert\(sent.count == 1 ? "" : "s") · \(Self.jobs(sentJobs))"
+                  : "\(shown.found.formatted()) of \(Self.jobs(sentJobs))")
+            Spacer()
+        } rows: {
+            Section {
+                if sent.isEmpty {
+                    Text("No alerts sent lately.").scaledFont(12).foregroundStyle(.secondary).padding(.vertical, 4)
+                } else if shown.rows.isEmpty {
+                    nothingFound("sent jobs", sentQuery)
+                }
+                // One flat run of rows, each with an id of its own: an alert, then its jobs while it's open.
+                // The list (an outline view underneath) took only the first unfolding or two when the jobs
+                // sat inside the alert's row, or in a ForEach nested in it; the rest showed only once that
+                // row was drawn again, when its "min. ago" next changed, up to a minute after the click.
+                ForEach(shown.rows) { row in
+                    switch row {
+                    case .alert(let alert, let found, let open):
+                        alertFold(alert, found: found, open: open, searching: !search.isEmpty)
+                    case .job(_, _, let job):
+                        sentJob(job)
+                    }
+                }
+            }
         }
     }
 
-    /// An alert's row: click it to show its jobs below it, or hide them.
-    private func alertHeader(_ alert: LiveState.Alert) -> some View {
-        let open = opened.contains(alert.id)
-        return Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                if open { opened.remove(alert.id) } else { opened.insert(alert.id) }
+    private func sentJob(_ job: LiveState.Alert.Job) -> some View {
+        MatchRow(title: job.title ?? "", company: job.company, location: job.location, url: job.url,
+                 when: "", since: job.first_seen.map { (label: "Found", at: $0) })
+            .padding(.leading, 20)
+    }
+
+    private func alertFold(_ alert: LiveState.Alert, found: Int, open: Bool, searching: Bool) -> some View {
+        fold(open: open, help: "this alert's jobs") {
+            if searching {
+                if open { sentShut.insert(alert.id) } else { sentShut.remove(alert.id) }
+            } else if open {
+                opened.remove(alert.id)
+            } else {
+                opened.insert(alert.id)
             }
+        } label: {
+            let jobs = searching ? "\(found.formatted()) of \(Self.jobs(alert.jobs.count))" : Self.jobs(alert.jobs.count)
+            let by = alert.by == "lambda" ? "Lambda" : (alert.by == nil ? nil : "the Mac")
+            foldLabel("paperplane.fill", When.date(alert.sent_at), [jobs, by.map { "sent by \($0)" }], or: alert.sent_at)
+        }
+    }
+
+    // -- folded groups ----------------------------------------------------------------------
+
+    /// A group's row: click it to show its jobs below it, or hide them.
+    private func fold<Label: View>(open: Bool, help: String, toggle: @escaping () -> Void,
+                                   @ViewBuilder label: () -> Label) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) { toggle() }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.right").scaledFont(10, weight: .semibold).foregroundStyle(.secondary)
                     .rotationEffect(.degrees(open ? 90 : 0))
-                alertLabel(alert)
+                label()
             }
             .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(open ? "Hide this alert's jobs" : "Show this alert's jobs")
+        .help(open ? "Hide \(help)" : "Show \(help)")
     }
 
-    private func alertLabel(_ alert: LiveState.Alert) -> some View {
-        let sent = When.date(alert.sent_at)
-        let jobs = "\(alert.jobs.count) job\(alert.jobs.count == 1 ? "" : "s")"
-        let by = alert.by == "lambda" ? "Lambda" : (alert.by == nil ? nil : "the Mac")
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "paperplane.fill").scaledFont(11).foregroundStyle(.secondary)
-            Text(sent.map(When.full) ?? alert.sent_at).scaledFont(13, weight: .semibold).monospacedDigit()
+    /// "Oct 1 at 7:10 PM  12 jobs · sent by the Mac · 6 days ago"
+    private func foldLabel(_ icon: String, _ at: Date?, _ details: [String?], or undated: String = "Earlier") -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: icon).scaledFont(11).foregroundStyle(.secondary)
+            Text(at.map(When.full) ?? undated).scaledFont(13, weight: .semibold).monospacedDigit()
             TimelineView(.everyMinute) { _ in
-                Text([jobs, by.map { "sent by \($0)" }, sent.map { When.ago($0) }].compactMap { $0 }.joined(separator: " · "))
+                Text((details + [at.map { When.ago($0) }]).compactMap { $0 }.joined(separator: " · "))
                     .scaledFont(11).foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 3)
-    }
-
-    private func header<Trailing: View>(_ title: String, _ count: Int, @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack {
-            Text(title).scaledFont(12, weight: .semibold)
-            Text(count.formatted()).scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
-            Spacer()
-            trailing()
-        }
     }
 }
 
