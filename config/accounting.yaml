@@ -10735,6 +10735,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, AU, IN]
 
+  - name: Infor
+    url: https://careers.infor.com/
+    ats: pinpoint
+    countries: [US, AU, IN]
+
   - name: Information Technology
     url: https://careers-slco.icims.com/jobs/search
     ats: icims
@@ -14497,6 +14502,11 @@ companies:
     url: https://fa-ewfb-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/GEMSNursing/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Nutanix
+    url: https://jobs.jobvite.com/nutanix
+    ats: jobvite
+    countries: [US, CA, IN]
 
   - name: Nuvem
     url: https://job-boards.greenhouse.io/nuvem

@@ -652,3 +652,48 @@ def test_comeet_reads_the_hosted_page_positions():
     assert golang.location == "Hyderabad, IN"
     assert descriptions == ["<p>Build</p>\n<p>3+ years</p>", "<p>8+ years</p>"]
     assert scraper_class_for("https://www.comeet.com/jobs/cyera/17.008").name == "comeet"
+
+
+def test_pinpoint():
+    data = {"data": [{"id": "509803", "title": "Software Engineer", "url": "https://careers.infor.com/en/postings/64c9", "employment_type_text": "Full Time",
+                      "location": {"city": "Bengaluru", "province": "Karnataka"}, "description": "<p>3+ years</p>",
+                      "job": {"department": {"name": "Development"}, "structure_custom_group_one": {"name": "India", "title": "Country"}}}]}
+    (eng,) = scrape("pinpoint", "https://careers.infor.com/", {"/postings.json": data}).jobs
+    assert (eng.job_id, eng.title, eng.url, eng.location) == ("509803", "Software Engineer", "https://careers.infor.com/en/postings/64c9", "Bengaluru, Karnataka, India")
+    assert (eng.department, eng.employment_type, eng.extra["description"]) == ("Development", "Full Time", "<p>3+ years</p>")
+
+
+def test_teamtailor():
+    feed = """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:tt="https://teamtailor.com/locations"><channel>
+      <item><title>Backend Engineer</title><description>&lt;p&gt;3+ years&lt;/p&gt;</description>
+        <pubDate>Wed, 23 Sep 2026 15:47:44 +0200</pubDate><link>https://careers.gitguardian.com/jobs/8442375-backend-engineer</link>
+        <remoteStatus>fully</remoteStatus><tt:locations><tt:location><tt:name>NYC office</tt:name><tt:city>New York</tt:city>
+        <tt:country>United States</tt:country></tt:location><tt:location><tt:city>Paris</tt:city><tt:country>France</tt:country></tt:location></tt:locations>
+        <tt:department>Engineering</tt:department></item></channel></rss>"""
+    (eng,) = scrape("teamtailor", "https://careers.gitguardian.com/", {"/jobs.rss": feed}).jobs
+    assert (eng.job_id, eng.url) == ("8442375", "https://careers.gitguardian.com/jobs/8442375-backend-engineer")
+    assert (eng.location, eng.department, eng.date_posted) == ("New York, United States; Paris, France (Remote)", "Engineering", date(2026, 9, 23))
+    assert eng.extra["description"] == "<p>3+ years</p>"
+
+
+def test_jobvite():
+    page = """<table class="jv-job-list"><tr><th>Job</th></tr>
+      <tr><td class="jv-job-list-name"> <a href="/nutanix/job/oUQKAfwO">Software Engineer</a> </td>
+          <td class="jv-job-list-location"> San Jose,
+          California </td></tr></table>"""
+    detail = '<div class="jv-job-detail-description"><p>3+ years</p><div>more</div></div><div class="jv-job-detail-bottom-actions">Apply</div>'
+    routes = {"/nutanix/jobs": page, "/nutanix/job/oUQKAfwO": detail}
+
+    def handler(request):
+        body = routes.get(request.url.path)
+        return httpx.Response(200, text=body) if body else httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            scraper = SCRAPERS["jobvite"](company("Nutanix", url="https://jobs.jobvite.com/nutanix"), http)
+            (eng,) = (await scraper.fetch_jobs()).jobs
+            return eng, await scraper.fetch_description(eng)
+
+    eng, description = asyncio.run(go())
+    assert (eng.job_id, eng.title, eng.location, eng.url) == ("oUQKAfwO", "Software Engineer", "San Jose, California", "https://jobs.jobvite.com/nutanix/job/oUQKAfwO")
+    assert description.startswith("<p>3+ years</p>")

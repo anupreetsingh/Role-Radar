@@ -23,16 +23,19 @@ from role_radar.scrapers.google import GoogleScraper
 from role_radar.scrapers.greenhouse import GreenhouseScraper
 from role_radar.scrapers.hrmdirect import HRMDirectScraper
 from role_radar.scrapers.icims import ICIMSScraper
+from role_radar.scrapers.jobvite import JobviteScraper
 from role_radar.scrapers.jibe import JibeScraper
 from role_radar.scrapers.lever import LeverScraper
 from role_radar.scrapers.mathworks import MathWorksScraper
 from role_radar.scrapers.meta import MetaScraper
 from role_radar.scrapers.oracle_hcm import OracleHcmScraper
 from role_radar.scrapers.phenom import PhenomScraper
+from role_radar.scrapers.pinpoint import PinpointScraper
 from role_radar.scrapers.recruiterbox import RecruiterboxScraper
 from role_radar.scrapers.rippling import RipplingScraper
 from role_radar.scrapers.smartrecruiters import SmartRecruitersScraper
 from role_radar.scrapers.successfactors import SuccessFactorsScraper
+from role_radar.scrapers.teamtailor import TeamtailorScraper
 from role_radar.scrapers.tiktok import TikTokScraper
 from role_radar.scrapers.workable import WorkableScraper
 from role_radar.scrapers.workday import WorkdayScraper
@@ -45,6 +48,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         ComsolScraper, RecruiterboxScraper, AmazonScraper, AppleScraper, GoogleScraper, EightfoldScraper,
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
         SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
+        PinpointScraper, TeamtailorScraper, JobviteScraper,
         GenericScraper,
     )
 }

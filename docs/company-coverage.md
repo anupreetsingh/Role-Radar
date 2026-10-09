@@ -606,11 +606,7 @@ Eightfold API answers 403.
 
 | Job site | Employers |
 |---|---|
-| Teamtailor | Lindy, GitGuardian, Starship Technologies |
-| Pinpoint | Infor, Wolverine Trading |
-| UKG | Presidio, eClinicalWorks |
 | Taleo | UnitedHealth Group and Optum |
-| Jobvite | Nutanix |
 | Radancy or BrassRing fronts | Intuit, Walgreens, Publix, ADM, Chipotle |
 
 **Phenom reader** (added the same day): a Phenom career site's search page fills itself from
@@ -668,6 +664,14 @@ code and usually its description, in one request. Cyera (224 jobs, 6 matching) a
 Security joined Tech; eToro, whose jobs in the four countries aren't tech roles, joined
 Accounting & Finance. CyberArk's careers site now redirects to Palo Alto Networks, which
 bought it and is already listed.
+
+**Pinpoint, Teamtailor and Jobvite readers** (the same day), each one request a check:
+Pinpoint's `postings.json` (Infor, 45 matching; Wolverine Trading, 9), Teamtailor's
+`jobs.rss`, which gives each job's city and country (Lindy, 5), and Jobvite's job table
+(`jobs.jobvite.com/nutanix/jobs`; Nutanix, 17). All four joined Tech, Infor and Nutanix also
+Accounting & Finance. GitGuardian's jobs in the four countries weren't tech roles and
+Starship Technologies had none there, so they stayed off. UKG's recruiting site
+(Presidio, eClinicalWorks) disallows everything in robots.txt.
 
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
