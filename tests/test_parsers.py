@@ -580,3 +580,21 @@ def test_parse_date_formats():
     assert parse_date("Posted 3 Days Ago", today) == date(2026, 9, 22)
     assert parse_date("Posted 30+ Days Ago", today) == date(2026, 8, 26)
     assert parse_date("sometime") is None
+
+
+def test_gem():
+    posts = [
+        {"id": "4003629005", "title": "Software Engineer", "absolute_url": "https://jobs.gem.com/retool/4003629005",
+         "location": {"name": "San Francisco, United States"}, "offices": [{"location": {"name": "San Francisco, United States"}}],
+         "departments": [{"name": "Engineering"}], "employment_type": "full_time", "first_published_at": "2026-09-25T18:46:39.000Z",
+         "content": "<p>3+ years experience</p>"},
+        {"id": "2", "title": "Account Executive", "absolute_url": "https://jobs.gem.com/retool/2", "location": {"name": "New York"},
+         "offices": [{"location": {"name": "New York, United States"}}, {"location": {"name": "London, United Kingdom"}}]},
+    ]
+    result = scrape("gem", "https://jobs.gem.com/retool", {"/job_board/v0/retool/job_posts": posts})
+    eng, ae = result.jobs
+    assert (eng.job_id, eng.title, eng.url) == ("4003629005", "Software Engineer", "https://jobs.gem.com/retool/4003629005")
+    assert (eng.location, eng.department, eng.employment_type, eng.date_posted) == ("San Francisco, United States", "Engineering", "full-time", date(2026, 9, 25))
+    assert eng.extra["description"] == "<p>3+ years experience</p>"
+    assert ae.location == "New York, United States; London, United Kingdom"
+    assert scraper_class_for("https://jobs.gem.com/retool").name == "gem"

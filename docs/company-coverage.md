@@ -606,7 +606,6 @@ Eightfold API answers 403.
 
 | Job site | Employers |
 |---|---|
-| Gem | Retool, Groq, Fireflies.ai, Bilt, Function Health |
 | Comeet | Aqua Security, Cyera, eToro |
 | Teamtailor | Lindy, GitGuardian, Starship Technologies |
 | Pinpoint | Infor, Wolverine Trading |
@@ -648,6 +647,12 @@ places one paragraph each, with the description in its content blocks; the reade
 Like Siemens, the first check reads the newest 250 jobs (25 pages) and later checks stop at a
 page with nothing new. 26 of the newest 250 matched; Deloitte joined Tech and, for its audit and
 tax work, Accounting & Finance.
+
+**Gem reader** (the same day): a Gem job board (jobs.gem.com/{board}) is served by Gem's public
+job board API, `api.gem.com/job_board/v0/{board}/job_posts`, every job with its place and
+description in one request. Retool (15 matching), Function Health (8), Groq (6), Bilt (6) and
+Fireflies.ai (none that day) joined Tech; Groq and Function Health also Accounting & Finance,
+and Function Health Healthcare.
 
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,

@@ -8663,6 +8663,11 @@ companies:
     ats: lever
     countries: [US, CA]
 
+  - name: Function Health
+    url: https://jobs.gem.com/function-health
+    ats: gem
+    countries: [US]
+
   - name: Fuse
     url: https://jobs.ashbyhq.com/Fuse
     ats: ashby
@@ -9382,6 +9387,11 @@ companies:
     url: https://apply.workable.com/gritter-francona/
     ats: workable
     countries: [US]
+
+  - name: Groq
+    url: https://jobs.gem.com/groq
+    ats: gem
+    countries: [US, CA, AU]
 
   - name: GroundTruth
     url: https://apply.workable.com/groundtruth/
