@@ -583,3 +583,27 @@ def test_radancy_lists_jobs_from_the_sitemap_and_reads_new_ones_page():
     assert new.title == "Staff Software Engineer, AI" and new.date_posted.isoformat() == "2026-10-08"
     assert new.location == "Mountain View, California, United States; San Diego, California, United States"
     assert new.extra["description"] == "<p>3+ years</p>" and not scraper.missing_fields(new)
+
+
+def test_jobposting_sitemap_links_and_job_page():
+    from role_radar.scrapers.jobposting import link_job
+    assert link_job("/careers/jobs/spatial-services-software-architect-550471") == ("550471", "spatial services software architect")
+    assert link_job("/retail-customer-service-associate/job/P25-354770-1") == ("P25-354770-1", "retail customer service associate")
+    index = '<sitemapindex><sitemap><loc>https://www.3ds.com/sitemap/sitemap-careers.xml</loc></sitemap><sitemap><loc>https://www.3ds.com/sitemap/sitemap-partner.xml</loc></sitemap></sitemapindex>'
+    careers = ('<urlset><url><loc>https://www.3ds.com/careers/our-teams</loc></url>'
+               '<url><loc>https://www.3ds.com/careers/jobs/cloud-platform-engineer-550471</loc></url></urlset>')
+    page = ('<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"JobPosting","title":"Cloud Platform Engineer",'
+            '"datePosted":"2026-10-01","jobLocation":{"@type":"Place","address":{"addressLocality":"Iselin","addressRegion":"NJ","addressCountry":"United States"}}}]}</script>')
+    routes = {"/sitemap.xml": index, "/sitemap/sitemap-careers.xml": careers, "/careers/jobs/cloud-platform-engineer-550471": page}
+    def handler(request):
+        body = routes.get(request.url.path)
+        return httpx.Response(200, text=body) if body else httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            scraper = SCRAPERS["jobposting"](company("Dassault", url="https://www.3ds.com/careers"), http)
+            (job,) = (await scraper.fetch_jobs()).jobs  # only the job page; the partner sitemap isn't read
+            assert (job.job_id, job.title, scraper.missing_fields(job)) == ("550471", "cloud platform engineer", {"location"})
+            return await scraper.fetch_details(job)
+    job = asyncio.run(go())
+    assert (job.title, job.location, job.date_posted.isoformat()) == ("Cloud Platform Engineer", "Iselin, NJ, United States", "2026-10-01")

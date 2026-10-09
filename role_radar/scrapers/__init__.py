@@ -25,6 +25,7 @@ from role_radar.scrapers.hrmdirect import HRMDirectScraper
 from role_radar.scrapers.icims import ICIMSScraper
 from role_radar.scrapers.jobvite import JobviteScraper
 from role_radar.scrapers.jibe import JibeScraper
+from role_radar.scrapers.jobposting import JobPostingScraper
 from role_radar.scrapers.lever import LeverScraper
 from role_radar.scrapers.mathworks import MathWorksScraper
 from role_radar.scrapers.meta import MetaScraper
@@ -49,7 +50,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         ComsolScraper, RecruiterboxScraper, AmazonScraper, AppleScraper, GoogleScraper, EightfoldScraper,
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
         SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
-        PinpointScraper, TeamtailorScraper, JobviteScraper, RadancyScraper,
+        PinpointScraper, TeamtailorScraper, JobviteScraper, RadancyScraper, JobPostingScraper,
         GenericScraper,
     )
 }

@@ -42,7 +42,8 @@ def _posting(page: str) -> dict[str, Any] | None:
             data = json.loads(block)
         except ValueError:
             continue
-        for item in data if isinstance(data, list) else [data]:
+        items = data if isinstance(data, list) else (data.get("@graph") or [data]) if isinstance(data, dict) else []
+        for item in items:
             if isinstance(item, dict) and item.get("@type") == "JobPosting":
                 return item
     return None

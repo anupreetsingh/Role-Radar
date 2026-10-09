@@ -6114,6 +6114,13 @@ companies:
     ats: oracle_hcm
     countries: [US, CA]
 
+  - name: Dassault Systèmes
+    url: https://www.3ds.com/careers
+    ats: jobposting
+    countries: [US, IN]
+    options:
+      sitemap: https://www.3ds.com/sitemap/sitemap-careers.xml
+
   - name: Databricks
     url: https://job-boards.greenhouse.io/databricks
     ats: greenhouse
@@ -8010,6 +8017,13 @@ companies:
     url: https://careers-federatedinsurance.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: FedEx
+    url: https://careers.fedex.com/
+    ats: jobposting
+    countries: [US, IN]
+    options:
+      sitemap: https://careers.fedex.com/sitemap-a0a4453b-en.xml
 
   - name: Fender
     url: https://job-boards.greenhouse.io/fender

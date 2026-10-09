@@ -690,23 +690,32 @@ Tech and Accounting & Finance, and Kaiser Permanente and Cargill Healthcare.
 operations roles, so its entry is narrowed to the Information Technology and Finance
 categories (`selected_fields`, 20 jobs, one request). It joined Tech and Accounting & Finance.
 
+**Sitemap + JobPosting reader** (the same day): some custom career sites list every job page in
+a sitemap and mark each page up with a schema.org JobPosting (the data Google's job search
+reads). `ats: jobposting` reads such a sitemap like the Radancy reader, taking a new job's
+title from its link's words and its page's JobPosting when it could match. A sweep of the
+remaining companies' sitemaps found Dassault Systèmes (684 jobs, about 100 tech titles, its
+careers sitemap) and FedEx (3,352 jobs in its English sitemap, 45 tech titles, mostly in
+Plano, Memphis and Hyderabad); both joined Tech and Accounting & Finance. Rapid7's site has the
+same shape, but its firewall answered with empty pages after a few requests. Wix was already
+listed, as Wix2 (its SmartRecruiters name), and Intuitive Surgical as Intuitive.
+
 **Still not covered**, after looking at each big name's careers page:
 
 - Bot protection answers scripts with a challenge or an empty page, and Role Radar doesn't pose
   as a browser: Citadel, Citadel Securities and Revolut (Cloudflare), IBM, Delta (its Avature
-  site) and McKinsey (its requests stall).
+  site), McKinsey (its requests stall), Arista Networks and Rapid7.
 - robots.txt closes the jobs: Verizon (`/en/jobs/`), UKG sites (Presidio, eClinicalWorks).
 - Jobs reachable only through the company's own page data, which would each need a reader of
   their own: Shopify (Ashby, but its board isn't public; its careers sitemap lists 117 job
-  pages), Wayfair (Paradox's chat-based hiring), Deel (deel.com/careers), Intuit's and
-  McKinsey's Avature sites (no public search), ByteDance (joinbytedance.com), Walgreens
-  (BrassRing) and FedEx.
+  pages), Wayfair (Paradox's chat-based hiring), Deel (deel.com/careers), McKinsey's
+  Avature site (no public search), ByteDance (joinbytedance.com), Walgreens
+  (BrassRing).
 - Google DeepMind's old Greenhouse board is gone; its roles appear on Google's own site,
   which is already read. CyberArk now belongs to Palo Alto Networks, already listed.
 - Not looked at closely yet: about 100 smaller or less tech-heavy names whose careers pages
-  named no job software (among them Tesla, Arista Networks, Rapid7, Check Point, Varonis,
-  Best Buy, Progressive, UBS and several game studios). The generic reader found only
-  navigation links on them.
+  named no job software (among them Tesla, Check Point, Varonis, Best Buy, Progressive,
+  UBS and several game studios). The generic reader found only navigation links on them.
 
 ## How the less conventional sources are covered
 
