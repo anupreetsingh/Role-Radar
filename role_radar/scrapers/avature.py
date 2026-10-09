@@ -1,4 +1,4 @@
-"""Avature's public SearchJobs result cards (e.g. Bloomberg, Siemens).
+"""Avature's public SearchJobs result cards (e.g. Bloomberg, Siemens, Two Sigma).
 
 Career sites use different schemas; this adapter validates the supported
 article--result layout and follows the site's actual Next links.
@@ -51,8 +51,9 @@ class AvatureScraper(BaseScraper):
                     raise ScraperError("Avature card missing job link")
                 link_url, title = link
                 job_id = link_url.rstrip("/").rsplit("/", 1)[-1]
-                # Siemens nests the city, state and country in spans of their own.
-                location = _inner_html(row, "span", "list-item-location")
+                # Siemens nests the city, state and country in spans of their own;
+                # Two Sigma's card gives the place first, then the team and level.
+                location = _inner_html(row, "span", "list-item-location") or _inner_html(row, "span", "paragraph_inner-span")[:1]
                 jobs[job_id] = self.make_job(job_id=job_id, title=title, url=link_url, location=html_to_text(location[0]) if location else None)
                 listed.append(jobs[job_id])
             following = next_link(page, url)

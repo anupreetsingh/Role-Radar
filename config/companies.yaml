@@ -1768,6 +1768,11 @@ companies:
     ats: greenhouse
     countries: [US, CA, IN]
 
+  - name: Two Sigma
+    url: https://careers.twosigma.com/careers/OpenRoles/
+    ats: avature
+    countries: [US]
+
   - name: Vanguard
     url: https://vanguard.wd5.myworkdayjobs.com/vanguard_external
     ats: workday

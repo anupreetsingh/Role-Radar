@@ -135,6 +135,18 @@ def test_avature_follows_next_link_and_ignores_duplicate_apply_links():
     assert result.jobs[0].title == "Compiler Engineer"
 
 
+def test_avature_card_without_location_span_takes_its_first_plain_span():
+    # Two Sigma: the place, then the team and the level, each in a plain span.
+    body = '''<article class="article article--result" id="article--1"><h3><a class="link"
+      href="https://careers.twosigma.com/careers/JobDetail/New-York-New-York-United-States-AI-Solutions-Developer/14102"> AI Solutions Developer </a></h3>
+      <div class="article__header__content__text"><span class="paragraph_inner-span">United States - NY New York</span>
+      <div class="article__header__content__sub-text"><span class="paragraph_inner-span">Engineering</span>
+      <span class="paragraph_inner-span">Experienced</span></div></div></article>'''
+    result = run_scraper("avature", "https://careers.twosigma.com/careers/OpenRoles/", lambda r: httpx.Response(200, text=body))
+    assert result.complete and result.jobs[0].job_id == "14102"
+    assert result.jobs[0].location == "United States - NY New York"
+
+
 def test_avature_newest_first_stops_at_a_page_with_nothing_new():
     from role_radar.storage import SeenJob
     # Siemens: 6 jobs a page, newest first, the city/state/country each in a span of their own.

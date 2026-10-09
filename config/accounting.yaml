@@ -20387,6 +20387,11 @@ companies:
     ats: greenhouse
     countries: [US, IN]
 
+  - name: Two Sigma
+    url: https://careers.twosigma.com/careers/OpenRoles/
+    ats: avature
+    countries: [US]
+
   - name: TydeCo
     url: https://apply.workable.com/tydeco/
     ats: workable
