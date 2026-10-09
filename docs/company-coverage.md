@@ -634,8 +634,15 @@ Two more were found while looking at the unidentified pages: Mobileye posts on L
 (`Etsy_Careers`) was missed because the sweep had already listed another site of the same
 Workday account (Depop's).
 
+**D. E. Shaw reader** (the same day): deshaw.com/careers/choose-your-path and
+deshawindia.com/careers are Next.js pages whose data holds every open job (regular jobs and
+internships; the internal jobs are skipped) with its offices and description, so one request
+reads a site. `ats: deshaw` gives the offices their state and country ("Denver" becomes
+"Denver, CO, United States"). D. E. Shaw (101 jobs, 22 matching) and D. E. Shaw India (76
+jobs, 7 matching) joined Tech, and D. E. Shaw Accounting & Finance.
+
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
-didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, D. E. Shaw, Shopify,
+didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
 Wayfair, Etsy, Google DeepMind, Valve, Mobileye, ByteDance, Revolut, Klarna, Deel, Rapid7,
 CyberArk, Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive,
 UBS and Eli Lilly. Each needs a look at what its page loads its jobs from.

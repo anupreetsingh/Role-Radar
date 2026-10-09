@@ -410,6 +410,7 @@ alert again. The previous version behaved the same way.
 | Avature | Public `SearchJobs` result cards, paginated (e.g. Bloomberg) | no |
 | Phenom | The career site's `POST {origin}/widgets` job feed, 100 jobs a request (e.g. Chewy, OpenText, United Airlines); set `ats: phenom`, since these sites use the company's own domain | no |
 | COMSOL | Job links grouped under location headings | no |
+| D. E. Shaw | The careers page's Next.js data (`__NEXT_DATA__`): every open job, its offices and description, in one request (deshaw.com and deshawindia.com) | no |
 | Recruiterbox / Trakstar | Public widget API (e.g. Wolfram) | no |
 | Eightfold | The site's `/api/pcsx/search` (Microsoft, Qualcomm, PayPal...) or `/api/apply/v2/jobs` (Netflix), newest first | no |
 | Oracle Cloud HCM | `{host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions`, newest first (JPMorgan Chase, Oracle, TI...) | no |

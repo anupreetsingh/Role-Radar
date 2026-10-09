@@ -6019,6 +6019,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, IN]
 
+  - name: D. E. Shaw
+    url: https://www.deshaw.com/careers/choose-your-path
+    ats: deshaw
+    countries: [US]
+
   - name: Dabella
     url: https://dabella.wd108.myworkdayjobs.com/DaBella_Exteriors_Careers
     ats: workday

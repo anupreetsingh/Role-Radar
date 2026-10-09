@@ -476,3 +476,32 @@ def test_tiktok_reads_every_page_and_keeps_us_jobs():
     job = result.jobs[0]
     assert job.url == "https://lifeattiktok.com/search/0" and job.location == "San Jose, California, United States of America"
     assert job.employment_type == "Regular" and job.department == "R&D"
+
+
+def test_deshaw_reads_the_careers_page_data():
+    data = {"props": {"pageProps": {
+        "regularJobs": [
+            {"id": 6113, "displayName": "Software Developer (Denver)", "office": [{"name": "Denver"}], "category": ["Technology"],
+             "data": {"jobUrl": "Software-Developer-Denver-6113", "jobMetadata": {"workStatus": "Regular Full-Time"},
+                      "jobDescription": {"websiteDescription": "Build systems.", "peopleWeAreLookingForStr": "Two years of experience."}}},
+            {"id": 6012, "displayName": "Receptionist", "office": [{"name": "Singapore"}, {"name": "New York"}],
+             "data": {"jobUrl": "Receptionist-6012"}},
+        ],
+        "internships": [{"id": 7001, "displayName": "Software Developer Intern", "office": [{"name": "Gurugram"}],
+                         "data": {"jobUrl": "Software-Developer-Intern-7001"}}],
+        "internalJobs": [{"id": 9, "displayName": "Internal move", "data": {"jobUrl": "Internal-9"}}],
+    }}}
+    page = f'<html><script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script></html>'
+    result = run_scraper("deshaw", "https://www.deshaw.com/careers/choose-your-path", lambda r: httpx.Response(200, text=page))
+    assert result.complete and [j.job_id for j in result.jobs] == ["6113", "6012", "7001"]  # internal jobs skipped
+    dev, reception, intern = result.jobs
+    assert dev.url == "https://www.deshaw.com/careers/Software-Developer-Denver-6113"
+    assert (dev.location, dev.department, dev.employment_type) == ("Denver, CO, United States", "Technology", "Regular Full-Time")
+    assert dev.extra["description"] == "Build systems. Two years of experience."
+    assert reception.location == "Singapore; New York, NY, United States"
+    assert intern.location == "Gurugram, India"
+
+
+def test_deshaw_page_without_jobs_is_error():
+    with pytest.raises(ScraperError):
+        run_scraper("deshaw", "https://www.deshaw.com/careers/choose-your-path", lambda r: httpx.Response(200, text="<html></html>"))
