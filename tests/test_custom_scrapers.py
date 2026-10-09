@@ -541,3 +541,45 @@ def test_avature_deloitte_cards_and_job_page():
     consultant = asyncio.run(go())
     assert consultant.location == "Atlanta, Georgia, United States; Chicago, Illinois, United States"
     assert "2+ years of consulting experience" in consultant.extra["description"]
+
+
+def test_radancy_lists_jobs_from_the_sitemap_and_reads_new_ones_page():
+    from role_radar.storage import SeenJob
+    sitemap = """<?xml version="1.0"?><urlset>
+      <url><loc>https://jobs.intuit.com/search-jobs</loc></url>
+      <url><loc>https://jobs.intuit.com/job/mountain-view/staff-software-engineer-ai/27595/101</loc></url>
+      <url><loc>https://jobs.intuit.com/en/job/bengaluru/data-engineer-2/27595/102</loc></url></urlset>"""
+    posting = {"@context": "https://schema.org", "@type": "JobPosting", "title": "Staff Software Engineer, AI", "datePosted": "2026-10-08",
+               "description": "<p>3+ years</p>", "jobLocation": [
+                   {"@type": "Place", "address": {"addressLocality": "Mountain View", "addressRegion": "California", "addressCountry": "United States"}},
+                   {"@type": "Place", "address": {"addressLocality": "San Diego", "addressRegion": "California", "addressCountry": "United States"}}]}
+    page = f'<script type="application/ld+json">{json.dumps(posting)}</script>'
+    def handler(request):
+        return httpx.Response(200, text=sitemap if request.url.path == "/sitemap.xml" else page)
+
+    async def go(known):
+        async with make_client(handler) as http:
+            scraper = SCRAPERS["radancy"](company("Intuit", url="https://jobs.intuit.com/"), http)
+            scraper.known = known
+            result = await scraper.fetch_jobs()
+            return scraper, result
+
+    scraper, first = asyncio.run(go({}))
+    assert first.complete and [(j.job_id, j.title, j.location) for j in first.jobs] == [
+        ("101", "staff software engineer ai", "mountain view"), ("102", "data engineer 2", "bengaluru")]
+    assert scraper.missing_fields(first.jobs[0]) == {"location"} and not scraper.wants_details(first.jobs[0])  # first check: a baseline
+
+    known = {first.jobs[1].uid: SeenJob(title="Data Engineer II", url="u", fingerprint="f", first_seen="x", location="Bengaluru, Karnataka, India")}
+    scraper, later = asyncio.run(go(known))
+    new, old = later.jobs
+    assert (old.title, old.location, scraper.wants_details(old)) == ("Data Engineer II", "Bengaluru, Karnataka, India", False)
+    assert scraper.wants_details(new)
+
+    async def details():
+        async with make_client(handler) as http:
+            s = SCRAPERS["radancy"](company("Intuit", url="https://jobs.intuit.com/"), http)
+            return await s.fetch_details(new)
+    asyncio.run(details())
+    assert new.title == "Staff Software Engineer, AI" and new.date_posted.isoformat() == "2026-10-08"
+    assert new.location == "Mountain View, California, United States; San Diego, California, United States"
+    assert new.extra["description"] == "<p>3+ years</p>" and not scraper.missing_fields(new)

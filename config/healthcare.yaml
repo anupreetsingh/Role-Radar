@@ -9553,6 +9553,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: UnitedHealth Group (Optum)
+    url: https://careers.unitedhealthgroup.com/
+    ats: radancy
+    countries: [US, CA, AU, IN]
+
   - name: Unitek Learning
     url: https://careers.smartrecruiters.com/uniteklearning
     ats: smartrecruiters

@@ -32,8 +32,8 @@ RESERVED_PREFIX = "#"
 PROFESSIONS = ("tech", "accounting", "healthcare")
 # Check intervals for job sites whose every check is a big download, in minutes, used unless
 # settings.check_interval_by_ats names the site (or check_interval_minutes is longer).
-# SuccessFactors sites send their whole listing (up to a few MB) each check.
-DEFAULT_CHECK_INTERVAL_BY_ATS = {"successfactors": 60.0}
+# SuccessFactors and Radancy sites send their whole listing (up to a few MB) each check.
+DEFAULT_CHECK_INTERVAL_BY_ATS = {"successfactors": 60.0, "radancy": 60.0}
 
 
 @dataclass

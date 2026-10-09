@@ -1737,6 +1737,11 @@ companies:
     ats: ashby
     countries: [US, AU]
 
+  - name: Arm
+    url: https://careers.arm.com/
+    ats: radancy
+    countries: [US, CA, IN]
+
   - name: Armada
     url: https://job-boards.greenhouse.io/armada
     ats: greenhouse
@@ -10971,6 +10976,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Intuit
+    url: https://jobs.intuit.com/
+    ats: radancy
+    countries: [US, CA, IN]
+
   - name: Intuitive
     url: https://careers.smartrecruiters.com/intuitive
     ats: smartrecruiters
@@ -11107,6 +11117,11 @@ companies:
     countries: [US, CA, IN]
     options:
       max_jobs: 200
+
+  - name: Jack Henry
+    url: https://careers.jackhenry.com/
+    ats: radancy
+    countries: [US]
 
   - name: Jack Link's Protein Snacks
     url: https://careers.smartrecruiters.com/jacklinksproteinsnacks
@@ -13466,6 +13481,11 @@ companies:
     url: https://apply.workable.com/montera/
     ats: workable
     countries: [US]
+
+  - name: "Moody's"
+    url: https://careers.moodys.com/
+    ats: radancy
+    countries: [US, CA, AU, IN]
 
   - name: Moog
     url: https://moog.wd5.myworkdayjobs.com/moog_external_career_site
@@ -19487,6 +19507,11 @@ companies:
     ats: smartrecruiters
     countries: [US, CA, IN]
 
+  - name: Synopsys
+    url: https://careers.synopsys.com/
+    ats: radancy
+    countries: [US, CA, IN]
+
   - name: Sysco Labs Technologies
     url: https://sysco.wd5.myworkdayjobs.com/syscocareers
     ats: workday
@@ -20782,6 +20807,11 @@ companies:
     url: https://job-boards.greenhouse.io/unitedveincenters
     ats: greenhouse
     countries: [US]
+
+  - name: UnitedHealth Group (Optum)
+    url: https://careers.unitedhealthgroup.com/
+    ats: radancy
+    countries: [US, CA, AU, IN]
 
   - name: Unitek Learning
     url: https://careers.smartrecruiters.com/uniteklearning

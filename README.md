@@ -402,6 +402,7 @@ alert again. The previous version behaved the same way.
 | Pinpoint | `{site}/postings.json` (every posting in one request; set `ats: pinpoint` on a company's own domain) | no |
 | Teamtailor | `{site}/jobs.rss` (every job with its places; set `ats: teamtailor` on a company's own domain) | no |
 | Jobvite | `jobs.jobvite.com/{company}/jobs`, one table of every job | a match's description |
+| Radancy (TalentBrew) | The career site's `/sitemap.xml`, every job's page link (the search is closed to crawlers); set `ats: radancy`; checked hourly | a new job known only by its link, once, if its link's words could match the filter |
 | Comeet | The hosted careers page `www.comeet.com/jobs/{company}/{uid}`, whose `COMPANY_POSITIONS_DATA` holds every position, its place and usually its description | a match's description, when the list lacks it |
 | Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |

@@ -593,21 +593,18 @@ location. The Greenhouse reader now takes the places from the job's metadata loc
 when the location names only a way of working ("Job Posting Location": "Austin, US" becomes
 "Austin, US (Hybrid)"), which every Cloudflare job has; that gave 79 matching jobs.
 
-**Readable, but left for a reader change**: Synopsys (Avature, about 100 pages of 6 jobs; it
-ignores the newest-first sort, and its other front end, careers.synopsys.com, disallows its
-search in robots.txt), Epic Systems (an Avature site in another layout; see the expansion queue), CarMax (its
-newest 200 Workday jobs are all store roles) and Moody's (its SuccessFactors search page
-answers 404).
+**Readable, but left for a reader change**: Epic Systems (an Avature site in another layout; see the expansion queue), and CarMax (its
+newest 200 Workday jobs are all store roles).
 
-**Not readable**: Jack Henry's and Arm's sites disallow the job pages in robots.txt; BCG's
-Eightfold API answers 403.
+**Not readable**: BCG's Eightfold API answers 403; UKG's recruiting site disallows everything.
+(Jack Henry and Arm, first counted here, are read from their Radancy sites; see below.)
 
 **No reader yet**, by job site:
 
 | Job site | Employers |
 |---|---|
 | Taleo | UnitedHealth Group and Optum |
-| Radancy or BrassRing fronts | Intuit, Walgreens, Publix, ADM, Chipotle |
+| BrassRing | Walgreens |
 
 **Phenom reader** (added the same day): a Phenom career site's search page fills itself from
 `POST {origin}/widgets` (`ddoKey: refineSearch`), which answers 100 jobs a request with the
@@ -673,11 +670,23 @@ Accounting & Finance. GitGuardian's jobs in the four countries weren't tech role
 Starship Technologies had none there, so they stayed off. UKG's recruiting site
 (Presidio, eClinicalWorks) disallows everything in robots.txt.
 
+**Radancy reader** (the same day): Radancy (TalentBrew) career sites on a company's own domain
+close their search (`/search-jobs/`) in robots.txt, but each one's sitemap lists every open
+job's page, `/job/{city}/{title}/{org}/{id}`, and each job page carries a schema.org
+JobPosting. `ats: radancy` reads the sitemap (one request; checked hourly, since UnitedHealth
+Group's is about 5 MB before compression), lists a new job under its link's words, and reads
+the page of one that could match for its real title and places, as the SuccessFactors reader
+does. Several sites first counted above as blocked or unreadable turned out to be Radancy
+fronts: Synopsys (608 jobs, 40 matching), Arm (396, 52), Jack Henry (81, 28) and Moody's
+(362, 38), along with Intuit (614, 201; its applications go to an Avature site with no public
+search) and UnitedHealth Group with Optum (5,655 jobs: 306 tech and 1,374 healthcare
+matches). All six joined Tech and Accounting & Finance, and UnitedHealth Group Healthcare.
+Chipotle's site is Radancy too, but its jobs are restaurant roles.
+
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
 Wayfair, Google DeepMind, Valve, ByteDance, Revolut, Deel, Rapid7,
-Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive
-and UBS. Each needs a look at what its page loads its jobs from.
+Check Point, Varonis, McKinsey, FedEx, Best Buy, Progressive and UBS. Each needs a look at what its page loads its jobs from.
 
 ## How the less conventional sources are covered
 
