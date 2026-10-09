@@ -87,6 +87,22 @@ def test_greenhouse():
     assert be.date_posted == date(2026, 9, 19)
 
 
+def test_greenhouse_work_mode_location_takes_the_metadata_places():
+    # Cloudflare: the location only says how people work; its metadata names the places.
+    jobs = {"jobs": [
+        {"id": 1, "title": "Systems Engineer", "location": {"name": "Hybrid"},
+         "metadata": [{"name": "Cost Center", "value": "5150"}, {"name": "Job Posting Location", "value": ["Austin, US", "London, UK"]}]},
+        {"id": 2, "title": "Software Engineer", "location": {"name": "Distributed; Hybrid"},
+         "metadata": [{"name": "Job Posting Location", "value": ["Bengaluru, India"]}]},
+        {"id": 3, "title": "Data Engineer", "location": {"name": "Hybrid"}, "metadata": []},
+        {"id": 4, "title": "Backend Engineer", "location": {"name": "Remote - US"},
+         "metadata": [{"name": "Job Posting Location", "value": ["Austin, US"]}]},
+    ]}
+    result = scrape("greenhouse", "https://job-boards.greenhouse.io/cloudflare", {"/v1/boards/cloudflare/jobs": jobs})
+    assert [j.location for j in result.jobs] == [
+        "Austin, US; London, UK (Hybrid)", "Bengaluru, India (Distributed; Hybrid)", "Hybrid", "Remote - US"]
+
+
 def test_lever():
     result = scrape("lever", "https://jobs.lever.co/acme", {"/v0/postings/acme": fixture_json("lever_postings.json")})
     (ml,) = result.jobs
