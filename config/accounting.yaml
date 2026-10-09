@@ -6270,6 +6270,13 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Deloitte
+    url: https://apply.deloitte.com/en_US/careers/SearchJobs/?folderSort=postedDate&folderSortDirection=DESC
+    ats: avature
+    countries: [US]
+    options:
+      max_pages: 25
+
   - name: Delta Dental
     url: https://rhsc.wd5.myworkdayjobs.com/delta_dental_of_michigan
     ats: workday

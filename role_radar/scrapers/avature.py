@@ -4,7 +4,7 @@ Career sites use different schemas; this adapter validates the supported
 article--result layout and follows the site's actual Next links.
 
 A search URL sorted newest first (Siemens: SearchJobs/?folderSort=postedDate&folderSortDirection=DESC,
-6 jobs a page, the sort kept in its Next links) is read from the top only until a page holds
+6 jobs a page; Deloitte's Next links drop the sort, so it's added back) is read from the top only until a page holds
 no job seen before, up to options.max_pages; a company's first check reads all of them. A job
 the site reposts moves back to the top. Such a read is never a removal snapshot. A card that
 says only "Multiple Locations" has its job page read for the places when the job could match,
@@ -14,7 +14,7 @@ and the experience filter reads a new match's description from that same page.
 from __future__ import annotations
 
 import re
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from role_radar.models import JobPosting, html_to_text
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
@@ -52,8 +52,10 @@ class AvatureScraper(BaseScraper):
                 link_url, title = link
                 job_id = link_url.rstrip("/").rsplit("/", 1)[-1]
                 # Siemens nests the city, state and country in spans of their own;
-                # Two Sigma's card gives the place first, then the team and level.
-                location = _inner_html(row, "span", "list-item-location") or _inner_html(row, "span", "paragraph_inner-span")[:1]
+                # Two Sigma's card gives the place first, then the team and level;
+                # Deloitte's subtitle is "Deloitte US | {entity} | {place}".
+                location = (_inner_html(row, "span", "list-item-location") or _inner_html(row, "span", "paragraph_inner-span")[:1]
+                            or [_spans(subtitle)[-1] for subtitle in _inner_html(row, "div", "article__header__text__subtitle")[:1] if _spans(subtitle)])
                 jobs[job_id] = self.make_job(job_id=job_id, title=title, url=link_url, location=html_to_text(location[0]) if location else None)
                 listed.append(jobs[job_id])
             following = next_link(page, url)
@@ -63,7 +65,7 @@ class AvatureScraper(BaseScraper):
                 return ScrapeResult(list(jobs.values()), complete=False)
             if newest_first and self.known and all(job.uid in self.known for job in listed):
                 return ScrapeResult(list(jobs.values()), complete=False)
-            url = following
+            url = _keep_sort(following, self.company.url) if newest_first else following
         return ScrapeResult(list(jobs.values()), complete=False)
 
     def missing_fields(self, job: JobPosting) -> set[str]:
@@ -74,6 +76,8 @@ class AvatureScraper(BaseScraper):
         job.extra["description"] = _description(page)
         # "Beijing - Beijing Shi - China", one list item per place
         places = [html_to_text(li).replace(" - ", ", ") for ul in _inner_html(page, "ul", "list--locations") for li in _inner_html(ul, "li", "list__item")]
+        # Deloitte: "Same job available in 4 locations", one paragraph per place
+        places = places or [html_to_text(p) for box in _inner_html(page, "div", "article__header--locations") for p in _inner_html(box, "p", "paragraph")]
         if any(places):
             job.location = "; ".join(p for p in places if p)
         return job
@@ -84,6 +88,19 @@ class AvatureScraper(BaseScraper):
         if "description" not in job.extra:  # its page wasn't read for the location
             job.extra["description"] = _description(await self.http.get_text(job.url))
         return job.extra["description"]
+
+
+def _spans(html: str) -> list[str]:
+    return re.findall(r"<span\b[^>]*>(.*?)</span\s*>", html, re.I | re.S)
+
+
+def _keep_sort(following: str, start: str) -> str:
+    """`following` with the start URL's sort, which some sites' Next links leave out (Deloitte)."""
+    if _newest_first(following):
+        return following
+    sort = [(k, v) for k, v in parse_qsl(urlsplit(start).query) if k.lower().endswith(("sort", "sortdirection"))]
+    parts = urlsplit(following)
+    return urlunsplit(parts._replace(query=urlencode(parse_qsl(parts.query) + sort)))
 
 
 def _newest_first(url: str) -> bool:
@@ -108,5 +125,7 @@ def _inner_html(page: str, tag: str, class_name: str) -> list[str]:
 
 
 def _description(page: str) -> str | None:
-    """The text of a job page's fields (Siemens: job ID, experience level, locations, then the description)."""
-    return "\n".join(t for t in map(html_to_text, _inner_html(page, "div", "article__content__view__field__value")) if t) or None
+    """The text of a job page's fields (Siemens: job ID, experience level, locations, then the description),
+    or of its content blocks (Deloitte)."""
+    fields = _inner_html(page, "div", "article__content__view__field__value") or _inner_html(page, "div", "article__content")
+    return "\n".join(t for t in map(html_to_text, fields) if t) or None

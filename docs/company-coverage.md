@@ -593,9 +593,9 @@ location. The Greenhouse reader now takes the places from the job's metadata loc
 when the location names only a way of working ("Job Posting Location": "Austin, US" becomes
 "Austin, US (Hybrid)"), which every Cloudflare job has; that gave 79 matching jobs.
 
-**Readable, but left for a reader change**: Synopsys and Deloitte (Avature, about 100 pages
-of 6 or 10 jobs; their Next links drop the newest-first sort, so every check would read them
-all), Epic Systems (an Avature site in another layout; see the expansion queue), CarMax (its
+**Readable, but left for a reader change**: Synopsys (Avature, about 100 pages of 6 jobs; it
+ignores the newest-first sort, and its other front end, careers.synopsys.com, disallows its
+search in robots.txt), Epic Systems (an Avature site in another layout; see the expansion queue), CarMax (its
 newest 200 Workday jobs are all store roles) and Moody's (its SuccessFactors search page
 answers 404).
 
@@ -640,6 +640,14 @@ internships; the internal jobs are skipped) with its offices and description, so
 reads a site. `ats: deshaw` gives the offices their state and country ("Denver" becomes
 "Denver, CO, United States"). D. E. Shaw (101 jobs, 22 matching) and D. E. Shaw India (76
 jobs, 7 matching) joined Tech, and D. E. Shaw Accounting & Finance.
+
+**Deloitte** (the same day): its Avature site sorts newest first, but its Next links drop the
+sort, so the reader now adds the start URL's sort back. Its cards give the place as the last
+part of "Deloitte US | {entity} | {place}", and a "Multiple Locations" job's page lists its
+places one paragraph each, with the description in its content blocks; the reader reads both.
+Like Siemens, the first check reads the newest 250 jobs (25 pages) and later checks stop at a
+page with nothing new. 26 of the newest 250 matched; Deloitte joined Tech and, for its audit and
+tax work, Accounting & Finance.
 
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,

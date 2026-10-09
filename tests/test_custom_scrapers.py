@@ -505,3 +505,39 @@ def test_deshaw_reads_the_careers_page_data():
 def test_deshaw_page_without_jobs_is_error():
     with pytest.raises(ScraperError):
         run_scraper("deshaw", "https://www.deshaw.com/careers/choose-your-path", lambda r: httpx.Response(200, text="<html></html>"))
+
+
+def test_avature_newest_first_keeps_the_sort_its_next_links_drop():
+    # Deloitte: the Next link is ?jobRecordsPerPage=10&jobOffset=10, without the sort.
+    seen = []
+    def handler(request):
+        seen.append(dict(request.url.params))
+        offset = int(request.url.params.get("jobOffset", "0"))
+        card = (f'<article class="article article--result"><h3><a href="https://apply.deloitte.com/en_US/careers/JobDetail/Analyst/{900 - offset}">'
+                f'Analyst {offset}</a></h3><span class="list-item-location">Houston, Texas, United States</span></article>')
+        return httpx.Response(200, text=card + f'<a href="/en_US/careers/SearchJobs/?jobRecordsPerPage=10&amp;jobOffset={offset + 10}">Next &gt;&gt;</a>')
+    result = run_scraper("avature", "https://apply.deloitte.com/en_US/careers/SearchJobs/?folderSort=postedDate&folderSortDirection=DESC",
+                         handler, max_pages=3)
+    assert len(result.jobs) == 3 and not result.complete
+    assert seen[1] == {"jobRecordsPerPage": "10", "jobOffset": "10", "folderSort": "postedDate", "folderSortDirection": "DESC"}
+
+
+def test_avature_deloitte_cards_and_job_page():
+    card = ('<article class="article article--result"><div class="article__header__text"><h3><a class="link" '
+            'href="https://apply.deloitte.com/en_US/careers/JobDetail/Consultant/370759"> Consultant </a></h3>'
+            '<div class="article__header__text__subtitle"><span> Deloitte US </span> | <span> Deloitte Consulting LLP </span> | '
+            '<span>Multiple Locations</span></div></div></article>')
+    page = ('<div class="article__header__text__subtitle"><a class="link toggleLocations">Same job available in 2 locations</a>'
+            '<div class="article__header--locations"><div class="fluid-cols"><p class="paragraph">Atlanta, Georgia, United States</p>'
+            '<p class="paragraph">Chicago, Illinois, United States</p></div></div></div>'
+            '<div class="article__content"><p>2+ years of consulting experience</p></div>')
+    async def go():
+        async with make_client(lambda r: httpx.Response(200, text=page if "JobDetail" in str(r.url) else card)) as http:
+            scraper = SCRAPERS["avature"](company("Deloitte", url="https://apply.deloitte.com/en_US/careers/SearchJobs/"), http)
+            result = await scraper.fetch_jobs()
+            (consultant,) = result.jobs
+            assert consultant.location == "Multiple Locations" and scraper.missing_fields(consultant) == {"location"}
+            return await scraper.fetch_details(consultant)
+    consultant = asyncio.run(go())
+    assert consultant.location == "Atlanta, Georgia, United States; Chicago, Illinois, United States"
+    assert "2+ years of consulting experience" in consultant.extra["description"]
