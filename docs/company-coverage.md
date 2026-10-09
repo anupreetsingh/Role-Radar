@@ -686,10 +686,27 @@ unidentified companies' sitemaps for Radancy job links found two more: Kaiser Pe
 jobs: 28 tech, 1,066 healthcare matches) and Cargill (1,333 jobs, 28 tech matches), which joined
 Tech and Accounting & Finance, and Kaiser Permanente and Cargill Healthcare.
 
-**Not identified**: about 140 career pages named no job software Role Radar knows (or
-didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
-Wayfair, Google DeepMind, Valve, ByteDance, Revolut, Deel, Rapid7,
-Check Point, Varonis, McKinsey, FedEx, Best Buy, Progressive and UBS. Each needs a look at what its page loads its jobs from.
+**UPS** (the same day) is a Phenom site too (www.jobs-ups.com): 1,953 US jobs, 1,697 of them
+operations roles, so its entry is narrowed to the Information Technology and Finance
+categories (`selected_fields`, 20 jobs, one request). It joined Tech and Accounting & Finance.
+
+**Still not covered**, after looking at each big name's careers page:
+
+- Bot protection answers scripts with a challenge or an empty page, and Role Radar doesn't pose
+  as a browser: Citadel, Citadel Securities and Revolut (Cloudflare), IBM, Delta (its Avature
+  site) and McKinsey (its requests stall).
+- robots.txt closes the jobs: Verizon (`/en/jobs/`), UKG sites (Presidio, eClinicalWorks).
+- Jobs reachable only through the company's own page data, which would each need a reader of
+  their own: Shopify (Ashby, but its board isn't public; its careers sitemap lists 117 job
+  pages), Wayfair (Paradox's chat-based hiring), Deel (deel.com/careers), Intuit's and
+  McKinsey's Avature sites (no public search), ByteDance (joinbytedance.com), Walgreens
+  (BrassRing) and FedEx.
+- Google DeepMind's old Greenhouse board is gone; its roles appear on Google's own site,
+  which is already read. CyberArk now belongs to Palo Alto Networks, already listed.
+- Not looked at closely yet: about 100 smaller or less tech-heavy names whose careers pages
+  named no job software (among them Tesla, Arista Networks, Rapid7, Check Point, Varonis,
+  Best Buy, Progressive, UBS and several game studios). The generic reader found only
+  navigation links on them.
 
 ## How the less conventional sources are covered
 

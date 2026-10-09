@@ -20989,6 +20989,14 @@ companies:
     ats: workable
     countries: [CA]
 
+  - name: UPS
+    url: https://www.jobs-ups.com/us/en/search-results
+    ats: phenom
+    countries: [US]
+    options:
+      selected_fields:
+        category: [Information Technology, Finance]
+
   - name: Upshop
     url: https://job-boards.greenhouse.io/upshop
     ats: greenhouse
