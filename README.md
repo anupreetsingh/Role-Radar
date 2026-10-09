@@ -399,6 +399,7 @@ alert again. The previous version behaved the same way.
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
 | Gem | `api.gem.com/job_board/v0/{board}/job_posts` (every job in one request) | no |
+| Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
 | SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |
 | Workable | `apply.workable.com/api/v1/widget/accounts/{account}` (every job in one request; 2 s apart, checked hourly) | no |

@@ -598,3 +598,24 @@ def test_gem():
     assert eng.extra["description"] == "<p>3+ years experience</p>"
     assert ae.location == "New York, United States; London, United Kingdom"
     assert scraper_class_for("https://jobs.gem.com/retool").name == "gem"
+
+
+def test_deel_reads_the_board_pages_data():
+    postings = [
+        {"id": "21584046", "title": "Software Engineer", "richtextDescription": "$1a", "createdAt": "2026-09-07T12:27:01.452Z",
+         "job": {"workArrangementEnum": "ON_SITE", "jobLocations": [{"location": {"name": "New York"}}],
+                 "jobDepartments": [{"department": {"name": "Engineering"}}], "jobEmploymentTypes": [{"employmentType": {"name": "Full-time"}}]}},
+        {"id": "90f29fc1", "title": "Data Engineer", "richtextDescription": "$1b",
+         "job": {"workArrangementEnum": "HYBRID", "jobLocations": [{"location": {"name": "Stockholm"}}, {"location": {"name": "London"}}]}},
+    ]
+    rows = '8:["$","$L19",null,{"jobPostings":' + json.dumps(postings) + '}]\n1a:T16,<p>3+ years, café</p>1b:Tf,<p>2+ years</p>'
+    chunk = json.dumps(rows)[1:-1]  # as the page escapes it inside a JS string
+    page = f'<script>self.__next_f.push([1,"{chunk}"])</script>'
+    result = scrape("deel", "https://jobs.deel.com/klarna", {"/klarna": page})
+    eng, data = result.jobs
+    assert eng.url == "https://jobs.deel.com/klarna/job-details/21584046/overview"
+    assert (eng.title, eng.location, eng.department, eng.employment_type, eng.date_posted) == (
+        "Software Engineer", "New York", "Engineering", "Full-time", date(2026, 9, 7))
+    assert eng.extra["description"] == "<p>3+ years, café</p>"
+    assert data.location == "Stockholm; London (Hybrid)" and data.extra["description"] == "<p>2+ years</p>"
+    assert scraper_class_for("https://jobs.deel.com/klarna").name == "deel"

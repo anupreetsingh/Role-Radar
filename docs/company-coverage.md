@@ -654,9 +654,17 @@ description in one request. Retool (15 matching), Function Health (8), Groq (6),
 Fireflies.ai (none that day) joined Tech; Groq and Function Health also Accounting & Finance,
 and Function Health Healthcare.
 
+**Deel reader** (the same day): Klarna's careers page lists its jobs from Deel's own job boards
+(jobs.deel.com/klarna). robots.txt there disallows `/api/`, but the board page's streamed
+Next.js data holds every job (title, places, team, employment type) and its description, so
+`ats: deel` reads the page: one request a check. Places are bare city names ("Columbus"), which
+Setup's location rules know for the big US cities. Klarna (102 jobs, mostly in Europe) joined
+Tech and Accounting & Finance. Deel's own jobs are listed on deel.com/careers instead (its
+board redirects there), which this reader doesn't read.
+
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
-Wayfair, Etsy, Google DeepMind, Valve, Mobileye, ByteDance, Revolut, Klarna, Deel, Rapid7,
+Wayfair, Google DeepMind, Valve, ByteDance, Revolut, Deel, Rapid7,
 CyberArk, Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive,
 UBS and Eli Lilly. Each needs a look at what its page loads its jobs from.
 

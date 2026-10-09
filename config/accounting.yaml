@@ -11610,6 +11610,11 @@ companies:
         Country:
         - bc33aa3152ec42d4995f4791a106ed09
 
+  - name: Klarna
+    url: https://jobs.deel.com/klarna
+    ats: deel
+    countries: [US, AU]
+
   - name: Klaviyo
     url: https://job-boards.greenhouse.io/klaviyo
     ats: greenhouse
