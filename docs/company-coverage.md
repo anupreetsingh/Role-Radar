@@ -246,7 +246,9 @@ were posting only senior roles); they stay because they hire for the profile.
 
 Not added: Cloudflare's Greenhouse board gives "Hybrid" or "Distributed" as each job's
 location instead of a city, so the location filter can't tell US jobs apart without a
-scraper change. No readable board was found for dbt Labs, Weights & Biases,
+scraper change (made in October 2026; see
+[Well-known employers that were missing](#well-known-employers-that-were-missing-october-2026)).
+No readable board was found for dbt Labs, Weights & Biases,
 Retool, Hugging Face, Mistral AI, Unity, Atlassian, Grammarly, Hebbia or Fannie Mae.
 (Rippling was on this list until its own board became readable; see
 [Rippling boards](#rippling-boards-september-2026).)
@@ -547,6 +549,78 @@ Not covered: job sites neither sweep searched (Darwinbox can't be read; Recruite
 Teamtailor, Breezy, Jobvite, Zoho Recruit, Keka, Taleo and SuccessFactors have no reader
 yet, though the first sweep's query listed their boards), and the Tech list's companies that
 post other professions' jobs but whose saved jobs didn't happen to include one.
+
+## Well-known employers that were missing (October 2026)
+
+The sweeps only found boards on the job sites Role Radar reads, so employers on their own
+career sites were missed: Two Sigma (Avature, added 2026-10-07) was one. On 2026-10-08 about
+1,500 well-known employers for the resume (big tech, AI, quant trading, fintech, security and
+GRC, chips, games and graphics, autonomy, consulting, banks, insurers, retail, health tech)
+were compared with the lists by name and board URL. About 300 weren't on the Tech list once
+renamed, merged and defunct companies, ones covered through a parent's board (Juniper via
+HPE, Redfin via Rocket, Athelas via Commure) and the employers removed before (defense,
+aerospace and space; the resume alignment) were set aside. For each one, from the laptop:
+
+- Greenhouse, Lever and Ashby were asked for boards under the company's likely names (up to
+  four names each, 0.4 s apart per site). Hits were kept only when the board's name and jobs
+  were the company's: `charles`, `lattice`, `oliver`, `safe` and `novo` were other companies.
+- Otherwise its careers page was read once and the job software named in the page was noted.
+- Each kept source was read once through Role Radar's own reader (181 requests for the 33
+  that weren't on those three sites) and scored like `scripts/build_lists.py`: a company joins
+  a list with a job carrying one of the profession's titles in a target country, and its
+  `countries` are every target country its jobs are in.
+
+**Added**: 61 to Tech (in their own section at the end of `config/companies.yaml`), 26 to
+Accounting & Finance and 3 to Healthcare. Eleven Tech additions had no matching opening that
+day but hire for the profile (Airtable, Zapier, Dremio, Engineers Gate, Unit, Mysten Labs,
+NetEase Games, Bungie, Cloud Software Group, Pixar, and Cloudflare before its reader fix).
+
+- Greenhouse, Lever and Ashby: Cloudflare, JFrog, SolarWinds, Outreach, CarGurus, Gopuff,
+  Midjourney, AQR, Old Mission, Squarepoint, Numerix, SoFi, Wealthfront, Nubank, Step,
+  Crypto.com, Offchain Labs, Axonius, Sysdig, TrustArc, Atom Computing, Nintendo of America,
+  Aeva, Outrider, Dexterity, Ro, Canvas Medical and the eleven above but Cloud Software Group
+  and Pixar.
+- Jibe career sites (100 jobs a request): Susquehanna (SIG), Intercontinental Exchange,
+  Keysight, SiriusXM, HERE, Principal, Medallia, ZS Associates, State Farm, Chick-fil-A, Aon
+  and Gallagher.
+- Workday (newest 200): Grubhub, Cloud Software Group, Qualys, Pixar, Ally, Condé Nast,
+  Fractal Analytics, Apollo Global Management and J.B. Hunt.
+- Avature: Electronic Arts. SuccessFactors: Scotiabank and Swiss Re. Rippling: Aerospike.
+  BambooHR: SideFX.
+
+Cloudflare's Greenhouse board gives "Hybrid", "Distributed" or "In-Office" as each job's
+location. The Greenhouse reader now takes the places from the job's metadata location field
+when the location names only a way of working ("Job Posting Location": "Austin, US" becomes
+"Austin, US (Hybrid)"), which every Cloudflare job has; that gave 79 matching jobs.
+
+**Readable, but left for a reader change**: Synopsys and Deloitte (Avature, about 100 pages
+of 6 or 10 jobs; their Next links drop the newest-first sort, so every check would read them
+all), Epic Systems (an Avature site in another layout; see the expansion queue), CarMax (its
+newest 200 Workday jobs are all store roles) and Moody's (its SuccessFactors search page
+answers 404).
+
+**Not readable**: Jack Henry's and Arm's sites disallow the job pages in robots.txt; BCG's
+Eightfold API answers 403.
+
+**No reader yet**, by job site:
+
+| Job site | Employers |
+|---|---|
+| Phenom | Chewy, OpenText, United Airlines, Marsh McLennan, DHL, TJX, BNSF, Allianz, Siemens Healthineers, Warner Bros. Games, O'Reilly Auto Parts |
+| Gem | Retool, Groq, Fireflies.ai, Bilt, Function Health |
+| Comeet | Aqua Security, Cyera, eToro |
+| Teamtailor | Lindy, GitGuardian, Starship Technologies |
+| Pinpoint | Infor, Wolverine Trading |
+| UKG | Presidio, eClinicalWorks |
+| Taleo | UnitedHealth Group and Optum |
+| Jobvite | Nutanix |
+| Radancy or BrassRing fronts | Intuit, Walgreens, Publix, ADM, Chipotle |
+
+**Not identified**: about 140 career pages named no job software Role Radar knows (or
+didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, D. E. Shaw, Shopify,
+Wayfair, Etsy, Google DeepMind, Valve, Mobileye, ByteDance, Revolut, Klarna, Deel, Rapid7,
+CyberArk, Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive,
+UBS and Eli Lilly. Each needs a look at what its page loads its jobs from.
 
 ## How the less conventional sources are covered
 

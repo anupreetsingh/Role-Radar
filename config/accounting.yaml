@@ -946,6 +946,13 @@ companies:
     ats: ashby
     countries: [US, IN]
 
+  - name: Ally
+    url: https://ally.wd1.myworkdayjobs.com/Ally
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
   - name: ALO
     url: https://job-boards.greenhouse.io/aloyoga
     ats: greenhouse
@@ -1381,6 +1388,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, IN]
 
+  - name: Aon
+    url: https://jobs.aon.com/jobs
+    ats: jibe
+    countries: [US, CA, AU, IN]
+
   - name: APAC/EMEA
     url: https://egmk.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
     ats: oracle_hcm
@@ -1422,6 +1434,13 @@ companies:
     url: https://apog.wd1.myworkdayjobs.com/apogee
     ats: workday
     countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Apollo Global Management
+    url: https://athene.wd5.myworkdayjobs.com/Apollo_Careers
+    ats: workday
+    countries: [US, IN]
     options:
       max_jobs: 200
 
@@ -4461,6 +4480,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Chick-fil-A
+    url: https://careers.chick-fil-a.com/jobs
+    ats: jibe
+    countries: [US, CA]
+
   - name: Chickasaw Nation Industries
     url: https://cni.wd503.myworkdayjobs.com/CNI
     ats: workday
@@ -5277,6 +5301,13 @@ companies:
     ats: oracle_hcm
     countries: [US, AU, IN]
 
+  - name: Condé Nast
+    url: https://condenast.wd115.myworkdayjobs.com/CondeCareers
+    ats: workday
+    countries: [US, IN]
+    options:
+      max_jobs: 200
+
   - name: ConEd
     url: https://ejcu.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1035/jobs
     ats: oracle_hcm
@@ -5818,6 +5849,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Crypto.com
+    url: https://jobs.lever.co/crypto
+    ats: lever
+    countries: [US, CA, AU]
 
   - name: Crystal Bridges
     url: https://awe.wd1.myworkdayjobs.com/Art_and_Wellness
@@ -7026,6 +7062,11 @@ companies:
     countries: [US, IN]
     options:
       max_jobs: 200
+
+  - name: Electronic Arts
+    url: https://jobs.ea.com/en_US/careers/SearchJobs
+    ats: avature
+    countries: [US, CA, IN]
 
   - name: Element Fleet Management
     url: https://elementfleet.wd3.myworkdayjobs.com/External_Career_Site
@@ -8634,6 +8675,11 @@ companies:
     ats: greenhouse
     countries: [US, IN]
 
+  - name: Gallagher
+    url: https://jobs.ajg.com/jobs
+    ats: jibe
+    countries: [US, CA, AU, IN]
+
   - name: Gallery Media Group
     url: https://job-boards.greenhouse.io/gallerymediagroup
     ats: greenhouse
@@ -9059,6 +9105,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Gopuff
+    url: https://jobs.lever.co/gopuff
+    ats: lever
+    countries: [US]
+
   - name: Gordon Food Service
     url: https://gfs.wd5.myworkdayjobs.com/usjobs-gen-gfs
     ats: workday
@@ -9330,6 +9381,13 @@ companies:
     url: https://jobs.ashbyhq.com/GrowthX AI
     ats: ashby
     countries: [US]
+
+  - name: Grubhub
+    url: https://wonder.wd1.myworkdayjobs.com/Grubhub_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
 
   - name: GRVTY
     url: https://job-boards.greenhouse.io/grvty
@@ -10811,6 +10869,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Intercontinental Exchange (ICE)
+    url: https://careers.ice.com/jobs
+    ats: jibe
+    countries: [US, AU, IN]
+
   - name: InterDigital Holdings
     url: https://interdigital.wd5.myworkdayjobs.com/InterDigital_Career
     ats: workday
@@ -10971,6 +11034,13 @@ companies:
     ats: greenhouse
     countries: [US, CA]
 
+  - name: J.B. Hunt
+    url: https://jbhunt.wd501.myworkdayjobs.com/Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
   - name: Jabil
     url: https://jabil.wd5.myworkdayjobs.com/Jabil_Careers
     ats: workday
@@ -11086,6 +11156,11 @@ companies:
     url: https://job-boards.greenhouse.io/jetbrains
     ats: greenhouse
     countries: [US]
+
+  - name: JFrog
+    url: https://job-boards.greenhouse.io/jfrog
+    ats: greenhouse
+    countries: [US, CA, AU, IN]
 
   - name: JLIConsulting
     url: https://careers.smartrecruiters.com/jliconsulting
@@ -11405,6 +11480,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Keysight
+    url: https://careers.keysight.com/jobs
+    ats: jibe
+    countries: [US, CA, IN]
 
   - name: Keywords Studios
     url: https://apply.workable.com/keywords-intl1/
@@ -14028,6 +14108,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Nintendo of America
+    url: https://job-boards.greenhouse.io/nintendo
+    ats: greenhouse
+    countries: [US]
+
   - name: Nira Medical
     url: https://jobs.ashbyhq.com/niramedical
     ats: ashby
@@ -14850,6 +14935,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Outreach
+    url: https://jobs.lever.co/outreach
+    ats: lever
+    countries: [US, IN]
 
   - name: Outschool
     url: https://jobs.ashbyhq.com/outschool
@@ -15924,6 +16014,11 @@ companies:
     ats: rippling
     countries: [US, AU]
 
+  - name: Principal Financial Group
+    url: https://careers.principal.com/jobs
+    ats: jibe
+    countries: [US, IN]
+
   - name: Prior Labs
     url: https://jobs.ashbyhq.com/prior-labs
     ats: ashby
@@ -16315,6 +16410,13 @@ companies:
     url: https://job-boards.greenhouse.io/qualtrics
     ats: greenhouse
     countries: [US, AU]
+
+  - name: Qualys
+    url: https://qualys.wd5.myworkdayjobs.com/Careers
+    ats: workday
+    countries: [US, AU, IN]
+    options:
+      max_jobs: 200
 
   - name: Quanta Services
     url: https://careers-quanta.icims.com/jobs/search
@@ -16958,6 +17060,11 @@ companies:
   - name: RMF Engineering
     url: https://apply.workable.com/rmf-engineering-inc/
     ats: workable
+    countries: [US]
+
+  - name: Ro
+    url: https://jobs.lever.co/ro
+    ats: lever
     countries: [US]
 
   - name: RoadRunner
@@ -17619,6 +17726,11 @@ companies:
     url: https://job-boards.greenhouse.io/scotch
     ats: greenhouse
     countries: [US]
+
+  - name: Scotiabank
+    url: https://jobs.scotiabank.com/
+    ats: successfactors
+    countries: [US, CA]
 
   - name: Scott Petroleum
     url: https://dynastymanagement.wd12.myworkdayjobs.com/SCOTT_PETROLEUM
@@ -18388,6 +18500,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, IN]
 
+  - name: SoFi
+    url: https://job-boards.greenhouse.io/sofi
+    ats: greenhouse
+    countries: [US]
+
   - name: SoLa Impact
     url: https://apply.workable.com/solaimpact/
     ats: workable
@@ -18664,6 +18781,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Squarepoint Capital
+    url: https://job-boards.greenhouse.io/squarepointcapital
+    ats: greenhouse
+    countries: [US, CA, IN]
+
   - name: Squarespace
     url: https://job-boards.greenhouse.io/squarespace
     ats: greenhouse
@@ -18821,6 +18943,11 @@ companies:
   - name: State Bar of Texas
     url: https://careers-texasbar.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: State Farm
+    url: https://jobs.statefarm.com/jobs
+    ats: jibe
     countries: [US]
 
   - name: State of Nebraska
@@ -19179,6 +19306,11 @@ companies:
     ats: ashby
     countries: [US, CA, AU, IN]
 
+  - name: Susquehanna International Group (SIG)
+    url: https://careers.sig.com/jobs
+    ats: jibe
+    countries: [US, AU, IN]
+
   - name: Susquehanna Nuclear
     url: https://talenenergy.wd1.myworkdayjobs.com/TalenCareers
     ats: workday
@@ -19221,6 +19353,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Swiss Re
+    url: https://careers.swissre.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
 
   - name: Sydecar
     url: https://jobs.ashbyhq.com/sydecar
@@ -22226,6 +22363,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: ZS Associates
+    url: https://jobs.zs.com/jobs
+    ats: jibe
+    countries: [US, CA, IN]
 
   - name: Zscaler
     url: https://job-boards.greenhouse.io/zscaler

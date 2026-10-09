@@ -3776,6 +3776,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Gallagher
+    url: https://jobs.ajg.com/jobs
+    ats: jibe
+    countries: [US, CA, AU, IN]
+
   - name: Gaston County Schools
     url: https://eobs.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -4747,6 +4752,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Included Health
+    url: https://jobs.lever.co/includedhealth
+    ats: lever
+    countries: [US]
 
   - name: Indian River State College
     url: https://irsc.wd5.myworkdayjobs.com/external
@@ -7767,6 +7777,11 @@ companies:
   - name: Rivia Mind
     url: https://job-boards.greenhouse.io/riviamind1
     ats: greenhouse
+    countries: [US]
+
+  - name: Ro
+    url: https://jobs.lever.co/ro
+    ats: lever
     countries: [US]
 
   - name: Rochester Regional Health

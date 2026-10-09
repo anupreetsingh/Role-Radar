@@ -6,7 +6,7 @@
 [![Download for Windows](https://img.shields.io/badge/Download_for_Windows-10_and_11-2ea44f?style=for-the-badge)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-windows-setup.exe)
 
 Watches company careers pages and collects the new jobs that match what you're looking for.
-It comes with three company lists, one per profession: about 7,900 for Tech, 3,900 for
+It comes with three company lists, one per profession: about 8,000 for Tech, 3,900 for
 Accounting & Finance and 1,800 for Healthcare, and you can add your own. Most companies are
 checked every 20 minutes. Workday boards get a full check every 6 hours and a quick look at
 their newest jobs every 20 minutes. A new match shows up in **Live Tracking** as soon as its
@@ -40,7 +40,7 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
 3. Its window walks through Setup's pages:
    - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
-     companies, built into the app and refreshed with each version (Tech's has about 7,900,
+     companies, built into the app and refreshed with each version (Tech's has about 8,000,
      Accounting & Finance's about 3,900, Healthcare's about 1,800).
      Changing it later deletes nothing: the other profession's saved jobs stay, and every
      company's next check starts quietly, recording the jobs already open instead of alerting
@@ -194,7 +194,7 @@ Two files in `config/` decide what Role Radar does. Edit both as you like:
 
 | File | In git | Holds |
 |---|---|---|
-| `companies.yaml` | yes | The Tech companies to watch (about 7,900 to start from) and how often to check them |
+| `companies.yaml` | yes | The Tech companies to watch (about 8,000 to start from) and how often to check them |
 | `accounting.yaml`, `healthcare.yaml` | yes | The Accounting & Finance and Healthcare professions' company lists, for the packaged app (built by `scripts/build_lists.py`) |
 | `profile.yaml` | no | You: the roles and places you want, the most years of experience a job may ask for, and where state and alert settings live. [profile.example.yaml](config/profile.example.yaml) shows every setting |
 
@@ -863,7 +863,7 @@ pick one:
   current matches too).
 
 The first full write covers every job at every company. At 25 WCU that's throttled
-(throttled requests are retried), so the full list of about 7,900 companies can take
+(throttled requests are retried), so the full list of about 8,000 companies can take
 several hours.
 Switching the table to on-demand for the day avoids that (see
 [Throttling](#throttling-and-on-demand-capacity)). Switch back afterwards. If
