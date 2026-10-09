@@ -7587,6 +7587,11 @@ companies:
     ats: greenhouse
     countries: [US, IN]
 
+  - name: eToro
+    url: https://www.comeet.com/jobs/etoro/41.009
+    ats: comeet
+    countries: [US, AU]
+
   - name: ETSU
     url: https://fa-evyu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm

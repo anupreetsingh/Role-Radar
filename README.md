@@ -399,6 +399,7 @@ alert again. The previous version behaved the same way.
 | Lever | `api.lever.co/v0/postings/{slug}?mode=json` | no |
 | Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | no |
 | Gem | `api.gem.com/job_board/v0/{board}/job_posts` (every job in one request) | no |
+| Comeet | The hosted careers page `www.comeet.com/jobs/{company}/{uid}`, whose `COMPANY_POSITIONS_DATA` holds every position, its place and usually its description | a match's description, when the list lacks it |
 | Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
 | SmartRecruiters | The public career page's location groups, `careers.smartrecruiters.com/{company}/api/groups?page=N`, and each big group's "Show more jobs" pages (the posting API's robots.txt allows only LinkedIn) | no |

@@ -606,7 +606,6 @@ Eightfold API answers 403.
 
 | Job site | Employers |
 |---|---|
-| Comeet | Aqua Security, Cyera, eToro |
 | Teamtailor | Lindy, GitGuardian, Starship Technologies |
 | Pinpoint | Infor, Wolverine Trading |
 | UKG | Presidio, eClinicalWorks |
@@ -662,11 +661,19 @@ Setup's location rules know for the big US cities. Klarna (102 jobs, mostly in E
 Tech and Accounting & Finance. Deel's own jobs are listed on deel.com/careers instead (its
 board redirects there), which this reader doesn't read.
 
+**Comeet reader** (the same day): a company's hosted Comeet page
+(`www.comeet.com/jobs/{company}/{uid}`; companies embedding Comeet show the uid in their own
+careers page) sets `COMPANY_POSITIONS_DATA`, every position with its city, state, country
+code and usually its description, in one request. Cyera (224 jobs, 6 matching) and Aqua
+Security joined Tech; eToro, whose jobs in the four countries aren't tech roles, joined
+Accounting & Finance. CyberArk's careers site now redirects to Palo Alto Networks, which
+bought it and is already listed.
+
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
 Wayfair, Google DeepMind, Valve, ByteDance, Revolut, Deel, Rapid7,
-CyberArk, Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive,
-UBS and Eli Lilly. Each needs a look at what its page loads its jobs from.
+Check Point, Varonis, McKinsey, Verizon, UPS, FedEx, Delta, Best Buy, Progressive
+and UBS. Each needs a look at what its page loads its jobs from.
 
 ## How the less conventional sources are covered
 

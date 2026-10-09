@@ -12,6 +12,7 @@ from role_radar.scrapers.ashby import AshbyScraper
 from role_radar.scrapers.avature import AvatureScraper
 from role_radar.scrapers.bamboohr import BambooHRScraper
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
+from role_radar.scrapers.comeet import ComeetScraper
 from role_radar.scrapers.comsol import ComsolScraper
 from role_radar.scrapers.deel import DeelScraper
 from role_radar.scrapers.deshaw import DEShawScraper
@@ -43,7 +44,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         MathWorksScraper, HRMDirectScraper, ICIMSScraper, JibeScraper, AvatureScraper,
         ComsolScraper, RecruiterboxScraper, AmazonScraper, AppleScraper, GoogleScraper, EightfoldScraper,
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
-        SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper,
+        SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
         GenericScraper,
     )
 }

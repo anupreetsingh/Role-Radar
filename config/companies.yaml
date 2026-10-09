@@ -7,7 +7,8 @@
 #   ats       optional: bamboohr | greenhouse | lever | ashby | workday | icims | jibe |
 #             avature | hrmdirect | recruiterbox | eightfold | oracle_hcm | amazon |
 #             apple | google | meta | tiktok | mathworks | comsol | smartrecruiters |
-#             workable | successfactors | phenom | deshaw | gem | deel | generic
+#             workable | successfactors | phenom | deshaw | gem | deel | comeet |
+#             generic
 #             (auto-detected from the URL when omitted; SuccessFactors and Phenom sites need it)
 #   filters   optional; each key REPLACES the same key from your profile's filters
 #   options   optional scraper-specific settings (see each scraper's docstring)
@@ -42752,6 +42753,7 @@ companies:
 
 
 
+
   - name: Aeva
     url: https://jobs.lever.co/aeva
     ats: lever
@@ -42762,10 +42764,12 @@ companies:
 
 
 
+
   - name: Airtable
     url: https://job-boards.greenhouse.io/airtable
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -42784,6 +42788,7 @@ companies:
 
 
 
+
   - name: Ally
     url: https://ally.wd1.myworkdayjobs.com/Ally
     ats: workday
@@ -42796,10 +42801,12 @@ companies:
 
 
 
+
   - name: Aon
     url: https://jobs.aon.com/jobs
     ats: jibe
     countries: [US, CA, AU, IN]
+
 
 
 
@@ -42818,6 +42825,7 @@ companies:
 
 
 
+
   - name: AQR Capital Management
     url: https://job-boards.greenhouse.io/aqr
     ats: greenhouse
@@ -42828,10 +42836,17 @@ companies:
 
 
 
+
+  - name: Aqua Security
+    url: https://www.comeet.com/jobs/aquasec/91.001
+    ats: comeet
+    countries: [US, IN]
+
   - name: Atom Computing
     url: https://jobs.lever.co/atomcomputing
     ats: lever
     countries: [US]
+
 
 
 
@@ -42848,10 +42863,12 @@ companies:
 
 
 
+
   - name: Bilt
     url: https://jobs.gem.com/bilt
     ats: gem
     countries: [US]
+
 
 
   - name: BNSF Railway
@@ -42863,10 +42880,12 @@ companies:
 
 
 
+
   - name: Bungie
     url: https://job-boards.greenhouse.io/bungie
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -42883,10 +42902,12 @@ companies:
 
 
 
+
   - name: CarGurus
     url: https://job-boards.greenhouse.io/cargurus
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -42902,10 +42923,12 @@ companies:
 
 
 
+
   - name: Chick-fil-A
     url: https://careers.chick-fil-a.com/jobs
     ats: jibe
     countries: [US, CA]
+
 
 
 
@@ -42924,10 +42947,12 @@ companies:
 
 
 
+
   - name: Cloudflare
     url: https://job-boards.greenhouse.io/cloudflare
     ats: greenhouse
     countries: [US, CA, AU, IN]
+
 
 
 
@@ -42946,6 +42971,7 @@ companies:
 
 
 
+
   - name: Crypto.com
     url: https://jobs.lever.co/crypto
     ats: lever
@@ -42956,6 +42982,12 @@ companies:
 
 
 
+
+  - name: Cyera
+    url: https://www.comeet.com/jobs/cyera/17.008
+    ats: comeet
+    countries: [US, CA, AU]
+
   - name: D. E. Shaw
     url: https://www.deshaw.com/careers/choose-your-path
     ats: deshaw
@@ -42964,10 +42996,12 @@ companies:
 
 
 
+
   - name: D. E. Shaw India
     url: https://www.deshawindia.com/careers
     ats: deshaw
     countries: [IN]
+
 
 
 
@@ -42981,10 +43015,12 @@ companies:
 
 
 
+
   - name: Dexterity
     url: https://jobs.lever.co/dexterity
     ats: lever
     countries: [US]
+
 
 
 
@@ -43003,10 +43039,12 @@ companies:
 
 
 
+
   - name: Dremio
     url: https://job-boards.greenhouse.io/dremio
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -43023,6 +43061,7 @@ companies:
 
 
 
+
   - name: Eli Lilly
     url: https://careers.lilly.com/us/en/search-results
     ats: phenom
@@ -43032,10 +43071,12 @@ companies:
 
 
 
+
   - name: Engineers Gate
     url: https://job-boards.greenhouse.io/engineersgate
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -43053,10 +43094,12 @@ companies:
 
 
 
+
   - name: Fireflies.ai
     url: https://jobs.gem.com/fireflies
     ats: gem
     countries: [US, CA, AU, IN]
+
 
 
   - name: Fractal Analytics
@@ -43071,16 +43114,19 @@ companies:
 
 
 
+
   - name: Function Health
     url: https://jobs.gem.com/function-health
     ats: gem
     countries: [US]
 
 
+
   - name: Gallagher
     url: https://jobs.ajg.com/jobs
     ats: jibe
     countries: [US, CA, AU, IN]
+
 
 
 
@@ -43097,10 +43143,12 @@ companies:
 
 
 
+
   - name: Groq
     url: https://jobs.gem.com/groq
     ats: gem
     countries: [US, CA, AU]
+
 
 
   - name: Grubhub
@@ -43109,6 +43157,7 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
 
 
 
@@ -43125,10 +43174,12 @@ companies:
 
 
 
+
   - name: Intercontinental Exchange (ICE)
     url: https://careers.ice.com/jobs
     ats: jibe
     countries: [US, AU, IN]
+
 
 
 
@@ -43147,10 +43198,12 @@ companies:
 
 
 
+
   - name: JFrog
     url: https://job-boards.greenhouse.io/jfrog
     ats: greenhouse
     countries: [US, CA, AU, IN]
+
 
 
 
@@ -43167,10 +43220,12 @@ companies:
 
 
 
+
   - name: Klarna
     url: https://jobs.deel.com/klarna
     ats: deel
     countries: [US, AU]
+
 
   - name: Marsh McLennan
     url: https://careers.marsh.com/global/en/search-results
@@ -43184,10 +43239,12 @@ companies:
 
 
 
+
   - name: Medallia
     url: https://jobs.medallia.com/jobs
     ats: jibe
     countries: [US, CA, AU]
+
 
 
 
@@ -43204,6 +43261,7 @@ companies:
 
 
 
+
   - name: Mobileye
     url: https://jobs.eu.lever.co/mobileye
     ats: lever
@@ -43213,10 +43271,12 @@ companies:
 
 
 
+
   - name: Mysten Labs
     url: https://jobs.ashbyhq.com/mystenlabs
     ats: ashby
     countries: [US]
+
 
 
 
@@ -43233,10 +43293,12 @@ companies:
 
 
 
+
   - name: Nintendo of America
     url: https://job-boards.greenhouse.io/nintendo
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -43253,10 +43315,12 @@ companies:
 
 
 
+
   - name: Numerix
     url: https://job-boards.greenhouse.io/numerix
     ats: greenhouse
     countries: [US, IN]
+
 
 
 
@@ -43273,10 +43337,12 @@ companies:
 
 
 
+
   - name: Old Mission
     url: https://job-boards.greenhouse.io/oldmissioncapital
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -43292,6 +43358,7 @@ companies:
 
 
 
+
   - name: Outreach
     url: https://jobs.lever.co/outreach
     ats: lever
@@ -43302,10 +43369,12 @@ companies:
 
 
 
+
   - name: Outrider
     url: https://job-boards.greenhouse.io/outrider
     ats: greenhouse
     countries: [US]
+
 
 
 
@@ -43324,10 +43393,12 @@ companies:
 
 
 
+
   - name: Principal Financial Group
     url: https://careers.principal.com/jobs
     ats: jibe
     countries: [US, IN]
+
 
 
 
@@ -43346,16 +43417,19 @@ companies:
 
 
 
+
   - name: Retool
     url: https://jobs.gem.com/retool
     ats: gem
     countries: [US]
 
 
+
   - name: Ro
     url: https://jobs.lever.co/ro
     ats: lever
     countries: [US]
+
 
 
 
@@ -43372,10 +43446,12 @@ companies:
 
 
 
+
   - name: SideFX
     url: https://sidefx.bamboohr.com/careers
     ats: bamboohr
     countries: [US, CA]
+
 
 
 
@@ -43394,10 +43470,12 @@ companies:
 
 
 
+
   - name: SiriusXM
     url: https://careers.siriusxm.com/jobs
     ats: jibe
     countries: [US]
+
 
 
 
@@ -43414,10 +43492,12 @@ companies:
 
 
 
+
   - name: SolarWinds
     url: https://job-boards.greenhouse.io/solarwinds
     ats: greenhouse
     countries: [US, AU, IN]
+
 
 
 
@@ -43434,10 +43514,12 @@ companies:
 
 
 
+
   - name: State Farm
     url: https://jobs.statefarm.com/jobs
     ats: jibe
     countries: [US]
+
 
 
 
@@ -43454,10 +43536,12 @@ companies:
 
 
 
+
   - name: Susquehanna International Group (SIG)
     url: https://careers.sig.com/jobs
     ats: jibe
     countries: [US, AU, IN]
+
 
 
 
@@ -43474,10 +43558,12 @@ companies:
 
 
 
+
   - name: Sysdig
     url: https://jobs.lever.co/sysdig
     ats: lever
     countries: [US]
+
 
 
 
@@ -43494,10 +43580,12 @@ companies:
 
 
 
+
   - name: Unit
     url: https://jobs.ashbyhq.com/unit
     ats: ashby
     countries: [US]
+
 
 
 
@@ -43513,10 +43601,12 @@ companies:
 
 
 
+
   - name: Warner Bros. Discovery
     url: https://careers.wbd.com/global/en/search-results
     ats: phenom
     countries: [US, CA, AU, IN]
+
 
 
 
@@ -43532,10 +43622,12 @@ companies:
 
 
 
+
   - name: Zapier
     url: https://jobs.ashbyhq.com/zapier
     ats: ashby
     countries: [US]
+
 
 
 

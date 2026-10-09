@@ -619,3 +619,36 @@ def test_deel_reads_the_board_pages_data():
     assert eng.extra["description"] == "<p>3+ years, café</p>"
     assert data.location == "Stockholm; London (Hybrid)" and data.extra["description"] == "<p>2+ years</p>"
     assert scraper_class_for("https://jobs.deel.com/klarna").name == "deel"
+
+
+def test_comeet_reads_the_hosted_page_positions():
+    positions = [
+        {"uid": "DE.078", "name": "Backend Engineer", "department": "R&D", "employment_type": "Full-time", "time_updated": "2026-10-07T04:17:08Z",
+         "location": {"name": "US Remote", "city": "New York", "state": "NY", "country": "US", "is_remote": True},
+         "url_active_page": "https://www.cyera.com/jobs/DE.078", "url_comeet_hosted_page": "https://www.comeet.com/jobs/cyera/17.008/backend-engineer/DE.078",
+         "custom_fields": {"details": [{"name": "Description", "value": "<p>Build</p>"}, {"name": "Requirements", "value": "<p>3+ years</p>"}]}},
+        {"uid": "56.37B", "name": "Golang Engineer", "location": {"name": "Hyderabad, India", "city": "Hyderabad", "country": "IN"},
+         "url_comeet_hosted_page": "https://www.comeet.com/jobs/aquasec/91.001/golang/56.37B"},
+        {"uid": "X.1", "name": "Internal move", "is_internal": True},
+    ]
+    position = {"uid": "56.37B", "custom_fields": {"details": [{"name": "Requirements", "value": "<p>8+ years</p>"}]}}
+    routes = {"/jobs/cyera/17.008": f"<script>var COMPANY_DATA; COMPANY_POSITIONS_DATA = {json.dumps(positions)};</script>",
+              "/jobs/aquasec/91.001/golang/56.37B": f"<script>POSITION_DATA = {json.dumps(position)};</script>"}
+
+    def handler(request):
+        body = routes.get(request.url.path)
+        return httpx.Response(200, text=body) if body else httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            scraper = SCRAPERS["comeet"](company("Cyera", url="https://www.comeet.com/jobs/cyera/17.008"), http)
+            result = await scraper.fetch_jobs()
+            return result, [await scraper.fetch_description(j) for j in result.jobs]
+
+    result, descriptions = asyncio.run(go())
+    backend, golang = result.jobs  # the internal position is skipped
+    assert (backend.job_id, backend.url, backend.location) == ("DE.078", "https://www.cyera.com/jobs/DE.078", "New York, NY, US (Remote)")
+    assert (backend.department, backend.employment_type, backend.date_posted) == ("R&D", "Full-time", date(2026, 10, 7))
+    assert golang.location == "Hyderabad, IN"
+    assert descriptions == ["<p>Build</p>\n<p>3+ years</p>", "<p>8+ years</p>"]
+    assert scraper_class_for("https://www.comeet.com/jobs/cyera/17.008").name == "comeet"
