@@ -408,6 +408,7 @@ alert again. The previous version behaved the same way.
 | iCIMS | Public job cards across every visible results page | no |
 | Jibe | Branded career site's public `/api/jobs` endpoint, paginated (e.g. Garmin) | no |
 | Avature | Public `SearchJobs` result cards, paginated (e.g. Bloomberg) | no |
+| Phenom | The career site's `POST {origin}/widgets` job feed, 100 jobs a request (e.g. Chewy, OpenText, United Airlines); set `ats: phenom`, since these sites use the company's own domain | no |
 | COMSOL | Job links grouped under location headings | no |
 | Recruiterbox / Trakstar | Public widget API (e.g. Wolfram) | no |
 | Eightfold | The site's `/api/pcsx/search` (Microsoft, Qualcomm, PayPal...) or `/api/apply/v2/jobs` (Netflix), newest first | no |

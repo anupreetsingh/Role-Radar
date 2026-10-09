@@ -606,7 +606,6 @@ Eightfold API answers 403.
 
 | Job site | Employers |
 |---|---|
-| Phenom | Chewy, OpenText, United Airlines, Marsh McLennan, DHL, TJX, BNSF, Allianz, Siemens Healthineers, Warner Bros. Games, O'Reilly Auto Parts |
 | Gem | Retool, Groq, Fireflies.ai, Bilt, Function Health |
 | Comeet | Aqua Security, Cyera, eToro |
 | Teamtailor | Lindy, GitGuardian, Starship Technologies |
@@ -615,6 +614,25 @@ Eightfold API answers 403.
 | Taleo | UnitedHealth Group and Optum |
 | Jobvite | Nutanix |
 | Radancy or BrassRing fronts | Intuit, Walgreens, Publix, ADM, Chipotle |
+
+**Phenom reader** (added the same day): a Phenom career site's search page fills itself from
+`POST {origin}/widgets` (`ddoKey: refineSearch`), which answers 100 jobs a request with the
+total; robots.txt leaves it open. `ats: phenom` reads it whole each check, since its "Most
+recent" order isn't reliably newest first; `options.selected_fields` narrows a big site the
+way its own filters do (Marsh McLennan, DHL, Allianz and Siemens Healthineers are narrowed to
+the four countries, which Allianz calls "United States" and the others "United States of
+America"), and the experience filter reads a new match's description from its job page. Read
+once each (157 requests), these joined Tech: Chewy, OpenText, United Airlines, Marsh McLennan
+(Marsh, Mercer and Oliver Wyman jobs), DHL, BNSF Railway, Allianz, Siemens Healthineers,
+Warner Bros. Discovery (Warner Bros. Games among them) and Eli Lilly, the one Phenom site found
+among the unidentified pages below; 9 of them joined Accounting & Finance and 4 Healthcare. TJX
+was left out: its "tech" matches were store "Front End Cashier" roles, as with Albertsons, and
+O'Reilly Auto Parts' site didn't answer.
+
+Two more were found while looking at the unidentified pages: Mobileye posts on Lever's EU site
+(`jobs.eu.lever.co/mobileye`, 186 jobs, mostly in Israel), and Etsy's own Workday site
+(`Etsy_Careers`) was missed because the sweep had already listed another site of the same
+Workday account (Depop's).
 
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, D. E. Shaw, Shopify,

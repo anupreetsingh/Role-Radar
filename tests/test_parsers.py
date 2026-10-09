@@ -1,4 +1,5 @@
 import asyncio
+import json
 from dataclasses import fields
 from datetime import date
 
@@ -101,6 +102,79 @@ def test_greenhouse_work_mode_location_takes_the_metadata_places():
     result = scrape("greenhouse", "https://job-boards.greenhouse.io/cloudflare", {"/v1/boards/cloudflare/jobs": jobs})
     assert [j.location for j in result.jobs] == [
         "Austin, US; London, UK (Hybrid)", "Bengaluru, India (Distributed; Hybrid)", "Hybrid", "Remote - US"]
+
+
+def phenom_job(n, **kw):
+    return {"jobSeqNo": f"CHINUSR{n}EXTERNALENUS", "jobId": f"R{n}", "title": f"Software Engineer {n}",
+            "cityStateCountry": "Plantation, Florida, United States of America", "multi_location": ["Plantation, FL"],
+            "category": "Technology", "type": "Full time", "postedDate": "2026-09-04T00:00:00.000+0000", **kw}
+
+
+def test_phenom_reads_the_widgets_feed_100_at_a_time():
+    bodies = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        bodies.append(body)
+        start = body["from"]
+        jobs = [phenom_job(n) for n in range(start, min(start + 100, 150))]
+        if start == 100:
+            jobs[0] = phenom_job(100, multi_location=["Plantation, FL", "Seattle, WA"])
+        return httpx.Response(200, json={"refineSearch": {"totalHits": 150, "data": {"jobs": jobs}}})
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company("Chewy", url="https://careers.chewy.com/us/en/search-results")
+            cfg.options = {"selected_fields": {"country": ["United States of America"]}}
+            return await SCRAPERS["phenom"](cfg, http).fetch_jobs()
+
+    result = asyncio.run(go())
+    assert result.complete and len(result.jobs) == 150
+    assert [(b["from"], b["size"], b["lang"], b["country"]) for b in bodies] == [(0, 100, "en_us", "us"), (100, 100, "en_us", "us")]
+    assert bodies[0]["selected_fields"] == {"country": ["United States of America"]}
+    first = result.jobs[0]
+    assert (first.job_id, first.title, first.department, first.date_posted) == ("CHINUSR0EXTERNALENUS", "Software Engineer 0", "Technology", date(2026, 9, 4))
+    assert first.url == "https://careers.chewy.com/us/en/job/R0"
+    assert first.location == "Plantation, Florida, United States of America"
+    assert next(j for j in result.jobs if j.job_id == "CHINUSR100EXTERNALENUS").location == "Plantation, FL; Seattle, WA"
+
+
+def test_phenom_global_site_and_cap():
+    seen = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        seen.append((str(request.url), body["lang"], body["country"], body["from"]))
+        jobs = [phenom_job(body["from"] + i) for i in range(100)]
+        return httpx.Response(200, json={"refineSearch": {"totalHits": 9904, "data": {"jobs": jobs}}})
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company("DHL", url="https://careers.dhl.com/global/en/search-results")
+            cfg.options = {"max_jobs": 200}
+            return await SCRAPERS["phenom"](cfg, http).fetch_jobs()
+
+    result = asyncio.run(go())
+    assert seen == [("https://careers.dhl.com/widgets", "en_global", "global", 0), ("https://careers.dhl.com/widgets", "en_global", "global", 100)]
+    assert not result.complete and len(result.jobs) == 200  # capped: never a removal snapshot
+    assert result.jobs[0].url == "https://careers.dhl.com/global/en/job/R0"
+
+
+def test_phenom_description_from_the_job_page():
+    page = ('<script>phApp.ddo = {"jobDetail":{"data":{"job":{"description":"<p>3+ years of experience</p>"}}}}; '
+            'phApp.experimental = {};</script>')
+
+    async def go():
+        async with make_client(lambda r: httpx.Response(200, text=page)) as http:
+            scraper = SCRAPERS["phenom"](company("Chewy", url="https://careers.chewy.com/us/en/search-results"), http)
+            return await scraper.fetch_description(job(url="https://careers.chewy.com/us/en/job/R1"))
+
+    assert asyncio.run(go()) == "<p>3+ years of experience</p>"
+
+
+def test_phenom_bad_response_is_error():
+    with pytest.raises(ScraperError):
+        scrape("phenom", "https://careers.chewy.com/us/en/search-results", {"/widgets": {"status": "error"}})
 
 
 def test_lever():

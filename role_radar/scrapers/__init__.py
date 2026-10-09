@@ -24,6 +24,7 @@ from role_radar.scrapers.lever import LeverScraper
 from role_radar.scrapers.mathworks import MathWorksScraper
 from role_radar.scrapers.meta import MetaScraper
 from role_radar.scrapers.oracle_hcm import OracleHcmScraper
+from role_radar.scrapers.phenom import PhenomScraper
 from role_radar.scrapers.recruiterbox import RecruiterboxScraper
 from role_radar.scrapers.rippling import RipplingScraper
 from role_radar.scrapers.smartrecruiters import SmartRecruitersScraper
@@ -39,7 +40,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         MathWorksScraper, HRMDirectScraper, ICIMSScraper, JibeScraper, AvatureScraper,
         ComsolScraper, RecruiterboxScraper, AmazonScraper, AppleScraper, GoogleScraper, EightfoldScraper,
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
-        SuccessFactorsScraper,
+        SuccessFactorsScraper, PhenomScraper,
         GenericScraper,
     )
 }

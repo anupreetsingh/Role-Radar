@@ -2061,6 +2061,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Chewy
+    url: https://careers.chewy.com/us/en/search-results
+    ats: phenom
+    countries: [US]
+
   - name: Chicago School
     url: https://tcsedsystem.wd1.myworkdayjobs.com/TCSPP
     ats: workday
@@ -3185,6 +3190,11 @@ companies:
     url: https://apply.workable.com/elevation-autism-center/
     ats: workable
     countries: [US]
+
+  - name: Eli Lilly
+    url: https://careers.lilly.com/us/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
 
   - name: Eliot Community Human Services
     url: https://job-boards.greenhouse.io/eliotcommunityhumanservices
@@ -5645,6 +5655,14 @@ companies:
     url: https://ejwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
     countries: [US, AU, IN]
+
+  - name: Marsh McLennan
+    url: https://careers.marsh.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
 
   - name: Marshall Medical Center
     url: https://marshallmedical.wd1.myworkdayjobs.com/MMC
@@ -8267,6 +8285,14 @@ companies:
     url: https://apply.workable.com/sidekicktool/
     ats: workable
     countries: [US, CA]
+
+  - name: Siemens Healthineers
+    url: https://careers.siemens-healthineers.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
 
   - name: Signature Healthcare at Home
     url: https://pennant.wd1.myworkdayjobs.com/signaturehceugene

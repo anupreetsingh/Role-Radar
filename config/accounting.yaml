@@ -902,6 +902,14 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Allianz
+    url: https://careers.allianz.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
+
   - name: Allied Solutions
     url: https://alliedsolutions.wd501.myworkdayjobs.com/Allied_External
     ats: workday
@@ -4473,6 +4481,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Chewy
+    url: https://careers.chewy.com/us/en/search-results
+    ats: phenom
+    countries: [US]
+
   - name: CHG Management
     url: https://chghealthcare.wd1.myworkdayjobs.com/External
     ats: workday
@@ -6380,6 +6393,14 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: DHL
+    url: https://careers.dhl.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
+
   - name: Dialogue
     url: https://ats.rippling.com/dialogue-en/jobs
     ats: rippling
@@ -7558,6 +7579,13 @@ companies:
     url: https://fa-evyu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Etsy
+    url: https://etsy.wd5.myworkdayjobs.com/Etsy_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
 
   - name: Eurofins
     url: https://careers.smartrecruiters.com/eurofins
@@ -12622,6 +12650,14 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Marsh McLennan
+    url: https://careers.marsh.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
+
   - name: Marshall Medical Center
     url: https://marshallmedical.wd1.myworkdayjobs.com/MMC
     ats: workday
@@ -14824,6 +14860,11 @@ companies:
   - name: OpenTable
     url: https://job-boards.greenhouse.io/opentable
     ats: greenhouse
+    countries: [US, CA, AU, IN]
+
+  - name: OpenText
+    url: https://careers.opentext.com/us/en/search-results
+    ats: phenom
     countries: [US, CA, AU, IN]
 
   - name: Ophelia
@@ -18192,6 +18233,14 @@ companies:
     ats: workable
     countries: [US, CA, IN]
 
+  - name: Siemens Healthineers
+    url: https://careers.siemens-healthineers.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
+    options:
+      selected_fields:
+        country: [United States of America, United States, Canada, Australia, India]
+
   - name: Siepe
     url: https://jobs.ashbyhq.com/siepe
     ats: ashby
@@ -20670,6 +20719,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: United Airlines
+    url: https://careers.united.com/us/en/search-results
+    ats: phenom
+    countries: [US, IN]
+
   - name: United Insurance Company of America
     url: https://kemper.wd5.myworkdayjobs.com/kemper_careers
     ats: workday
@@ -21558,6 +21612,11 @@ companies:
     url: https://fa-evdi-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/WarbyParkerCareers/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Warner Bros. Discovery
+    url: https://careers.wbd.com/global/en/search-results
+    ats: phenom
+    countries: [US, CA, AU, IN]
 
   - name: Warner Music
     url: https://wmg.wd1.myworkdayjobs.com/wmgus
