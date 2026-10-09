@@ -1741,6 +1741,11 @@ companies:
     ats: workable
     countries: [US, CA]
 
+  - name: Cargill
+    url: https://careers.cargill.com/
+    ats: radancy
+    countries: [US, CA, AU, IN]
+
   - name: Carilion Emergency Services
     url: https://carilionclinic.wd12.myworkdayjobs.com/external_careers
     ats: workday
@@ -5080,6 +5085,11 @@ companies:
   - name: JumpstartMD
     url: https://ats.rippling.com/jumpstartmd-careers/jobs
     ats: rippling
+    countries: [US]
+
+  - name: Kaiser Permanente
+    url: https://www.kaiserpermanentejobs.org/
+    ats: radancy
     countries: [US]
 
   - name: Kaizo Health

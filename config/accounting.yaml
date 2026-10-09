@@ -4009,6 +4009,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Cargill
+    url: https://careers.cargill.com/
+    ats: radancy
+    countries: [US, CA, AU, IN]
+
   - name: Caribou Financial
     url: https://job-boards.greenhouse.io/caribou
     ats: greenhouse
@@ -11425,6 +11430,11 @@ companies:
   - name: Kailera Therapeutics
     url: https://job-boards.greenhouse.io/kailera
     ats: greenhouse
+    countries: [US]
+
+  - name: Kaiser Permanente
+    url: https://www.kaiserpermanentejobs.org/
+    ats: radancy
     countries: [US]
 
   - name: Kaizen Asset Management Services

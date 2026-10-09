@@ -681,7 +681,10 @@ fronts: Synopsys (608 jobs, 40 matching), Arm (396, 52), Jack Henry (81, 28) and
 (362, 38), along with Intuit (614, 201; its applications go to an Avature site with no public
 search) and UnitedHealth Group with Optum (5,655 jobs: 306 tech and 1,374 healthcare
 matches). All six joined Tech and Accounting & Finance, and UnitedHealth Group Healthcare.
-Chipotle's site is Radancy too, but its jobs are restaurant roles.
+Chipotle's site is Radancy too, but its jobs are restaurant roles. A sweep of the
+unidentified companies' sitemaps for Radancy job links found two more: Kaiser Permanente (3,130
+jobs: 28 tech, 1,066 healthcare matches) and Cargill (1,333 jobs, 28 tech matches), which joined
+Tech and Accounting & Finance, and Kaiser Permanente and Cargill Healthcare.
 
 **Not identified**: about 140 career pages named no job software Role Radar knows (or
 didn't answer), among them IBM, Tesla, Citadel and Citadel Securities, Shopify,
