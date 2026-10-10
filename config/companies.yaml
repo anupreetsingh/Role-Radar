@@ -1526,6 +1526,17 @@ companies:
         Location_Country:
           - bc33aa3152ec42d4995f4791a106ed09
 
+  - name: GlobalFoundries
+    url: https://globalfoundries.wd1.myworkdayjobs.com/External
+    ats: workday
+    countries: [US]
+    # US jobs only, to keep Workday traffic down
+    options:
+      max_jobs: 3000
+      applied_facets:
+        locationCountry:
+          - bc33aa3152ec42d4995f4791a106ed09
+
   - name: Intel
     url: https://intel.wd1.myworkdayjobs.com/External
     ats: workday

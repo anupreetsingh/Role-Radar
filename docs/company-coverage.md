@@ -700,6 +700,9 @@ Plano, Memphis and Hyderabad); both joined Tech and Accounting & Finance. Rapid7
 same shape, but its firewall answered with empty pages after a few requests. Wix was already
 listed, as Wix2 (its SmartRecruiters name), and Intuitive Surgical as Intuitive.
 
+**GlobalFoundries** (2026-10-09), removed from Tech with the hardware employers on 2026-09-27,
+is tracked again on request: its Workday board, US jobs only (373 of them).
+
 **Still not covered**, after looking at each big name's careers page:
 
 - Bot protection answers scripts with a challenge or an empty page, and Role Radar doesn't pose
