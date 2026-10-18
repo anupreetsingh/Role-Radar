@@ -3,8 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: >-
   Role Radar's suggestions box: the app's Companies page posts the companies people want on
   everyone's lists to this function URL, and `role-radar suggestions` lists them. It also serves the
-  GitHub page's badges: downloads, and weekly users (copies of the app check in with an anonymous
-  id). Its own stack,
+  GitHub page's badges: downloads, and weekly users (copies of the app check in with a random id
+  and the name their person gave; `role-radar users` lists them). Its own stack,
   apart from the checker's, so deploying it never touches the checker. Deploy from the project root:
   sam build -t deploy/suggestions/template.yaml && sam deploy --stack-name role-radar-suggestions
   --resolve-s3 --capabilities CAPABILITY_IAM
@@ -26,7 +26,7 @@ Resources:
         - AttributeName: id
           KeyType: HASH
 
-  # One row per copy of the app in use (a random id), for the weekly users badge.
+  # One row per copy of the app in use (a random id), for the weekly users badge and `role-radar users`.
   InstallsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain

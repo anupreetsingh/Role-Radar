@@ -10,6 +10,7 @@ public sealed class FakeCli : ICli
     public Dictionary<string, bool> Switches { get; } = new() { ["laptop"] = true, ["lambda"] = false, ["discord"] = false, ["email"] = true };
     public bool EmailReady { get; set; } = true;
     public bool Ready { get; set; } = true;
+    public string? Name { get; set; } = "Test Person"; // the person's, as `setup name` saved it
     public string? Failing { get; set; } // a command that fails with this message
 
     public static readonly string Now = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -46,6 +47,7 @@ public sealed class FakeCli : ICli
             "matches" => System.Text.Json.JsonSerializer.Serialize(Live, Json.Options), // snake_case, as role-radar writes it
             "setup" => Json.Write(new Dictionary<string, object?>
             {
+                ["name"] = args.Count > 1 && args[1] == "name" ? Name = Json.Read<Dictionary<string, string>>(stdin!)!["name"] : Name,
                 ["ready"] = Ready, ["email_ready"] = EmailReady, ["discord_ready"] = false, ["profession"] = "tech",
                 ["roles"] = new[] { "engineer" }, ["countries"] = new[] { "US" },
             }),

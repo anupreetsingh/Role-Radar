@@ -46,7 +46,7 @@ import socket
 import sys
 import time
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Callable
@@ -61,7 +61,8 @@ from role_radar.lease import Lease, LeaseKeeper
 from role_radar.monitor import print_matches
 from role_radar.runner import EXIT_LEASE_HELD, Runner
 from role_radar.schedule import due_companies, interval_for, next_due
-from role_radar.storage import CHANNELS, RUNNERS, SWITCHES, JsonStateStore, StateStore, alerts_off, from_iso, switch_on, utcnow
+from role_radar.storage import (CHANNELS, RUNNERS, SWITCHES, JsonStateStore, StateStore, alerts_off, from_iso, switch_on,
+                                to_iso, utcnow)
 
 log = logging.getLogger("role-radar")
 
@@ -372,6 +373,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
     action = args.action or "show"
     if action == "init":
         onboarding.init(config)
+    elif action == "name":
+        suggest.save_name(config, str(json.load(sys.stdin).get("name") or ""))
     elif action == "profession":
         onboarding.save_profession(config, json.load(sys.stdin).get("profession") or "")
     elif action == "profile":
@@ -421,6 +424,27 @@ def cmd_setup(args: argparse.Namespace) -> int:
 def cmd_checkin(args: argparse.Namespace) -> int:
     """The downloadable app's anonymous check-in, when it opens and every 6 hours (suggest.check_in)."""
     return 0 if suggest.check_in(context(args).config_path) else 1
+
+
+def cmd_users(args: argparse.Namespace) -> int:
+    """The maintainer's list of who uses the app: each copy that checked in, by the name its person gave."""
+    rows = suggest.list_users()
+    if args.json:
+        print(json.dumps(rows))
+        return 0
+    if not rows:
+        print("No copies of the app have checked in yet.")
+        return 0
+    week = to_iso(utcnow() - timedelta(days=7))
+    named = lambda row: row.get("person") or "(no name yet)"  # noqa: E731
+    width = max(len(named(row)) for row in rows)
+    for row in rows:
+        system = "Windows" if str(row.get("os") or "").startswith("Windows") else f"Mac {row.get('os') or '?'}"
+        print(f"{named(row):<{width}}  {system:<12}  v{row.get('app') or '?':<7}  "
+              f"since {str(row.get('first_seen') or '?')[:10]}  last seen {str(row.get('last_seen') or '?')[:10]}")
+    active = sum(1 for row in rows if str(row.get("last_seen") or "") >= week)
+    print(f"\n{len(rows)} cop{'y' if len(rows) == 1 else 'ies'} of the app; {active} used in the last 7 days.")
+    return 0
 
 
 def cmd_suggestions(args: argparse.Namespace) -> int:
@@ -816,9 +840,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("setup", parents=[common], help="the packaged app's first-run setup (JSON in and out)")
     p.add_argument("action", nargs="?",
-                   choices=["init", "show", "profession", "profile", "prompt", "companies", "email", "discord",
+                   choices=["init", "show", "name", "profession", "profile", "prompt", "companies", "email", "discord",
                             "recipients", "find", "track", "add", "suggest"],
-                   help="init: create the files; profession: pick one (JSON on stdin); profile: save titles, countries "
+                   help='init: create the files; name: save their name ({"name"}); '
+                        "profession: pick one (JSON on stdin); profile: save titles, countries "
                         "etc. (JSON on stdin); prompt: print the AI prompt; "
                         "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin); "
                         "discord: save a Discord webhook (JSON on stdin); "
@@ -835,6 +860,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("checkin", parents=[common],
                        help="the downloadable app's anonymous check-in, for the user counts on the GitHub page")
     p.set_defaults(func=cmd_checkin)
+
+    p = sub.add_parser("users", parents=[common],
+                       help="who uses the app: each copy that checked in, by name (the maintainer's AWS credentials)")
+    p.add_argument("--json", action="store_true", help="as JSON")
+    p.set_defaults(func=cmd_users)
 
     p = sub.add_parser("suggestions", parents=[common],
                        help="the companies people asked for in the app (the maintainer's AWS credentials)")

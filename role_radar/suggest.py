@@ -28,6 +28,8 @@ from role_radar.storage import to_iso, utcnow
 ENDPOINT = "https://jpgqzrwhtsaeplsmw35a5rp7oa0qohwq.lambda-url.us-east-1.on.aws/"
 TABLE = "role-radar-suggestions"
 LIMITS = {"name": 120, "url": 500, "note": 1000}
+NAME_LIMIT = 60  # the person's name, as they give it once in the app
+INSTALLS = "role-radar-installs"
 
 
 def endpoint() -> str | None:
@@ -59,9 +61,10 @@ def suggest(config: Path, name: str, url: str = "", note: str = "") -> dict[str,
 
 
 def check_in(config: Path) -> bool:
-    """Tell the box this copy of the app is in use, for the user counts on the project's GitHub page:
-    a random id made once on this computer (install-id, beside the companies file), the app's version and
-    the system's (os_version). Nothing else. False if it couldn't be sent; the next one counts all the same."""
+    """Tell the box this copy of the app is in use, for the user counts on the project's GitHub page and the
+    maintainer's list of who uses it: a random id made once on this computer (install-id, beside the companies
+    file), the name they gave (your-name, once saved), the app's version and the system's (os_version). Nothing
+    else. False if it couldn't be sent; the next one counts all the same."""
     url = endpoint()
     if not url:
         return False
@@ -71,12 +74,39 @@ def check_in(config: Path) -> bool:
     except (OSError, ValueError):
         install = str(uuid.uuid4())
         path.write_text(install + "\n", encoding="utf-8")
+    body = {"id": install, "app": __version__, "os": os_version()}
+    if name := read_name(config):
+        body["name"] = name
     try:
-        httpx.post(url.rstrip("/") + "/checkin", json={"id": install, "app": __version__, "os": os_version()},
+        httpx.post(url.rstrip("/") + "/checkin", json=body,
                    timeout=15, headers={"User-Agent": f"RoleRadar/{__version__}"}).raise_for_status()
         return True
     except httpx.HTTPError:
         return False
+
+
+def name_file(config: Path) -> Path:
+    return Path(config).with_name("your-name")
+
+
+def read_name(config: Path) -> str | None:
+    """The name they gave when the app asked, or None until they have."""
+    try:
+        return name_file(config).read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def save_name(config: Path, name: str) -> None:
+    """The app asks for their name once (Setup's first screen, or after updating from a version that didn't):
+    it goes with every check-in from then on."""
+    name = " ".join(name.split())
+    if not name:
+        raise ValueError("type your name")
+    if len(name) > NAME_LIMIT:
+        raise ValueError(f"the name is too long (at most {NAME_LIMIT} characters)")
+    name_file(config).parent.mkdir(parents=True, exist_ok=True)
+    name_file(config).write_text(name + "\n", encoding="utf-8")
 
 
 def os_version() -> str:
@@ -146,6 +176,20 @@ def mark_done(ids: list[str], *, client: Any = None, table: str = TABLE) -> None
         db.update_item(TableName=table, Key={"id": {"S": key}}, UpdateExpression="SET #s = :done",
                        ConditionExpression="attribute_exists(id)",
                        ExpressionAttributeNames={"#s": "status"}, ExpressionAttributeValues={":done": {"S": "done"}})
+
+
+def list_users(*, client: Any = None, table: str = INSTALLS) -> list[dict[str, Any]]:
+    """Every copy of the app that has checked in, most recently seen first: its name (once given), system,
+    version, when it was first and last seen, and how many check-ins."""
+    db, rows, start = _client(client), [], None
+    while True:
+        page = db.scan(TableName=table, **({"ExclusiveStartKey": start} if start else {}))
+        rows += [{key: _plain(value) for key, value in item.items()} for item in page.get("Items", [])]
+        start = page.get("LastEvaluatedKey")
+        if not start:
+            break
+    rows.sort(key=lambda r: r.get("last_seen") or "", reverse=True)
+    return rows
 
 
 def _plain(value: dict[str, Any]) -> Any:

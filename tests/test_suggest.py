@@ -162,6 +162,29 @@ def test_the_app_checks_in_with_the_same_id_and_nothing_else(config, monkeypatch
     assert cli.main(["checkin", "--config", str(config)]) == 1  # quietly: the next one counts all the same
 
 
+def test_the_name_they_give_goes_with_every_check_in(config, monkeypatch, capsys):
+    sent = []
+    monkeypatch.setattr(suggest.httpx, "post", lambda url, json=None, **kw: sent.append(json)
+                        or httpx.Response(200, request=httpx.Request("POST", url)))
+    monkeypatch.setenv("ROLE_RADAR_SUGGESTIONS_URL", "https://box.example/")
+    assert json.loads(_setup(config, "show", capsys, monkeypatch))["name"] is None  # the app asks for it
+    with pytest.raises(ValueError):
+        suggest.save_name(config, "   ")
+    with pytest.raises(ValueError):
+        suggest.save_name(config, "x" * 61)
+    shown = json.loads(_setup(config, "name", capsys, monkeypatch, {"name": "  Jas   Kaur "}))
+    assert shown["name"] == "Jas Kaur"
+    assert suggest.check_in(config)
+    assert sent[-1]["name"] == "Jas Kaur" and set(sent[-1]) == {"id", "app", "os", "name"}
+
+
+def _setup(config, action, capsys, monkeypatch, data=None):
+    capsys.readouterr()
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(data or {})))
+    assert cli.main(["setup", action, "--config", str(config)]) == 0
+    return capsys.readouterr().out
+
+
 def call(box, method, path, body=None):
     module, _ = box
     event = {"requestContext": {"http": {"method": method}}, "rawPath": path}
@@ -198,6 +221,27 @@ def test_the_box_counts_weekly_users(box):
     assert call(box, "GET", "/")["statusCode"] == 405
     assert client.scan(TableName="role-radar-installs")["Count"] == 2
     assert client.scan(TableName="role-radar-suggestions")["Count"] == 1
+
+
+def test_the_box_keeps_whose_copy_it_is(box, capsys):
+    import uuid
+
+    _, client = box
+    make_table(client, "role-radar-installs")
+    mine, theirs = str(uuid.uuid4()), str(uuid.uuid4())
+    long_name = " Jas\n Kaur " + "x" * 80
+    for install, body in ((theirs, {"app": "2.5.1", "os": "Windows 10.0.26200"}),
+                          (mine, {"app": "2.6.0", "os": "26.4", "name": long_name}),
+                          (mine, {"app": "2.6.0", "os": "26.4"})):  # the last as an older copy sends it: no name
+        assert call(box, "POST", "/checkin", {"id": install, **body})["statusCode"] == 200
+    users = {row["id"]: row for row in suggest.list_users(client=client)}
+    assert users[mine]["person"] == ("Jas Kaur " + "x" * 80)[:60] and users[mine]["checkins"] == 2
+    assert "person" not in users[theirs]
+
+    assert cli.main(["users"]) == 0  # the maintainer's view, from the same (fake) AWS
+    out = capsys.readouterr().out
+    assert "Jas Kaur" in out and "(no name yet)" in out and "Windows" in out and "Mac 26.4" in out
+    assert "2 copies of the app; 2 used in the last 7 days." in out
 
 
 def test_the_downloads_badge_counts_fresh_downloads_only(box, monkeypatch):

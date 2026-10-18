@@ -124,6 +124,7 @@ public sealed class SentJob
 /// <summary>`role-radar setup show`.</summary>
 public sealed class SetupState
 {
+    public string? Name { get; set; } // the person's, asked for once before anything else (NameView)
     public string? Profession { get; set; }
     public List<Profession> Professions { get; set; } = new();
     public List<string> Roles { get; set; } = new();

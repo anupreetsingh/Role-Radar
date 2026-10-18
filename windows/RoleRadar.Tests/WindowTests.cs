@@ -42,6 +42,35 @@ public class WindowTests
     });
 
     [Fact(Timeout = 300_000)]
+    public Task TheNameScreenFitsAndMovesOn() => UiThread.Run(async () =>
+    {
+        var (model, cli, _) = RealCli.Made();
+        var window = Open(model);
+        await model.StartAsync();
+        await UiThread.Settle(cli);
+        Assert.Contains("Welcome to Role Radar", Words(window));
+        var problems = new List<string>();
+        foreach (var (scale, size) in new[] { (TextSize.Standard, "standard"), (TextSize.High, "biggest") })
+        {
+            TextSize.Change(scale - TextSize.Scale);
+            await UiThread.Settle(cli);
+            problems.AddRange(Layout.Check(window, $"name-{size}"));
+        }
+        TextSize.Reset();
+        var box = Find<TextBox>(window, _ => true);
+        var next = Find<Button>(window, button => Words(button).Contains("Continue"));
+        Assert.False(next.IsEnabled); // not without a name
+        box.Text = "Test Person";
+        Assert.True(next.IsEnabled);
+        next.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        await UiThread.Settle(cli);
+        Assert.Equal("Test Person", model.Setup!.Name);
+        Assert.Contains("What's your profession?", Words(window)); // on to Setup
+        window.Hide();
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+    });
+
+    [Fact(Timeout = 300_000)]
     public Task LiveTrackingAndTheTrayPanelFit() => UiThread.Run(async () =>
     {
         var (model, cli, place) = RealCli.Made();
@@ -86,7 +115,8 @@ public class WindowTests
     /// <summary>Start the app, and do Setup as a person would: Tech, and their countries, roles and qualifications.</summary>
     private static async Task StartSetUp(AppModel model, RecordingCli cli)
     {
-        await model.StartAsync(); // opens the window, on Setup
+        await model.StartAsync(); // opens the window, on the name screen, then Setup
+        Assert.Null(await model.SaveNameAsync("Test Person"));
         Assert.Null(await model.SetupStepAsync(["profession"], new Dictionary<string, string> { ["profession"] = "tech" }));
         var answers = new SetupRules.Profile(model.Setup!.Roles, model.Setup.Exclude, [], ["US", "IN"], 2, "bachelors");
         Assert.Null(await model.SetupStepAsync(["profile"], answers.Json(withEducation: true)));

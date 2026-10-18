@@ -114,10 +114,11 @@ Releases page all fetch the same file, the newest release's `Role-Radar-apple-si
 Windows' is `Role-Radar-windows-setup.exe`. Updates fetch copies under other names
 (`...-update.dmg`, `...-windows-update.exe`), and checking for one reads a feed, so neither counts.
 **Weekly users** is how many copies of the app ran in the
-last 7 days: when it opens, and every six hours while it runs, the app sends an anonymous check-in
-to the suggestions box (deploy/suggestions), with a random id made once on that computer and the
-app's and the system's versions. Nothing else: no name, email, settings or jobs. The dev builds and
-the app built from the code never check in. Both counts refresh at most hourly.
+last 7 days: when it opens, and every six hours while it runs, the app sends a check-in to the
+suggestions box (deploy/suggestions), with a random id made once on that computer, the name its person
+typed when the app first asked (since 2.6.0), and the app's and the system's versions. Nothing else: no
+email, settings or jobs. `role-radar users` lists them for the maintainer (with the suggestions box's AWS
+access). The dev builds and the app built from the code never check in. Both counts refresh at most hourly.
 
 **Publishing a new version** (from the code, on an Apple Silicon Mac with uv, Xcode, the .NET 10 SDK
 and NSIS, `brew install makensis`): bump `__version__` in `role_radar/__init__.py` (every copy compares it

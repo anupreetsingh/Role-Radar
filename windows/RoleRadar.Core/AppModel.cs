@@ -35,6 +35,10 @@ public sealed class AppModel(ICli cli, Place place, Action? openAtLogin = null)
     /// <summary>Setup is done: a profession, countries and roles.</summary>
     public bool Ready => Setup?.Ready == true;
 
+    /// <summary>It asks for its person's name before anything else: on a new copy, and once on a copy updated
+    /// from a version that didn't ask. Checking carries on meanwhile.</summary>
+    public bool NeedsName => Setup is not null && string.IsNullOrWhiteSpace(Setup.Name);
+
     /// <summary>It starts checking only once Setup is done (and a dev build only if asked to check).</summary>
     public bool CanStart => Place.Checks && Ready;
 
@@ -64,7 +68,7 @@ public sealed class AppModel(ICli cli, Place place, Action? openAtLogin = null)
             SetupChanged?.Invoke();
         }
         await LoadSetupAsync();
-        if (!Ready || !LaunchedAtLogin)
+        if (!Ready || NeedsName || !LaunchedAtLogin)
         {
             ShowWindow(setup: !Ready);
         }
@@ -81,8 +85,20 @@ public sealed class AppModel(ICli cli, Place place, Action? openAtLogin = null)
         WindowWanted?.Invoke();
     }
 
-    /// <summary>The anonymous check-in, for the user counts on the project's GitHub page: not from a dev build.</summary>
+    /// <summary>The check-in, for the user counts on the project's GitHub page and the maintainer's `role-radar
+    /// users`: a random id, the name its person gave, and the versions. Not from a dev build.</summary>
     public Task CheckInAsync() => Place.Dev ? Task.CompletedTask : Cli.RunAsync(["checkin"]);
+
+    /// <summary>Save the person's name, and check in with it straight away. Returns the error message, or null.</summary>
+    public async Task<string?> SaveNameAsync(string name)
+    {
+        var error = await SetupStepAsync(["name"], new Dictionary<string, string> { ["name"] = name });
+        if (error is null)
+        {
+            _ = CheckInAsync();
+        }
+        return error;
+    }
 
     // -- the switches -------------------------------------------------------------------------------
 

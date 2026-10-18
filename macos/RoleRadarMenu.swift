@@ -359,10 +359,19 @@ enum Place {
         && !["/Applications/", NSHomeDirectory() + "/Applications/"].contains { Bundle.main.bundlePath.hasPrefix($0) }
 }
 
-/// The downloadable app's anonymous check-in (`role-radar checkin`): a random id made once on this Mac, with
-/// the app's and macOS's versions, sent when it opens and every 6 hours while it runs, for the user counts
-/// on the project's GitHub page. Nothing else leaves the Mac. Not from the dev build, nor an app built from the code.
+/// The downloadable app's check-in (`role-radar checkin`): a random id made once on this Mac, the name its
+/// person gave (NameView), and the app's and macOS's versions, sent when it opens and every 6 hours while it
+/// runs, for the user counts on the project's GitHub page and the maintainer's `role-radar users`. Nothing else
+/// leaves the Mac. Not from the dev build, nor an app built from the code.
 enum CheckIn {
+    /// One now, besides the regular ones: once the name is saved.
+    static func now() {
+        guard Place.packaged, !Place.devBuild else { return }
+        Task.detached(priority: .background) {
+            _ = await Model.cli(args: ["-m", "role_radar", "checkin", "--config", Place.config])
+        }
+    }
+
     static func start() {
         guard Place.packaged, !Place.devBuild else { return }
         Task.detached(priority: .background) {
@@ -567,6 +576,7 @@ struct SetupState: Decodable {
         let examples: Examples?
     }
     struct Country: Decodable { let code: String; let name: String }
+    let name: String?  // the person's, asked for once before anything else (NameView)
     let profession: String?
     let professions: [Profession]?
     let roles: [String]
@@ -653,7 +663,7 @@ final class Model: ObservableObject {
         Self.runQuietly("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Bundle.main.bundlePath])
         if case .failure(let message) = await setupCommand(["init"]) { setupError = message }
         await loadSetup()
-        if !(setup?.ready ?? false) || !Dock.launchedAtLogin {
+        if !(setup?.ready ?? false) || needsName || !Dock.launchedAtLogin {
             showingSetup = !(setup?.ready ?? false)  // Setup until it's done, then Live Tracking
             wantsWindow = true
         }
@@ -676,6 +686,10 @@ final class Model: ObservableObject {
         default: return "Role Radar"
         }
     }
+
+    /// The packaged app asks for its person's name before anything else: on a new copy, and once on a copy
+    /// updated from a version that didn't ask. Checking carries on meanwhile.
+    var needsName: Bool { Place.packaged && setup != nil && (setup?.name ?? "").isEmpty }
 
     /// The packaged app starts checking only once Setup is done (and it's in Applications); one built from the code always may.
     var canStart: Bool { Place.checks && (!Place.packaged || (!Place.misplaced && (setup?.ready ?? false))) }
@@ -1522,18 +1536,21 @@ struct MainWindow: View {
 
     var body: some View {
         Group {
-            if setupShown { SetupView(model: model) } else { LiveWindow(model: model) }
+            if model.needsName {
+                NameView(model: model)
+            } else if setupShown { SetupView(model: model) } else { LiveWindow(model: model) }
         }
-        .navigationTitle(setupShown ? "Role Radar Setup" : "Live Tracking")
+        .navigationTitle(model.needsName ? "Welcome to Role Radar" : setupShown ? "Role Radar Setup" : "Live Tracking")
         .toolbar {
-            if Place.packaged && !setupShown {
+            // Nothing to go to from the name screen until the name is in.
+            if Place.packaged && !setupShown && !model.needsName {
                 ToolbarItem(placement: .navigation) {
                     Button { model.showingSetup = true } label: {
                         Label("Edit Setup", systemImage: "slider.horizontal.3").labelStyle(.titleAndIcon)
                     }
                     .help("Change your profession, countries, roles, qualifications or alerts")
                 }
-            } else if setupShown && model.setup?.ready ?? false {
+            } else if setupShown && !model.needsName && model.setup?.ready ?? false {
                 ToolbarItem(placement: .navigation) {
                     Button { model.showingSetup = false } label: {
                         Label("Live Tracking", systemImage: "list.bullet.rectangle.portrait").labelStyle(.titleAndIcon)
@@ -1543,6 +1560,74 @@ struct MainWindow: View {
             }
             ToolbarItem { TextSizeButtons() }
         }
+    }
+}
+
+/// Before anything else, the packaged app asks for its person's name, which goes with its check-ins, and
+/// says to use it during business hours: it reads job sites from their own internet connection.
+struct NameView: View {
+    @ObservedObject var model: Model
+    @State private var name = ""
+    @State private var saving = false
+    @State private var error: String?
+    @FocusState private var focused: Bool
+
+    private var typed: String { name.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                Text("Welcome to Role Radar").scaledFont(20, weight: .semibold)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Your name").scaledFont(15, weight: .semibold)
+                    Text("Helps keep track of Role Radar's users and decide which features to add or change. It's sent "
+                         + "with the app's check-ins (the app version and your system's version) and nothing else.")
+                        .scaledFont(12).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    TextField("Your name", text: $name)
+                        .textFieldStyle(.roundedBorder).scaledFont(13)
+                        .frame(maxWidth: 320)
+                        .focused($focused)
+                        .onSubmit { Task { await save() } }
+                        .padding(.top, 4)
+                }
+                Label {
+                    Text("Role Radar checks companies' job sites from your own internet connection. Some companies "
+                         + "block an address that sends unexpected traffic, so it's safest to use Role Radar during "
+                         + "normal business hours and switch it off at night and on weekends.")
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                }
+                .scaledFont(12)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.1)))
+                HStack(spacing: 10) {
+                    Button("Continue") { Task { await save() } }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(typed.isEmpty || saving)
+                    if saving { ProgressView().controlSize(.small) }
+                    if let error {
+                        Label(error, systemImage: "exclamationmark.triangle").scaledFont(11).foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(32)
+            .frame(maxWidth: 560, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(minWidth: 640, minHeight: 600)
+        .onAppear { focused = true }
+    }
+
+    private func save() async {
+        guard !typed.isEmpty, !saving else { return }
+        saving = true
+        let data = (try? JSONSerialization.data(withJSONObject: ["name": typed])).map { String(decoding: $0, as: UTF8.self) }
+        error = await model.setupStep(["name"], stdin: data)
+        saving = false
+        if error == nil { CheckIn.now() }
     }
 }
 

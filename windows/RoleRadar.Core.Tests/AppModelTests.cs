@@ -37,6 +37,26 @@ public class AppModelTests
     }
 
     [Fact]
+    public async Task ItAsksForTheNameOnceEvenAtLogin()
+    {
+        var (model, cli) = Made();
+        cli.Name = null; // updated from a version that didn't ask
+        model.LaunchedAtLogin = true;
+        var opened = 0;
+        model.WindowWanted += () => opened++;
+        await model.StartAsync();
+        Assert.Equal(1, opened);
+        Assert.True(model.NeedsName);
+        Assert.Contains(cli.Calls, call => call.Args[0] == "switch"); // checking carries on meanwhile
+
+        Assert.Null(await model.SaveNameAsync("Jas Kaur"));
+        Assert.Equal(["setup", "name"], cli.Last("setup").Args);
+        Assert.False(model.NeedsName);
+        Assert.Equal("Jas Kaur", model.Setup!.Name);
+        Assert.DoesNotContain(cli.Calls, call => call.Args[0] == "checkin"); // a dev build never checks in
+    }
+
+    [Fact]
     public async Task OnlyAnInstalledCheckerIsStarted()
     {
         var (model, cli) = Made(checks: true);

@@ -28,6 +28,11 @@ public class CliContractTests
         Shape.AssertComplete<SetupState>(cli.Last("setup", "show"));
         Assert.Equal(["accounting", "healthcare", "tech"], model.Setup!.Professions.Select(p => p.Id).Order());
         Assert.False(model.Setup.Ready);
+        Assert.True(model.NeedsName);
+        Assert.Null(await model.SaveNameAsync("  Jas   Kaur "));
+        Shape.AssertComplete<SetupState>(cli.Last("setup", "name"));
+        Assert.Equal("Jas Kaur", model.Setup!.Name);
+        Assert.False(model.NeedsName);
 
         Assert.Null(await model.SetupStepAsync(["profession"], new Dictionary<string, string> { ["profession"] = "tech" }));
         Shape.AssertComplete<SetupState>(cli.Last("setup", "profession"));

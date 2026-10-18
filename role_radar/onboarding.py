@@ -1,6 +1,7 @@
 """First-run setup for the packaged app (`role-radar setup ...`, what its Setup window runs).
 
   init       create the companies file (settings, no companies yet) and a Mac-only profile
+  name       their name, asked for once before anything else: it goes with the app's check-ins
   show       what's set up: profession, roles, countries, companies, email, and whether it's ready
   profession pick Tech, Accounting & Finance or Healthcare: its company list comes with the app
              (config.profession_list), and a new profession brings its titles and rule-out words
@@ -302,7 +303,7 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 
 def show(config: Path) -> dict[str, Any]:
-    from role_radar import keychain
+    from role_radar import keychain, suggest
 
     profile = _read_yaml(profile_path(config))
     filters, settings = profile.get("filters") or {}, profile.get("settings") or {}
@@ -314,6 +315,7 @@ def show(config: Path) -> dict[str, Any]:
     locations = filters.get("locations") or []
     labels = PROFESSIONS[settings["profession"]]["labels"] if settings.get("profession") in PROFESSIONS else {}
     state = {
+        "name": suggest.read_name(config),  # asked for once, before Setup's pages (suggest.save_name)
         "profession": settings.get("profession"),
         "professions": [{"id": pid, "name": p["name"], "about": p["about"],
                          "groups": [{"name": name, "titles": titles} for name, titles in p["groups"]],

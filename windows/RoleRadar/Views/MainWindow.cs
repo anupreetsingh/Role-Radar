@@ -1,5 +1,5 @@
-// The app's one window: Setup's pages until they're done (or when asked for again), otherwise Live
-// Tracking, switching in place rather than opening another window. Closing it leaves the tray icon,
+// The app's one window: its person's name until it's given (NameView), Setup's pages until they're done
+// (or when asked for again), otherwise Live Tracking, switching in place rather than opening another window. Closing it leaves the tray icon,
 // still checking. Its toolbar has the way between the two, and smaller and bigger text.
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +14,7 @@ public sealed class MainWindow : Window
     private readonly AppModel model;
     private readonly SetupView setup;
     private readonly LiveView live;
+    private readonly NameView name;
     private readonly Button toSetup, toLive, smaller, bigger;
 
     public MainWindow(AppModel model)
@@ -21,6 +22,7 @@ public sealed class MainWindow : Window
         this.model = model;
         setup = new SetupView(model);
         live = new LiveView(model);
+        name = new NameView(model);
         setup.Finished += () => ShowPage(setup: false);
         Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/AppIcon.ico"));
         Width = 1000;
@@ -39,6 +41,7 @@ public sealed class MainWindow : Window
         var pages = new Grid();
         pages.Children.Add(setup);
         pages.Children.Add(live);
+        pages.Children.Add(name);
         var layout = new DockPanel();
         DockPanel.SetDock(toolbar, Dock.Top);
         layout.Children.Add(toolbar);
@@ -55,7 +58,7 @@ public sealed class MainWindow : Window
         InputBindings.Add(new KeyBinding(new Command(TextSize.Reset), Key.D0, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new Command(TextSize.Reset), Key.NumPad0, ModifierKeys.Control));
         TextSize.Changed += ShowToolbar;
-        model.SetupChanged += ShowToolbar;
+        model.SetupChanged += () => ShowPage(model.ShowingSetup); // the name screen leaves once the name is in
         model.WindowWanted += BringUp;
         ShowPage(setup: true);
     }
@@ -77,8 +80,9 @@ public sealed class MainWindow : Window
 
     private void ShowToolbar()
     {
-        toSetup.Visible(!OnSetup);
-        toLive.Visible(OnSetup && model.Ready);
+        // Nothing to go to from the name screen until the name is in.
+        toSetup.Visible(!OnSetup && !model.NeedsName);
+        toLive.Visible(OnSetup && model.Ready && !model.NeedsName);
         smaller.IsEnabled = TextSize.Scale > TextSize.Low;
         bigger.IsEnabled = TextSize.Scale < TextSize.High;
     }
@@ -90,9 +94,11 @@ public sealed class MainWindow : Window
             this.setup.SaveIfChanged();
         }
         model.ShowingSetup = setup;
-        this.setup.Visible(setup);
-        live.Visible(!setup);
-        Title = (setup ? "Role Radar Setup" : "Live Tracking") + (model.Place.Dev ? " (dev)" : "");
+        var naming = model.NeedsName;
+        name.Visible(naming);
+        this.setup.Visible(setup && !naming);
+        live.Visible(!setup && !naming);
+        Title = (naming ? "Welcome to Role Radar" : setup ? "Role Radar Setup" : "Live Tracking") + (model.Place.Dev ? " (dev)" : "");
         ShowToolbar();
     }
 

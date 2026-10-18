@@ -11,8 +11,9 @@ It also serves the two badges on the project's GitHub page, in shields.io's endp
   Role-Radar-windows-setup.exe. Updates fetch copies named ...-update.dmg and ...-windows-update.exe
   (scripts/publish_update.sh), so they don't count.
 - GET /badge/users: how many copies of the app ran in the last 7 days. Each copy POSTs /checkin when
-  it opens and every 6 hours: {"id": a random id made once on that computer, "app", "os"}, one row per id
-  in the installs table.
+  it opens and every 6 hours: {"id": a random id made once on that computer, "app", "os", "name"}, one row
+  per id in the installs table. The name is the person's, asked for once in the app (since 2.6.0), kept as
+  "person"; `role-radar users` lists them.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ REPO = os.environ.get("REPO", "anupreetsingh/Role-Radar")
 DOWNLOAD = re.compile(r"^Role-Radar-([0-9.]+-)?(apple-silicon\.dmg|windows-setup\.exe)$")
 REFRESH = 1800  # seconds between asking GitHub; the badge shows the count kept in between
 LIMITS = {"name": 120, "url": 500, "note": 1000, "profession": 20, "app": 40}
+NAME_LIMIT = 60
 MAX_BODY = 8000
 _db = None
 
@@ -116,18 +118,22 @@ def save(fields: dict[str, str], countries: list[str]) -> None:
 
 
 def check_in(data: dict[str, Any]) -> dict[str, Any]:
-    """A copy of the app in use: its row says when it was first and last seen, on which versions."""
+    """A copy of the app in use: its row says when it was first and last seen, on which versions, and whose it is."""
     install = str(data.get("id") or "")
     if not INSTALL_ID.match(install):
         return _reply(400, "send the app's id")
     global _db
     _db = _db or boto3.client("dynamodb")
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    values = {":now": {"S": now}, ":app": {"S": str(data.get("app") or "?")[:40]},
+              ":os": {"S": str(data.get("os") or "?")[:40]}, ":one": {"N": "1"}}
+    sets = "SET first_seen = if_not_exists(first_seen, :now), last_seen = :now, app = :app, os = :os"
+    person = " ".join(str(data.get("name") or "").split())[:NAME_LIMIT]
+    if person:  # an older version sends none: keep the name a newer one gave
+        values[":person"] = {"S": person}
+        sets += ", person = :person"
     _db.update_item(TableName=INSTALLS, Key={"id": {"S": install.lower()}},
-                    UpdateExpression="SET first_seen = if_not_exists(first_seen, :now), last_seen = :now, app = :app, "
-                                     "os = :os ADD checkins :one",
-                    ExpressionAttributeValues={":now": {"S": now}, ":app": {"S": str(data.get("app") or "?")[:40]},
-                                               ":os": {"S": str(data.get("os") or "?")[:40]}, ":one": {"N": "1"}})
+                    UpdateExpression=sets + " ADD checkins :one", ExpressionAttributeValues=values)
     return _reply(200, "thanks")
 
 
