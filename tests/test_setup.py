@@ -472,3 +472,21 @@ def test_adding_a_company_by_name_says_whether_it_can_be_tracked(config, lists, 
     added = onboarding.add_company(config, "Good Co", "job-boards.greenhouse.io/good")  # https:// assumed
     assert added["status"] == "added"
     assert onboarding.find_companies(config, "good")["results"][0]["url"] == "https://job-boards.greenhouse.io/good"
+
+
+@pytest.mark.parametrize("profession", ["tech", "accounting", "healthcare", "hospitality"])
+def test_every_professions_shipped_list_loads(tmp_path, monkeypatch, profession):
+    """What Setup loads for a profession: the list from config/ as write_lists ships it, with unique names."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    subprocess.run([sys.executable, str(root / "scripts/write_lists.py"), str(tmp_path / "lists")], check=True, capture_output=True)
+    monkeypatch.setenv("ROLE_RADAR_LISTS", str(tmp_path / "lists"))
+    monkeypatch.delenv("ROLE_RADAR_PROFILE", raising=False)
+    config = tmp_path / "Role Radar" / "companies.yaml"
+    onboarding.init(config)
+    onboarding.save_profession(config, profession)  # loads the profile with the whole list: duplicate names fail here
+    loaded = load_config(config, profile_path(config))
+    assert len(loaded.companies) > 100 and len({c.name for c in loaded.companies}) == len(loaded.companies)

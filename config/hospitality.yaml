@@ -62,11 +62,6 @@ companies:
       search: Canada
 
   - name: Accor Apartments & Realty
-    url: https://jobs.dayforcehcm.com/en-AU/accorpacific/INDEEDPORTAL
-    ats: dayforce
-    countries: [AU]
-
-  - name: Accor Apartments & Realty
     url: https://jobs.dayforcehcm.com/accorpacific/EXTCANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
