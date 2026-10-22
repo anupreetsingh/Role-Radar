@@ -876,3 +876,20 @@ def test_jazzhr_reads_every_job_with_its_place_and_team():
         "9NArJAGO9k", "Cashier", "100 Mile House, BC, Canada", "100 Mile House")
     assert (cook.title, cook.location, cook.department) == ("Line Cook & Prep", "Calgary, AB, Canada", None)
     assert cook.url == "https://aw.applytojob.com/apply/srR1GG6TNI/Line-Cook"
+
+
+def test_selectminds_landing_page_lists_its_newest_jobs():
+    page = """<div id="job_results_list_hldr">
+      <div id="job_list_599661" class="job_list_row jlr_Odd new"><div class="jlr_title">
+        <p><a href="https://careers.example.ca/jobs/food-service-i-599661" class="job_link font_bold">Food Service I</a></p>
+        <p class="jlr_location"><a href="#" class="location jTooltip"><span class="loc_icon entypo">&#128269;</span>Calgary Zone, Calgary, Rockyview General Hospital</a></p>
+      </div></div>
+      <div id="job_list_599683" class="job_list_row jlr_Even"><div class="jlr_title">
+        <p><a href="https://careers.example.ca/jobs/cook-i-599683" class="job_link font_bold">Cook I</a></p>
+      </div></div></div>"""
+    url = "https://careers.example.ca/landingpages/nutrition-food-51"
+    result = scrape("selectminds", url, {"/landingpages/nutrition-food-51": page})
+    service, cook = result.jobs
+    assert not result.complete  # only the newest page: jobs dropping off it aren't removed
+    assert (service.job_id, service.title, service.location) == ("599661", "Food Service I", "Calgary Zone, Calgary, Rockyview General Hospital")
+    assert (cook.url, cook.location) == ("https://careers.example.ca/jobs/cook-i-599683", None)

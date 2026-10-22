@@ -40,6 +40,7 @@ from role_radar.scrapers.radancy import RadancyScraper
 from role_radar.scrapers.recruitee import RecruiteeScraper
 from role_radar.scrapers.recruiterbox import RecruiterboxScraper
 from role_radar.scrapers.rippling import RipplingScraper
+from role_radar.scrapers.selectminds import SelectMindsScraper
 from role_radar.scrapers.smartrecruiters import SmartRecruitersScraper
 from role_radar.scrapers.successfactors import SuccessFactorsScraper
 from role_radar.scrapers.teamtailor import TeamtailorScraper
@@ -56,7 +57,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
         SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
         PinpointScraper, TeamtailorScraper, JobviteScraper, RadancyScraper, JobPostingScraper,
-        DayforceScraper, ADPScraper, BreezyScraper, RecruiteeScraper, JazzHRScraper,
+        DayforceScraper, ADPScraper, BreezyScraper, RecruiteeScraper, JazzHRScraper, SelectMindsScraper,
         GenericScraper,
     )
 }

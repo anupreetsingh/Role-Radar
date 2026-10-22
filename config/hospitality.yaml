@@ -66,6 +66,11 @@ companies:
     ats: dayforce
     countries: [AU]
 
+  - name: Accor Apartments & Realty
+    url: https://jobs.dayforcehcm.com/accorpacific/EXTCANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
   - name: Accor Apartments & Realty (Candidateportal)
     url: https://jobs.dayforcehcm.com/accorpacific/CANDIDATEPORTAL
     ats: dayforce
@@ -149,9 +154,9 @@ companies:
       max_jobs: 200
 
   - name: Alberta Health Services
-    url: https://albertahs.taleo.net/careersection/ahs_external_career_site/jobsearch.ftl
-    platform: taleo
-    enabled: false
+    url: https://careers.albertahealthservices.ca/landingpages/nutrition-food-opportunities-at-alberta-health-services-51
+    ats: selectminds
+    countries: [CA]
 
   - name: Albertsons Companies
     url: https://eofd.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
@@ -460,6 +465,11 @@ companies:
     url: https://job-boards.greenhouse.io/avebykormancommunities
     ats: greenhouse
     countries: [US]
+
+  - name: Aveo
+    url: https://jobs.dayforcehcm.com/aveo/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: Avera McKennan
     url: https://avera.wd5.myworkdayjobs.com/avera-careers
@@ -1394,10 +1404,20 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Concordia Lutheran Ministries and Affiliates (Lutherridge)
+    url: https://jobs.dayforcehcm.com/clh/LUTHERRIDGE
+    ats: dayforce
+    countries: [US]
+
   - name: Condadocollection
     url: https://careers-condadocollection.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Connecting Care (2000) Inc.
+    url: https://jobs.dayforcehcm.com/cal4644/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Connections Health Solutions
     url: https://job-boards.greenhouse.io/connectionshealthsolutions
@@ -1840,6 +1860,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: DWV
+    url: https://jobs.dayforcehcm.com/dwv/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Eagle Creek Brewing Company
     url: https://eaglecreek.applytojob.com/apply
@@ -2464,6 +2489,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Good Food Holdings Companies (Metropolitanmarketexternal)
+    url: https://jobs.dayforcehcm.com/gfh/METROPOLITANMARKETEXTERNAL
+    ats: dayforce
+    countries: [US]
+
   - name: Good Food Holdings Companies (Newleaf)
     url: https://jobs.dayforcehcm.com/gfh/NEWLEAF
     ats: dayforce
@@ -2751,6 +2781,11 @@ companies:
   - name: HASC Center
     url: https://hasccenter.applytojob.com/apply
     ats: jazzhr
+    countries: [US]
+
+  - name: Hawaii Tokai International College \t\t\t\t\t
+    url: https://jobs.dayforcehcm.com/htic/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: HCPS
@@ -3583,6 +3618,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Lunds & Byerlys
+    url: https://jobs.dayforcehcm.com/lundsandbyerlys/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Lutheran Home
     url: https://lutheranhomecape.applytojob.com/apply
     ats: jazzhr
@@ -4157,6 +4197,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Neighborhood House Association
+    url: https://jobs.dayforcehcm.com/nha/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Neighbourly Pharmacy
     url: https://jobs.dayforcehcm.com/loder/CANDIDATEPORTAL
     ats: dayforce
@@ -4482,6 +4527,11 @@ companies:
 
   - name: OTR Group
     url: https://jobs.dayforcehcm.com/en-AU/vivaenergyau/OTRSITE
+    ats: dayforce
+    countries: [AU]
+
+  - name: OTR Group (121388)
+    url: https://jobs.dayforcehcm.com/vivaenergyau/121388
     ats: dayforce
     countries: [AU]
 
@@ -5682,6 +5732,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Spire Holdings, LLC. and affiliated companies (Candidateportal)
+    url: https://jobs.dayforcehcm.com/spireall/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Splendido
     url: https://job-boards.greenhouse.io/mathersplendido
     ats: greenhouse
@@ -6146,13 +6201,28 @@ companies:
     platform: custom
     enabled: false
 
+  - name: The Living Company
+    url: https://jobs.dayforcehcm.com/scapeaus/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
   - name: The Nutrition Group
     url: https://jobs.dayforcehcm.com/tng/CANDIDATEPORTAL
     ats: dayforce
     countries: [US]
 
+  - name: The Palace
+    url: https://jobs.dayforcehcm.com/thepalace/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: The People Concern
     url: https://jobs.dayforcehcm.com/pplco/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Polo Room Palm Beach
+    url: https://jobs.dayforcehcm.com/hospitalityfirm/THEPOLOROOMPALMBEACHCAREERS
     ats: dayforce
     countries: [US]
 
@@ -6474,6 +6544,11 @@ companies:
 
   - name: Uniting NSW.ACT
     url: https://jobs.dayforcehcm.com/en-AU/unitingaunsw/UNITINGCCS
+    ats: dayforce
+    countries: [AU]
+
+  - name: Uniting NSW.ACT (119850)
+    url: https://jobs.dayforcehcm.com/unitingaunsw/119850
     ats: dayforce
     countries: [AU]
 
