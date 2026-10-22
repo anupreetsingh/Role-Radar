@@ -338,6 +338,19 @@ def test_smartrecruiters_reads_every_group_and_its_more_pages():
     ]
 
 
+def test_smartrecruiters_search_reads_its_groups_once():
+    """A search answers every group on every page: the repeated page ends the listing."""
+    page = fixture_text("smartrecruiters_groups0.html")
+    result, _, seen = scrape_smartrecruiters(groups={str(n): page for n in range(100)}, search="Canada")
+    assert result.complete and len(result.jobs) == 5
+    assert [u.split(".com", 1)[1] for u in seen] == [
+        "/Acme/api/groups?page=0&search=Canada",
+        "/Acme/api/more?type=location&value=Bengaluru%2C%20IN&page=1&search=Canada",
+        "/Acme/api/more?type=location&value=Bengaluru%2C%20IN&page=2&search=Canada",
+        "/Acme/api/groups?page=1&search=Canada",
+    ]
+
+
 def test_smartrecruiters_listing_is_incomplete_when_cut_short():
     short_group, _, _ = scrape_smartrecruiters(more={})  # "Show more jobs" gives nothing: 1 of Bengaluru's 3 jobs
     assert not short_group.complete and len(short_group.jobs) == 4

@@ -570,6 +570,12 @@ Calgary.
   Properties, Banff Sunshine Village) and ADP Workforce Now (`ats: adp`; Lake Louise Ski Resort, the
   Calgary Zoo, Westmont Hospitality). Carewest (Lever) joined too. Marriott's `countries` gained
   Canada: its site had 24 Calgary jobs, but the sweep had read only its newest 500.
+- **Accor's board is too big for one check** (about 4,500 jobs worldwide take some 500 requests,
+  past the 5-minute limit), so Canada has its own entry, `Accor (Canada)`: SmartRecruiters'
+  `options.search: Canada` reads its 20 Canadian hotels (Fairmont Palliser, Banff Springs, Chateau
+  Lake Louise, Jasper Park Lodge...) in about 36 requests. The whole board stays for the other
+  countries and still times out; searches for "United States", "Australia" or "India" match job
+  text worldwide, so they don't narrow it. Pilot Company's board times out too.
 - **One board per site:** a senior-living operator's 80 community boards on one Oracle site are
   subsets of its AllJobs board, and Carnival's, Holland America's and Private Destinations' boards
   list the same jobs; only AllJobs and Carnival stay.

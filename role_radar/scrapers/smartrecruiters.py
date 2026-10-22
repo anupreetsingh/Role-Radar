@@ -16,12 +16,16 @@ loading a few groups at a time as it's scrolled:
 A group's heading is its jobs' location (a job is listed under its main location; one
 found in two groups would be merged by ID, keeping both). The listing has no posting
 date or description; the job's own page is read only for the experience check.
+
+options.search narrows a big board to the jobs its search finds (Accor's thousands, to
+"Canada"); a search answers every group on every page, so a page seen before is the end.
 """
 
 from __future__ import annotations
 
 import re
 from html import unescape
+from urllib.parse import quote
 
 from role_radar.models import JobPosting, html_to_text
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError, first_path_segment, parse_date
@@ -59,14 +63,20 @@ class SmartRecruitersScraper(BaseScraper):
             raise ScraperError("could not determine SmartRecruiters company; set options.company_identifier")
         return identifier
 
+    @property
+    def _search(self) -> str:
+        return f"&search={quote(str(self.options['search']))}" if self.options.get("search") else ""
+
     async def fetch_jobs(self) -> ScrapeResult:
         jobs: dict[str, JobPosting] = {}
         ended, whole_groups = False, True
+        pages: set[str] = set()
         for number in range(int(self.options.get("max_pages", 100))):
-            page = await self.http.get_text(f"{SITE}/{self.identifier}/api/groups?page={number}")
-            if not page.strip():
+            page = await self.http.get_text(f"{SITE}/{self.identifier}/api/groups?page={number}{self._search}")
+            if not page.strip() or page in pages:
                 ended = True
                 break
+            pages.add(page)
             groups = _GROUP.findall(page)
             if not groups:
                 raise ScraperError("SmartRecruiters job groups missing; refusing to treat the page as the end")
@@ -90,7 +100,7 @@ class SmartRecruitersScraper(BaseScraper):
                 raise ScraperError(f"jobs are grouped by {kind!r}, not location")
             for number in range(1, int(self.options.get("max_more_pages", 100)) + 1):
                 # data-value comes URL-encoded ("Bengaluru%2C%20IN"), as the page's own script sends it.
-                page = await self.http.get_text(f"{SITE}{path}?type={kind}&value={value}&page={number}")
+                page = await self.http.get_text(f"{SITE}{path}?type={kind}&value={value}&page={number}{self._search}")
                 listed = self._add_cards(jobs, page, location)
                 if not set(listed) - ids:  # the end (an empty page), or a page repeating the last
                     break

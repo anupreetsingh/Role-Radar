@@ -32,7 +32,14 @@ companies:
   - name: Accor
     url: https://careers.smartrecruiters.com/accorhotel
     ats: smartrecruiters
-    countries: [US, CA, AU, IN]
+    countries: [US, AU, IN]
+
+  - name: Accor (Canada)
+    url: https://careers.smartrecruiters.com/accorhotel
+    ats: smartrecruiters
+    countries: [CA]
+    options:
+      search: Canada
 
   - name: Ace Hardware
     url: https://acehardware.wd1.myworkdayjobs.com/External
