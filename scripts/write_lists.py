@@ -17,7 +17,8 @@ from pathlib import Path
 import yaml
 
 CONFIG = Path(__file__).resolve().parent.parent / "config"
-LISTS = {"tech": "companies.yaml", "accounting": "accounting.yaml", "healthcare": "healthcare.yaml"}
+LISTS = {"tech": "companies.yaml", "accounting": "accounting.yaml", "healthcare": "healthcare.yaml",
+         "hospitality": "hospitality.yaml"}
 
 
 def write(target: Path) -> None:

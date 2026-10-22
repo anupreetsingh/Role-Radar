@@ -6,8 +6,8 @@
 [![Download for Windows](https://img.shields.io/badge/Download_for_Windows-10_and_11-2ea44f?style=for-the-badge)](https://github.com/anupreetsingh/Role-Radar/releases/latest/download/Role-Radar-windows-setup.exe)
 
 Watches company careers pages and collects the new jobs that match what you're looking for.
-It comes with three company lists, one per profession: about 8,000 for Tech, 3,900 for
-Accounting & Finance and 1,800 for Healthcare, and you can add your own. Most companies are
+It comes with four company lists, one per profession: about 8,000 for Tech, 3,900 for
+Accounting & Finance, 1,800 for Healthcare and 800 for Hospitality, and you can add your own. Most companies are
 checked every 20 minutes. Workday boards get a full check every 6 hours and a quick look at
 their newest jobs every 20 minutes. A new match shows up in **Live Tracking** as soon as its
 company's check finishes. If you set up email or Discord, the matches are also sent every 10
@@ -16,7 +16,7 @@ minutes.
 There are three ways to run it:
 
 - **Download the app,** for a Mac or Windows. Nothing to install: a Setup window asks your profession (Tech,
-  Accounting & Finance or Healthcare), the job titles and countries you want, and sends alerts
+  Accounting & Finance, Healthcare or Hospitality), the job titles and countries you want, and sends alerts
   from your Gmail. See [Get the app](#get-the-app).
 - **On your Mac only, from the code.** Everything, from the jobs it has seen to your email
   settings, stays on your Mac, and it checks while the menu bar app is open. No AWS account
@@ -39,9 +39,10 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
    says it can't check it: click **Done**, then open **System Settings → Privacy & Security**,
    scroll down, click **Open Anyway** next to Role Radar, and confirm. You only do this once.
 3. Its window walks through Setup's pages:
-   - **Profession:** Tech, Accounting & Finance or Healthcare. Each comes with its own list of
-     companies, built into the app and refreshed with each version (Tech's has about 8,000,
-     Accounting & Finance's about 3,900, Healthcare's about 1,800).
+   - **Profession:** Tech, Accounting & Finance, Healthcare or Hospitality. Each comes with its own
+     list of companies, built into the app and refreshed with each version (Tech's has about 8,000,
+     Accounting & Finance's about 3,900, Healthcare's about 1,800, Hospitality's about 800: hotels,
+     restaurants, bars, catering, casinos, resorts and airlines).
      Changing it later deletes nothing: the other profession's saved jobs stay, and every
      company's next check starts quietly, recording the jobs already open instead of alerting
      on them all (`settings.fresh_start_at` in `profile.yaml` is when you switched).
@@ -196,7 +197,7 @@ Two files in `config/` decide what Role Radar does. Edit both as you like:
 | File | In git | Holds |
 |---|---|---|
 | `companies.yaml` | yes | The Tech companies to watch (about 8,000 to start from) and how often to check them |
-| `accounting.yaml`, `healthcare.yaml` | yes | The Accounting & Finance and Healthcare professions' company lists, for the packaged app (built by `scripts/build_lists.py`) |
+| `accounting.yaml`, `healthcare.yaml`, `hospitality.yaml` | yes | The Accounting & Finance, Healthcare and Hospitality professions' company lists, for the packaged app (built by `scripts/build_lists.py`) |
 | `profile.yaml` | no | You: the roles and places you want, the most years of experience a job may ask for, and where state and alert settings live. [profile.example.yaml](config/profile.example.yaml) shows every setting |
 
 **1. Get the code and install it** (Python 3.10 or newer). Keep it outside Desktop,
@@ -405,6 +406,8 @@ alert again. The previous version behaved the same way.
 | Jobvite | `jobs.jobvite.com/{company}/jobs`, one table of every job | a match's description |
 | Radancy (TalentBrew) | The career site's `/sitemap.xml`, every job's page link (the search is closed to crawlers); set `ats: radancy`; checked hourly | a new job known only by its link, once, if its link's words could match the filter |
 | Sitemap + JobPosting | A career site's sitemap of job pages (`options.sitemap`, `options.job_path`), each page's schema.org JobPosting; set `ats: jobposting` (Dassault Systèmes, FedEx); checked hourly | a new job known only by its link, once, if its link's words could match the filter |
+| Dayforce | `jobs.dayforcehcm.com/[{culture}/]{client}/{board}`: the job search its pages call, with the token they send (25 a page, newest first, each with its places and description); WestJet, Northland Properties, Coast Hotels | no |
+| ADP Workforce Now | `workforcenow.adp.com/...recruitment.html?cid={id}`: the public job list its pages call (newest first, with places); Lake Louise Ski Resort, the Calgary Zoo | a match's description |
 | Comeet | The hosted careers page `www.comeet.com/jobs/{company}/{uid}`, whose `COMPANY_POSITIONS_DATA` holds every position, its place and usually its description | a match's description, when the list lacks it |
 | Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |
@@ -727,7 +730,7 @@ pipx install '.[aws]'                 # from the project directory; drop [aws] t
 | `role-radar switch discord\|email on\|off` | Turns an alert channel on or off; the next digest applies it. With both off, new matches are saved and sent once one is back on (see [Notification digests](#notification-digests)). |
 | `role-radar matches` | Lists the matches waiting to be sent, skipped and sent (see [Live Tracking](#live-tracking)). `skip COMPANY UID` (or `--pick COMPANY UID` for each of several, or `--all`) clears matches: never sent; `unskip` puts them back while they're listed (a week); `send` sends matches now, alerts on or off (all of them without `--pick`). `--json` is what the menu bar app reads. |
 | `role-radar ui` | Opens a local page (127.0.0.1:8765) with the same two switches, the lease holder and each runner's last pass. `--port`, `--no-browser`. |
-| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting` or `healthcare`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `discord` (a channel's webhook, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
+| `role-radar setup` | What the packaged app's Setup window runs: `init`, `show`, `profession` (`{"profession": "tech"}` on stdin: `tech`, `accounting`, `healthcare` or `hospitality`; brings its company list and titles), `profile` (target titles, non-target words, `countries`, cities as `locations`, experience and education; JSON on stdin), `prompt` (a ChatGPT/Claude prompt), `companies` (add companies of your own, e.g. from the AI's answer on stdin; `--replace`), `email` (Gmail address and app password, JSON on stdin, into the Keychain), `discord` (a channel's webhook, into the Keychain), `recipients` (who else gets the alerts, JSON on stdin). It only rewrites files it wrote itself. |
 | `scripts/package_app.sh` | Builds `dist/Role-Radar-<version>-apple-silicon.dmg`: the app with its own Python, for someone else's Mac, in a disk image whose window shows it beside Applications (see [Get the app](#get-the-app)). The same file is the update. |
 | `scripts/publish_update.sh` | Signs the packaged disk image with the update key, writes `appcast.xml`, and creates the GitHub release every copy of the app updates from, with the disk image as `Role-Radar-apple-silicon.dmg` for people and `Role-Radar-<version>-update.dmg` for updates (`DRY_RUN=1` stops before publishing). |
 | `scripts/build_dev_app.sh` | Builds **Role Radar Dev** into `build/` from the working tree, beside any installed Role Radar and apart from it (its own files, checker and Keychain items), checking no job sites unless built with `DEV_CHECKS=1`. `--open` opens it. |

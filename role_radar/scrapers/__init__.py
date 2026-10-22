@@ -6,6 +6,7 @@ and add the class to SCRAPERS below.
 
 from __future__ import annotations
 
+from role_radar.scrapers.adp import ADPScraper
 from role_radar.scrapers.amazon import AmazonScraper
 from role_radar.scrapers.apple import AppleScraper
 from role_radar.scrapers.ashby import AshbyScraper
@@ -14,6 +15,7 @@ from role_radar.scrapers.bamboohr import BambooHRScraper
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
 from role_radar.scrapers.comeet import ComeetScraper
 from role_radar.scrapers.comsol import ComsolScraper
+from role_radar.scrapers.dayforce import DayforceScraper
 from role_radar.scrapers.deel import DeelScraper
 from role_radar.scrapers.deshaw import DEShawScraper
 from role_radar.scrapers.eightfold import EightfoldScraper
@@ -51,6 +53,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
         SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
         PinpointScraper, TeamtailorScraper, JobviteScraper, RadancyScraper, JobPostingScraper,
+        DayforceScraper, ADPScraper,
         GenericScraper,
     )
 }

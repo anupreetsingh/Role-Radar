@@ -697,3 +697,111 @@ def test_jobvite():
     eng, description = asyncio.run(go())
     assert (eng.job_id, eng.title, eng.location, eng.url) == ("oUQKAfwO", "Software Engineer", "San Jose, California", "https://jobs.jobvite.com/nutanix/job/oUQKAfwO")
     assert description.startswith("<p>3+ years</p>")
+
+
+def _dayforce_job(job_id, title, *places, virtual=False, posted="2026-10-20T06:00:00+00:00"):
+    return {"jobPostingId": job_id, "jobTitle": title, "jobDescription": f"<p>{title}: 1 year</p>", "hasVirtualLocation": virtual,
+            "postingStartTimestampUTC": posted, "postingLocations": [
+                {"formattedAddress": f"{city}, {state}, Canada", "cityName": city, "stateCode": state, "isoCountryCode": country}
+                for city, state, country in places]}
+
+
+def scrape_dayforce(url="https://jobs.dayforcehcm.com/en-CA/WestJet/CANDIDATEPORTAL", *, quick=False, **options):
+    """Run the Dayforce reader on a board of three jobs, two a page; searches without the site's token are refused."""
+    seen, searched = [], []
+    pages = {0: [_dayforce_job(6254, "Night Auditor", ("Calgary", "AB", "CA")),
+                 _dayforce_job(6249, "Server", ("Banff", "AB", "CA"), ("Seattle", "WA", "US"))],
+             2: [_dayforce_job(5510, "Guest Service Agent", virtual=True, posted="2026-09-22T06:00:00+00:00")]}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(f"{request.method} {request.url}")
+        if request.url.path == "/api/auth/csrf":
+            assert request.headers.get("cookie", "") == ""  # a fresh token, not another board's
+            return httpx.Response(200, json={"csrfToken": "tok"}, headers={"set-cookie": "__Host-next-auth.csrf-token=abc%7Cdef; Path=/; Secure"})
+        if request.url.path == "/api/geo/westjet/jobposting/search":
+            if request.headers.get("x-csrf-token") != "tok" or "__Host-next-auth.csrf-token=abc%7Cdef" not in request.headers.get("cookie", ""):
+                return httpx.Response(403, text="Forbidden")
+            body = json.loads(request.content)
+            searched.append(body)
+            items = pages.get(body["paginationStart"], [])
+            return httpx.Response(200, json={"jobPostings": items, "maxCount": 3, "offset": body["paginationStart"], "count": len(items)})
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            cfg = company("WestJet", url=url)
+            cfg.options = options
+            scraper = SCRAPERS["dayforce"](cfg, http)
+            if quick:
+                return await scraper.fetch_first_page(), seen, searched
+            return await scraper.fetch_jobs(), seen, searched
+
+    return asyncio.run(go())
+
+
+def test_dayforce_reads_every_page_with_the_sites_token():
+    result, seen, searched = scrape_dayforce()
+    assert result.complete and [j.job_id for j in result.jobs] == ["6254", "6249", "5510"]
+    assert sum("/api/auth/csrf" in s for s in seen) == 1  # one token for the whole check
+    assert searched == [{"clientNamespace": "westjet", "jobBoardCode": "CANDIDATEPORTAL", "cultureCode": "en-CA", "paginationStart": 0},
+                        {"clientNamespace": "westjet", "jobBoardCode": "CANDIDATEPORTAL", "cultureCode": "en-CA", "paginationStart": 2}]
+    audit, server, agent = result.jobs
+    assert (audit.title, audit.location, audit.date_posted) == ("Night Auditor", "Calgary, AB, Canada", date(2026, 10, 20))
+    assert audit.url == "https://jobs.dayforcehcm.com/en-CA/westjet/CANDIDATEPORTAL/jobs/6254"
+    assert server.location == "Banff, AB, Canada; Seattle, WA, United States"  # not "Banff, AB, CA": California
+    assert agent.location == "Remote" and agent.extra["description"] == "<p>Guest Service Agent: 1 year</p>"
+
+
+def test_dayforce_quick_check_reads_the_newest_page():
+    page, _, searched = scrape_dayforce(quick=True)
+    assert [j.job_id for j in page] == ["6254", "6249"] and len(searched) == 1
+
+
+@pytest.mark.parametrize("url, parts", [
+    ("https://jobs.dayforcehcm.com/en-CA/WestJet/CANDIDATEPORTAL", ("en-CA", "WestJet", "CANDIDATEPORTAL")),
+    ("https://jobs.dayforcehcm.com/sunshine/CANDIDATEPORTAL", (None, "sunshine", "CANDIDATEPORTAL")),
+    ("https://can241.dayforcehcm.com/CandidatePortal/en-US/northlandproperties/Site/SANDMANHOTELGROUP",
+     ("en-US", "northlandproperties", "SANDMANHOTELGROUP")),
+    ("https://canr57.dayforcehcm.com/CandidatePortal/en-US/coasthotels", ("en-US", "coasthotels", None)),
+])
+def test_dayforce_board_from_url(url, parts):
+    from role_radar.scrapers.dayforce import board_of
+
+    assert board_of(url) == parts and scraper_class_for(url).name == "dayforce"
+
+
+def test_adp_lists_every_job_and_reads_a_description():
+    seen = []
+    listing = {"jobRequisitions": [
+        {"itemID": "9201048995157_1", "requisitionTitle": "Cook - Winter 26/27", "postDate": "2026-10-18T11:28:00.000-04:00",
+         "workLevelCode": {"shortName": "Full Time - Seasonal - Hourly"},
+         "requisitionLocations": [{"nameCode": {"shortName": " Lake Louise, AB, CA"}}]},
+        {"itemID": "634837241_1", "requisitionTitle": "Junior Financial Administrator", "postDate": "2026-10-19T18:06:00.000-04:00",
+         "requisitionLocations": [{"nameCode": {"shortName": "Accra, Ghana"}}, {"nameCode": {"shortName": "Calgary, Alberta, Calgary, AB, CA"}}]},
+    ], "meta": {"startSequence": 0, "totalNumber": 2}}
+    api = "/mascsr/default/careercenter/public/events/staffing/v1/job-requisitions"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == api and request.url.params.get("cid") == "abc":
+            return httpx.Response(200, json=listing)
+        if request.url.path == f"{api}/9201048995157_1":
+            return httpx.Response(200, json={"requisitionDescription": "<p>1 year cooking</p>"})
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            url = "https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=abc&ccId=19000101_000001&lang=en_CA"
+            scraper = scraper_class_for(url)(company("Lake Louise", url=url), http)
+            result = await scraper.fetch_jobs()
+            return result, await scraper.fetch_description(result.jobs[0])
+
+    result, description = asyncio.run(go())
+    cook, admin = result.jobs
+    assert result.complete and description == "<p>1 year cooking</p>"
+    assert (cook.job_id, cook.title, cook.location) == ("9201048995157_1", "Cook - Winter 26/27", "Lake Louise, AB, Canada")
+    assert (cook.employment_type, cook.date_posted) == ("Full Time - Seasonal - Hourly", date(2026, 10, 18))
+    assert cook.url == ("https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html"
+                        "?cid=abc&ccId=19000101_000001&jobId=9201048995157_1&lang=en_CA")
+    assert admin.location == "Accra, Ghana; Calgary, Alberta, Calgary, AB, Canada"
+    assert "lang=en_CA" in seen[0] and "%24top=100" in seen[0]

@@ -3,7 +3,7 @@
   init       create the companies file (settings, no companies yet) and a Mac-only profile
   name       their name, asked for once before anything else: it goes with the app's check-ins
   show       what's set up: profession, roles, countries, companies, email, and whether it's ready
-  profession pick Tech, Accounting & Finance or Healthcare: its company list comes with the app
+  profession pick Tech, Accounting & Finance, Healthcare or Hospitality: its company list comes with the app
              (config.profession_list), and a new profession brings its titles and rule-out words
   profile    save what the person is looking for (target and non-target roles, countries and cities,
              experience and education)
@@ -181,6 +181,73 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
         ],
         "examples": {"target": ("registered nurse", ["Registered Nurse - ICU", "Registered Nurse, Night Shift"]),
                      "non_target": (["nurse"], ["manager"], ["Registered Nurse", "Nurse Practitioner"], ["Nurse Manager"])},
+    },
+    "hospitality": {
+        "name": "Hospitality",
+        "about": "Hotels, restaurants, bars, events and travel",
+        # Staff, supervisors and managers alike: hotel and restaurant jobs are posted at every level. Commis
+        # and lift operators only in kitchens and on ski hills: in Quebec a commis is a store clerk.
+        "groups": [
+            ("Front desk and guest services", ["front desk", "front office", "front of house", "guest service",
+                                               "guest services", "guest experience", "guest relations", "concierge",
+                                               "night auditor", "night audit", "reservations", "reservation agent",
+                                               "bell attendant", "bellperson", "bellman", "door attendant", "doorman",
+                                               "valet"]),
+            ("Housekeeping", ["housekeeper", "housekeeping", "room attendant", "house attendant", "houseperson",
+                              "house person", "public area attendant", "laundry attendant", "camp attendant"]),
+            ("Food and beverage service", ["server", "waiter", "waitress", "bartender", "barback", "bar back", "host",
+                                           "hostess", "busser", "food runner", "barista", "sommelier", "room service",
+                                           "in room dining", "lounge attendant", "food and beverage", "food & beverage",
+                                           "F&B"]),
+            ("Kitchen", ["cook", "line cook", "prep cook", "chef", "sous chef", "chef de partie", "commis chef",
+                         "commis de cuisine", "pastry", "baker", "kitchen helper", "kitchen porter", "kitchen assistant",
+                         "dishwasher", "steward", "culinary", "back of house", "food service", "food services"]),
+            ("Events and catering", ["banquet", "banquets", "catering", "event coordinator", "events coordinator",
+                                     "event planner", "event manager", "events manager", "conference services",
+                                     "convention services", "meeting planner", "wedding coordinator"]),
+            ("Supervisors and managers", ["hotel manager", "restaurant manager", "bar manager", "kitchen manager",
+                                          "rooms division", "night manager", "duty manager"]),
+            ("Casinos", ["table games", "casino dealer", "blackjack dealer", "poker dealer", "croupier", "slot attendant",
+                         "cage cashier", "casino host"]),
+            ("Resorts and attractions", ["lift operator", "ski instructor", "snowboard instructor", "ride operator",
+                                         "tour guide", "spa attendant", "spa coordinator", "spa concierge"]),
+            ("Travel", ["flight attendant", "cabin crew", "travel consultant", "travel agent", "travel advisor",
+                        "tour director"]),
+        ],
+        # Not "manager" or "supervisor": the managers' titles are targets too. In French a chef leads a team, a
+        # project or a department (chef d'équipe, chef de projet, ingénieur en chef); a chef de cuisine, de partie
+        # or de rang works in a restaurant.
+        "skip": [
+            ("Senior levels", ["senior", "sr", "director", "executive chef", "regional"]),
+            ("Executives", ["vice president", "vp", "head of", "chief", "president"]),
+            ("Other kinds of work", [
+                ("software and IT", r"re:\b(?:software|developers?|engineers?|engineering|architects?|architecture|SQL|"
+                                    r"database|DevOps|cloud|network|infrastructure|hardware|CPU|GPU|Linux|Windows|"
+                                    r"ServiceNow|onboarding|data|analytics|analysts?|(?-i:IT|AI|ML|IO))\b"),
+                ("computer servers", r"re:\bservers?\s+(?:administrat\w+|product\w*|side|platforms?|specialists?|support|"
+                                     r"technicians?)\b|\b(?:content|MID|application|web|compute)\s+servers?\b"),
+                ("medical and dental", r"re:\b(?:medical|dental|dentist|clinic|nurse|infirmi\w*|physician|pharmacy|"
+                                       r"pharmacist|veterinary|optometry|disease|researcher|postdoctoral)\b"),
+                ("chef d'équipe, chef de projet",
+                 r"re:\bchef(?:\(fe\)|[.·]fe\b|fe\b|\s+fe\b)|\bchef\s+(?:d['’\s]|de\s+(?!partie\b|cuisine\b|rang\b)|du\s|"
+                 r"des\s|principal|adjoint|opérat|technique|RH\b|QA\b|artiste|mécanicien)|\bchef\s*[,–—-]\s*(?:analyse|"
+                 r"planification|gestion|affaires|relations|ressources|opérations|projets?|équipe|section|division|"
+                 r"département|secteur)\b|\ben\s+chef\b"),
+                ("account managers and sales reps", r"re:\b(?:accounts?\s+(?:managers?|executives?|specialists?|"
+                                                    r"representatives?|leaders?|directors?)|key\s+accounts?|sales\s+"
+                                                    r"(?:representatives?|reps?|consultants?|executives?|support))\b"),
+                ("product and project managers", r"re:\b(?:product|project|program)\s+(?:managers?|management|owners?|"
+                                                 r"planning)\b"),
+                ("livestream and podcast hosts", r"re:\b(?:live[\s-]*stream\w*|podcast|tiktok|youtube)\b"),
+                ("forklift", r"re:\bfork[\s-]*lifts?\b"),
+                ("tool and uniform rooms", r"re:\b(?:tool|uniform|scale)\s+(?:room|house)\b"),
+                ("supply chain and logistics", r"re:\b(?:supply\s+chain|logistics|last\s+mile|warehouse)\b"),
+                "process server", "gas bar", "maintenance", "security", "delivery", "marketing", "category",
+                "construction", "equipment"]),
+        ],
+        "examples": {"target": ("bartender", ["Bartender - Part Time", "Banquet Bartender"]),
+                     "non_target": (["housekeeping"], ["director"], ["Housekeeping Supervisor", "Housekeeping Manager"],
+                                    ["Director of Housekeeping"])},
     },
 }
 for _profession in PROFESSIONS.values():

@@ -16,6 +16,7 @@ public sealed class SetupView : Grid
     private static readonly Dictionary<string, string> ProfessionGlyphs = new()
     {
         ["tech"] = Glyphs.Laptop, ["accounting"] = Glyphs.Calculator, ["healthcare"] = Glyphs.Health,
+        ["hospitality"] = Glyphs.Cafe,
     };
     private const string SavedWhere = "Saved in Windows Credential Manager";
 

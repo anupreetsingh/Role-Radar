@@ -89,6 +89,9 @@ class BaseScraper(ABC):
 # -- helpers ----------------------------------------------------------------
 
 _RELATIVE = re.compile(r"(\d+)\+?\s+(day|week|month)s?\s+ago", re.I)
+# Countries for places a job site gives with an ISO code: "Banff, AB, CA" would read as California.
+COUNTRY_NAMES = {"CA": "Canada", "US": "United States", "AU": "Australia", "IN": "India", "GB": "United Kingdom",
+                 "IE": "Ireland", "NZ": "New Zealand", "MX": "Mexico", "PH": "Philippines"}
 
 
 def parse_date(value: Any, today: date | None = None) -> date | None:

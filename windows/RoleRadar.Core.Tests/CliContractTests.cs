@@ -26,7 +26,7 @@ public class CliContractTests
         await model.StartAsync(); // setup init, setup show, switch --json (a test app starts no checker)
         Assert.Null(model.SetupError);
         Shape.AssertComplete<SetupState>(cli.Last("setup", "show"));
-        Assert.Equal(["accounting", "healthcare", "tech"], model.Setup!.Professions.Select(p => p.Id).Order());
+        Assert.Equal(["accounting", "healthcare", "hospitality", "tech"], model.Setup!.Professions.Select(p => p.Id).Order());
         Assert.False(model.Setup.Ready);
         Assert.True(model.NeedsName);
         Assert.Null(await model.SaveNameAsync("  Jas   Kaur "));

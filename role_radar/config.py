@@ -29,7 +29,7 @@ from role_radar.http_client import HttpSettings
 # Rows the state store keeps for itself use keys starting with this.
 RESERVED_PREFIX = "#"
 # The professions a person can pick; each has its own company list (onboarding.PROFESSIONS).
-PROFESSIONS = ("tech", "accounting", "healthcare")
+PROFESSIONS = ("tech", "accounting", "healthcare", "hospitality")
 # Check intervals for job sites whose every check is a big download, in minutes, used unless
 # settings.check_interval_by_ats names the site (or check_interval_minutes is longer).
 # SuccessFactors, Radancy and other sitemap-read sites send their whole listing (up to a few MB) each check.

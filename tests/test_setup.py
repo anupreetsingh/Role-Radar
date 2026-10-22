@@ -84,7 +84,7 @@ def lists(tmp_path, monkeypatch):
 def test_a_profession_brings_its_titles_and_company_list(config, lists):
     state = onboarding.show(config)
     assert state["profession"] is None and state["companies"] == 0
-    assert [p["name"] for p in state["professions"]] == ["Tech", "Accounting & Finance", "Healthcare"]
+    assert [p["name"] for p in state["professions"]] == ["Tech", "Accounting & Finance", "Healthcare", "Hospitality"]
     onboarding.save_profession(config, "tech")
     state = onboarding.show(config)
     assert state["profession"] == "tech" and state["roles"] == onboarding.PROFESSIONS["tech"]["titles"]

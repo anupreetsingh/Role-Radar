@@ -44,6 +44,7 @@ public static class Glyphs
     public const string Laptop = "";
     public const string Calculator = "";
     public const string Health = "";
+    public const string Cafe = "";
     public const string Sync = "";
     public const string List = "";
     public const string Send = "";

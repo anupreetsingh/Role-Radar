@@ -2360,7 +2360,8 @@ struct SetupView: View {
     private static let pages = ["Profession", "Countries", "Companies", "Roles", "Qualifications", "Alerts"]
     private static let degrees = [("none", "No degree yet"), ("bachelors", "Bachelor's"), ("masters", "Master's"), ("phd", "PhD")]
     private static let last = pages.count - 1
-    private static let symbols = ["tech": "laptopcomputer", "accounting": "chart.bar.doc.horizontal", "healthcare": "stethoscope"]
+    private static let symbols = ["tech": "laptopcomputer", "accounting": "chart.bar.doc.horizontal", "healthcare": "stethoscope",
+                                   "hospitality": "fork.knife"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

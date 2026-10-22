@@ -550,6 +550,39 @@ Teamtailor, Breezy, Jobvite, Zoho Recruit, Keka, Taleo and SuccessFactors have n
 yet, though the first sweep's query listed their boards), and the Tech list's companies that
 post other professions' jobs but whose saved jobs didn't happen to include one.
 
+## Hospitality (October 2026)
+
+The fourth profession's list, `config/hospitality.yaml` (777 companies, 763 read: 691 post in the
+US, 122 in Canada, 40 in Australia, 22 in India), was built on 2026-10-22 for a first user in
+Calgary.
+
+- **From the saved sweeps and the Tech list's saved jobs**, offline, by `scripts/build_lists.py
+  --profession hospitality`. A board joins when one of its jobs has a Hospitality title (Setup's
+  105, less its "other kinds of work") that offices, clinics and stores don't use too, and would
+  alert as Setup starts; or when its only matches are such shared titles (front desk, events,
+  concierge, travel) but its name sounds like a hotel, restaurant, bar, resort or travel company.
+  French "chef" titles (chef d'équipe, chef de projet) and a food company's "Foodservice" sales
+  jobs don't count. Staffing firms, test boards and employers whose hospitality-titled jobs are in
+  factories, labs or offices are left out by name (`NOT_HOSPITALITY`).
+- **By hand, around Calgary.** About 80 employers' careers pages were opened once to see which job
+  site they use. Two new readers came out of it: Dayforce (`ats: dayforce`; WestJet, Northland
+  Properties' Sandman, Sutton Place, Denny's and CHOP boards, Coast Hotels, Banff Caribou
+  Properties, Banff Sunshine Village) and ADP Workforce Now (`ats: adp`; Lake Louise Ski Resort, the
+  Calgary Zoo, Westmont Hospitality). Carewest (Lever) joined too. Marriott's `countries` gained
+  Canada: its site had 24 Calgary jobs, but the sweep had read only its newest 500.
+- **One board per site:** a senior-living operator's 80 community boards on one Oracle site are
+  subsets of its AllJobs board, and Carnival's, Holland America's and Private Destinations' boards
+  list the same jobs; only AllJobs and Carnival stay.
+
+Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
+Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
+search behind each board (the board's page shows only a few featured jobs); Workstream (Moxie's),
+Push Operations (Cactus Club Cafe), Njoyn (Grey Eagle Resort & Casino), HigherMe (Tim Hortons),
+Taleo (Alberta Health Services); and Earls, The Keg, Hyatt (careers.hyatt.com answers 403) and IHG,
+whose pages load their jobs some other way. Also checked: Gateway Casinos' Jobvite board is empty,
+Basecamp Resorts' ADP board had no jobs, and Bethany Care Society, Calgary Co-op, Air Canada and
+Wyndham had no hospitality openings that day.
+
 ## Well-known employers that were missing (October 2026)
 
 The sweeps only found boards on the job sites Role Radar reads, so employers on their own

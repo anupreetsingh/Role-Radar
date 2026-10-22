@@ -1,0 +1,4415 @@
+# Role Radar's Hospitality companies: employers that posted hospitality jobs (hotels, restaurants, bars, kitchens,
+# events, casinos, resorts, travel) in the US, Canada, Australia or India. Each company's `countries` are where its
+# jobs are, and a person's picked countries decide which are checked. Built by scripts/build_lists.py from board
+# sweeps (2026-09-30; SmartRecruiters and Workable, 2026-09-30; SuccessFactors, 2026-10-02) and the Tech list's
+# saved jobs, plus employers added by hand (2026-10-22, mostly around Calgary); see docs/company-coverage.md.
+
+companies:
+  - name: 1 Hotel Kauai, L.L.C
+    url: https://shhotelsandresorts.wd12.myworkdayjobs.com/shg
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: 3IF MPM Epic Tampa
+    url: https://mainsailhotels.wd5.myworkdayjobs.com/Mainsail_Property_Management
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: A Bright Beginning Childcare
+    url: https://job-boards.greenhouse.io/abrightbeginnings
+    ats: greenhouse
+    countries: [US]
+
+  - name: ABM US
+    url: https://eiqg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Accor
+    url: https://careers.smartrecruiters.com/accorhotel
+    ats: smartrecruiters
+    countries: [US, CA, AU, IN]
+
+  - name: Ace Hardware
+    url: https://acehardware.wd1.myworkdayjobs.com/External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Acelero Learning Camden Philadelphia
+    url: https://acelero.wd1.myworkdayjobs.com/AceleroLearningCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: ACML AgeCare Management
+    url: https://agecare.wd10.myworkdayjobs.com/AgeCare_Careers_External
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Acts
+    url: https://careers-actslife.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Advanced MedAesthetic Partners
+    url: https://ats.rippling.com/advanced-medaesthetic-partners-inc/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Adventist Health
+    url: https://ecvz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Advocate Health Care
+    url: https://aah.wd5.myworkdayjobs.com/External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: AEG Worldwide
+    url: https://job-boards.greenhouse.io/aegworldwide
+    ats: greenhouse
+    countries: [US]
+
+  - name: Aesthetic Medical Practice
+    url: https://aspendental.wd1.myworkdayjobs.com/MyChaptercom-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: AIDB
+    url: https://ibaeqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Air North
+    url: https://job-boards.greenhouse.io/airnorth
+    ats: greenhouse
+    countries: [CA]
+
+  - name: Alamo Intermediate II Holdings
+    url: https://drafthouse.wd5.myworkdayjobs.com/Alamo
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Alberta Health Services
+    url: https://albertahs.taleo.net/careersection/ahs_external_career_site/jobsearch.ftl
+    platform: taleo
+    enabled: false
+
+  - name: Albertsons Companies
+    url: https://eofd.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Alex Lee
+    url: https://careers-lowesfoods.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Alfred Coffee
+    url: https://ats.rippling.com/alfred/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: AlgaeCal
+    url: https://apply.workable.com/algaecal/
+    ats: workable
+    countries: [US, CA]
+
+  - name: Alle-Kiski Medical Center
+    url: https://highmarkhealth.wd1.myworkdayjobs.com/highmark
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Allegiant Air
+    url: https://jobs.lever.co/allegiantair
+    ats: lever
+    countries: [US]
+
+  - name: Allens
+    url: https://allens.wd3.myworkdayjobs.com/Allens
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: American House Senior Living
+    url: https://careers-americanhouse.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Amery Hospital & Clinic
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/amery-hospital-and-clinic/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Amherst College
+    url: https://amherst.wd5.myworkdayjobs.com/amherst_jobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Anaheim Arena Management, LLC (F&B)
+    url: https://anaheimducks.wd5.myworkdayjobs.com/allco
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Anheuser-Busch
+    url: https://abinbev.wd1.myworkdayjobs.com/USA
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Anne's Pantry
+    url: https://careers.smartrecruiters.com/annespantry
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Applebee's Services
+    url: https://dinebrands.wd503.myworkdayjobs.com/RestaurantCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: AppleTree Prep
+    url: https://job-boards.greenhouse.io/appletreeprep
+    ats: greenhouse
+    countries: [US]
+
+  - name: APS
+    url: https://fa-epop-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Aramark
+    url: https://aramarkcareers.com/
+    ats: successfactors
+    countries: [US, CA, AU, IN]
+
+  - name: Aritzia
+    url: https://aritzia.wd3.myworkdayjobs.com/External
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Arkansas Valley Adventures
+    url: https://theoutlawgroup.wd501.myworkdayjobs.com/theoutlawgroupcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Arlington County VA
+    url: https://fa-exkk-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Arterra Wines Canada
+    url: https://awc.wd3.myworkdayjobs.com/AWC_Career_Site
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Artisanal Brewing Ventures
+    url: https://artbrew.wd501.myworkdayjobs.com/Art_Brew_Ventures
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Asbury Communities
+    url: https://careers.smartrecruiters.com/asburycommunities
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Ascension Coffee
+    url: https://ats.rippling.com/ascension-coffee-careers/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Ash World
+    url: https://ats.rippling.com/ash-people/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Ashton
+    url: https://careers-ashton.icims.com/jobs/search
+    ats: icims
+    countries: [US, CA]
+
+  - name: Aspen Skiing Company
+    url: https://careers.smartrecruiters.com/aspenskiingcompany
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: ATCO
+    url: https://eezy.fa.ca2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Atlanta National League Baseball Club, LLC. DBA Atlanta Braves
+    url: https://atlantabravesmlb.wd5.myworkdayjobs.com/AtlantaBraves
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Atlantic Health System
+    url: https://erqh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: AtlantiCare
+    url: https://ibywjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Atria Health and Research Institute
+    url: https://apply.workable.com/atria-health/
+    ats: workable
+    countries: [US]
+
+  - name: Atria Senior Living
+    url: https://asl-frontlinewagedisplay.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Attorney General
+    url: https://maine.wd5.myworkdayjobs.com/executive
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Au Cheval
+    url: https://job-boards.greenhouse.io/auchevalnashville
+    ats: greenhouse
+    countries: [US]
+
+  - name: Austin Community College District
+    url: https://austincc.wd1.myworkdayjobs.com/External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Ausvenueco
+    url: https://ausvenueco.wd105.myworkdayjobs.com/AVC
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Avamere Skilled Advisors
+    url: https://apply.workable.com/avamere-skilled-advisors-llc/
+    ats: workable
+    countries: [US]
+
+  - name: AVE by Korman Communities
+    url: https://job-boards.greenhouse.io/avebykormancommunities
+    ats: greenhouse
+    countries: [US]
+
+  - name: Avera McKennan
+    url: https://avera.wd5.myworkdayjobs.com/avera-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Aviator Nation
+    url: https://job-boards.greenhouse.io/aviatornation
+    ats: greenhouse
+    countries: [US]
+
+  - name: Avon Senior Living
+    url: https://careers-avon.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Away
+    url: https://jobs.ashbyhq.com/away
+    ats: ashby
+    countries: [US, CA]
+
+  - name: Bahs
+    url: https://jobs-bahs.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Banff Caribou Properties
+    url: https://jobs.dayforcehcm.com/banff/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Banff Hospitality Collective
+    url: https://apply.workable.com/banffcollective/
+    ats: workable
+    countries: [CA]
+
+  - name: Banff Sunshine Village
+    url: https://jobs.dayforcehcm.com/sunshine/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Banner House at T Bar M
+    url: https://ats.rippling.com/banner-house-at-t-bar-m/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Baptist
+    url: https://fa-ewpe-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Bass Pro Shops
+    url: https://basspro.wd1.myworkdayjobs.com/careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Baystate Health
+    url: https://baystatehealth.wd12.myworkdayjobs.com/External_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: BCPS
+    url: https://bcps-ibohjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Be Part of Harvard
+    url: https://careers.smartrecruiters.com/harvarduniversity
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Beemok Hospitality Holdings
+    url: https://beemok.wd5.myworkdayjobs.com/BHC_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Berwick
+    url: https://wd105.myworkdaysite.com/recruiting/sjog/SJGHC_External_Career_Site
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Best Friends Animal Society (Company)
+    url: https://bestfriends.wd1.myworkdayjobs.com/bestfriendscareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Bethelpointe
+    url: https://careers-bethelpointe.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Bezos Academy
+    url: https://job-boards.greenhouse.io/day1academies
+    ats: greenhouse
+    countries: [US]
+
+  - name: BHCC Bright Horizons Children's Centers
+    url: https://brighthorizons.wd5.myworkdayjobs.com/external-northamerica
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: BIBIBOP
+    url: https://job-boards.greenhouse.io/bibibopcareers
+    ats: greenhouse
+    countries: [US]
+
+  - name: Billingsleycareers
+    url: https://ats.rippling.com/billingsleycareers/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Black Fodder Coffee Co
+    url: https://careers.smartrecruiters.com/blackfoddercoffeeco
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Blank Street
+    url: https://job-boards.greenhouse.io/blankstreet
+    ats: greenhouse
+    countries: [US]
+
+  - name: Bloomingdale's
+    url: https://ebwh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1002/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Blue Heron Senior Living
+    url: https://careers-blueheron.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Blue Mountain Resort
+    url: https://alterra.wd1.myworkdayjobs.com/BlueMountainResort
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Boca Recovery Center
+    url: https://apply.workable.com/boca-recovery/
+    ats: workable
+    countries: [US]
+
+  - name: Bon Secours Mercy Health
+    url: https://easyservice.wd5.myworkdayjobs.com/MercyHealthCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Bosselman Enterprises
+    url: https://careers-bosselman.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Boston Beer
+    url: https://hcrb.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Boston Medical Center
+    url: https://bmc.wd1.myworkdayjobs.com/BMC
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Boston Pizza
+    url: https://careers-bostonpizza.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: Boys Town
+    url: https://boystown.wd1.myworkdayjobs.com/boystowncareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Bradley Center
+    url: https://apply.workable.com/thebradleycenter/
+    ats: workable
+    countries: [US]
+
+  - name: Breeden's Orchard
+    url: https://apply.workable.com/breedens-orchard/
+    ats: workable
+    countries: [US]
+
+  - name: Brenwood Park Assisted Living
+    url: https://pennant.wd1.myworkdayjobs.com/PinnacleSeniorLivingCareCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Bridgewater
+    url: https://careers-bridgewater.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Brigham Young University
+    url: https://byu.wd1.myworkdayjobs.com/byu-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Brighton Care Center
+    url: https://ensign.wd1.myworkdayjobs.com/BrightonCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Brookdale Senior Living
+    url: https://ibmwjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Brookfield Asset Management Private Institutional Capital Adviser (Private Equity)
+    url: https://brookfield.wd5.myworkdayjobs.com/brookfield
+    ats: workday
+    countries: [US, CA, AU, IN]
+    options:
+      max_jobs: 200
+
+  - name: Brookfield Healthcare
+    url: https://ensign.wd1.myworkdayjobs.com/BrookfieldHealthcareCenterCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Brookings Health System
+    url: https://avera.wd5.myworkdayjobs.com/BHS-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Brookshire Grocery Company
+    url: https://brookshires.wd108.myworkdayjobs.com/BGC
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Buc-ee's Murfreesboro
+    url: https://cfr.wd5.myworkdayjobs.com/Buc-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Bullis Charter School
+    url: https://job-boards.greenhouse.io/bullischarterschool
+    ats: greenhouse
+    countries: [US]
+
+  - name: C.H. Guenther
+    url: https://chg.wd5.myworkdayjobs.com/US_External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Cactus Club Cafe
+    url: https://www.cactusclubcafe.com/hiring/
+    platform: pushoperations
+    enabled: false
+
+  - name: Caesars Entertainment
+    url: https://edmn.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Cajun Operating Company
+    url: https://churchs.wd1.myworkdayjobs.com/Field
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Calgary Sports and Entertainment
+    url: https://recruiting.ultipro.ca/CAL5002/JobBoard/5f9649eb-fe0e-95eb-07f5-9ac9b3ae6647/
+    platform: ukg
+    enabled: false
+
+  - name: Calgary Stampede
+    url: https://recruiting.ultipro.com/CAL5000CS/JobBoard/acb71250-8332-4a0d-955c-5a430b89f6e7/
+    platform: ukg
+    enabled: false
+
+  - name: Calgary Zoo (Wilder Institute)
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=21776daf-f5d6-445a-8284-be1d53c78d12&lang=en_CA
+    ats: adp
+    countries: [CA]
+
+  - name: Calvary Hospital
+    url: https://apply.workable.com/calvary-hospital/
+    ats: workable
+    countries: [US]
+
+  - name: Calvin University
+    url: https://calvin.wd5.myworkdayjobs.com/CalvinUniversityCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Capitol View Transitional Care Center
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/capitol-view-transitional-care-center/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Care One NEW
+    url: https://fa-eqgc-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: CarePoint Health Management Associates
+    url: https://careers-carepointhealth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Carewest
+    url: https://jobs.lever.co/carewest
+    ats: lever
+    countries: [CA]
+
+  - name: Caribou Coffee Operating Company
+    url: https://coffeeandbagelbrands.wd1.myworkdayjobs.com/coffeeandbagelbrands
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Carnival
+    url: https://eicl.fa.em5.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_4001/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: CarolinaEast
+    url: https://enpu.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Casa Esperanza
+    url: https://ats.rippling.com/casa-esperanza/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Catch
+    url: https://apply.workable.com/the-catch/
+    ats: workable
+    countries: [US]
+
+  - name: CEC Entertainment
+    url: https://cecentertainment.wd5.myworkdayjobs.com/CEC_Careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Center for Strategic and International Studies
+    url: https://job-boards.greenhouse.io/centerforstrategicandinternationalstudiesinc
+    ats: greenhouse
+    countries: [US]
+
+  - name: Centerstone of Florida
+    url: https://centerstone.wd5.myworkdayjobs.com/centerstonecareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Centra Health
+    url: https://ejid.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: CentraCare
+    url: https://elyb.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Central Market
+    url: https://jobs-centralmarket.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Centricity Research
+    url: https://ats.rippling.com/centricity-research/jobs
+    ats: rippling
+    countries: [US, CA]
+
+  - name: Champions Club Texas
+    url: https://job-boards.greenhouse.io/championsclubtexas
+    ats: greenhouse
+    countries: [US]
+
+  - name: Chartwell Retirement Residences
+    url: https://hcrw.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Cherokee Nation Businesses
+    url: https://ejvp.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_4001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Cherry Creek
+    url: https://enmv.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Child Start
+    url: https://apply.workable.com/childstart/
+    ats: workable
+    countries: [US]
+
+  - name: Children's Hospital of Eastern Ontario
+    url: https://cheo.wd10.myworkdayjobs.com/External_Site
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Chili's
+    url: https://fa-etjg-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Chilis/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Choctaw Nation of Oklahoma
+    url: https://egoh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: CHOP Steakhouse & Bar
+    url: https://jobs.dayforcehcm.com/northlandproperties/CHOPSTEAKHOUSEBAR
+    ats: dayforce
+    countries: [CA]
+
+  - name: Christ Hospital Health Network
+    url: https://fa-etxt-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_5/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: CHS
+    url: https://fa-evxo-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Chukchansi Gold
+    url: https://chukchansigold.wd503.myworkdayjobs.com/cgrccareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Cinemark
+    url: https://cinemark.wd1.myworkdayjobs.com/cinemark
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Cineplex Entertainment
+    url: https://cineplex.wd3.myworkdayjobs.com/Cineplex
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Circle K
+    url: https://circlek.wd3.myworkdayjobs.com/circlekstorejobs
+    ats: workday
+    countries: [US, CA, IN]
+    options:
+      max_jobs: 200
+
+  - name: Civeo
+    url: https://fa-esyi-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [CA, AU]
+
+  - name: ClearSky Rehabilitation Hospital of Eau Claire
+    url: https://clearskyhealth.wd1.myworkdayjobs.com/csh
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Clinton Foundation
+    url: https://job-boards.greenhouse.io/clintonfoundation
+    ats: greenhouse
+    countries: [US]
+
+  - name: ClubCorp
+    url: https://ecwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: CMH Heli-Skiing
+    url: https://alterra.wd1.myworkdayjobs.com/CMHHeli-Skiing
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Co-op
+    url: https://fa-esfc-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Coast Hotels
+    url: https://jobs.dayforcehcm.com/coasthotels/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US, CA]
+
+  - name: COBS Bread
+    url: https://apply.workable.com/cobs-bread-2/
+    ats: workable
+    countries: [US, CA]
+
+  - name: CocuSocial
+    url: https://careers.smartrecruiters.com/cocusocial
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Columbus State Community College
+    url: https://cscc.wd1.myworkdayjobs.com/CSCC_ext
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Columbuszoo
+    url: https://careers2-columbuszoo.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Commerce
+    url: https://nc.wd108.myworkdayjobs.com/nc_careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Community FoodBank of New Jersey
+    url: https://apply.workable.com/community-foodbank-of-new-jersey/
+    ats: workable
+    countries: [US]
+
+  - name: Community Memorial Hospital
+    url: https://careers-mycmh.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Community Sports Partners
+    url: https://apply.workable.com/community-sports-partners/
+    ats: workable
+    countries: [US, CA]
+
+  - name: Comstock
+    url: https://job-boards.greenhouse.io/comstock
+    ats: greenhouse
+    countries: [US]
+
+  - name: Concentric
+    url: https://job-boards.greenhouse.io/concentric
+    ats: greenhouse
+    countries: [US]
+
+  - name: Concorde Group
+    url: https://recruiting.ultipro.ca/CON5100CNPD/JobBoard/14f6bfd5-47bb-479f-b7bd-c7e5c8b1a206/
+    platform: ukg
+    enabled: false
+
+  - name: Condadocollection
+    url: https://careers-condadocollection.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Connections Health Solutions
+    url: https://job-boards.greenhouse.io/connectionshealthsolutions
+    ats: greenhouse
+    countries: [US]
+
+  - name: Contact Our Hotels In Rochester, MN
+    url: https://careers-kahlerhospitalitygroup.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Contour Education
+    url: https://ats.rippling.com/contour-education/jobs
+    ats: rippling
+    countries: [AU]
+
+  - name: Convene Hospitality Group
+    url: https://job-boards.greenhouse.io/convene
+    ats: greenhouse
+    countries: [US]
+
+  - name: CookUnity
+    url: https://job-boards.greenhouse.io/cookunity
+    ats: greenhouse
+    countries: [US, CA]
+
+  - name: Copley Health Systems
+    url: https://careers-chsi.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Copperfield Healthcare and Rehabilitation
+    url: https://ensign.wd1.myworkdayjobs.com/CopperfieldHealthcareandRehabilitationCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Copperknoll
+    url: https://careers-copperknoll.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: CoralTree Hospitality
+    url: https://townandcountry-coraltreehospitality.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: CORP Saint Luke's Health System
+    url: https://saintlukes.wd1.myworkdayjobs.com/saintlukeshealthcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Cortland
+    url: https://job-boards.greenhouse.io/cortland
+    ats: greenhouse
+    countries: [US]
+
+  - name: Corvias Corporate Services
+    url: https://job-boards.greenhouse.io/corviascorporateservicesllc
+    ats: greenhouse
+    countries: [US]
+
+  - name: COTE Miami
+    url: https://job-boards.greenhouse.io/cotemiami
+    ats: greenhouse
+    countries: [US]
+
+  - name: Cote NYC
+    url: https://job-boards.greenhouse.io/cotenyc
+    ats: greenhouse
+    countries: [US]
+
+  - name: COTE Vegas
+    url: https://job-boards.greenhouse.io/cotevegas
+    ats: greenhouse
+    countries: [US]
+
+  - name: Cottage Health
+    url: https://eglz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Country Inn & Suites by Radisson, Bothell
+    url: https://choicehotels.wd5.myworkdayjobs.com/HotelExternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: County of Marathon
+    url: https://ccitc.wd1.myworkdayjobs.com/Marathon_County_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Covenant House New York
+    url: https://ats.rippling.com/covenant-house-new-york/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: CoxHealth
+    url: https://coxhealth.wd5.myworkdayjobs.com/CoxHealth_External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Creekside
+    url: https://careers-creekside.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Crenn Dining Group
+    url: https://ats.rippling.com/crenndininggroup/jobs
+    ats: rippling
+    countries: [US, AU]
+
+  - name: Crestwood Behavioral Health
+    url: https://job-boards.greenhouse.io/crestwoodcareers
+    ats: greenhouse
+    countries: [US]
+
+  - name: Crown Melbourne
+    url: https://crownresorts.wd3.myworkdayjobs.com/crown_careers
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Crystal Mountain
+    url: https://alterra.wd1.myworkdayjobs.com/CrystalMountain
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: CSC Generation
+    url: https://jobs.lever.co/cscgeneration-2
+    ats: lever
+    countries: [US, CA]
+
+  - name: CT Cricket Tasmania
+    url: https://australiancricket.wd105.myworkdayjobs.com/CTAS
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Dairyland Power Cooperative
+    url: https://dairynet.wd1.myworkdayjobs.com/DPCcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Dallas County
+    url: https://fa-etvc-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Damar Services
+    url: https://careers-damar.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Dave & Buster's Management
+    url: https://daveandbusters.wd1.myworkdayjobs.com/Main_Event_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: David Lloyd Leisure
+    url: https://davidlloyd.wd3.myworkdayjobs.com/101
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Davidson
+    url: https://fa-exci-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Davidson Hospitality Group
+    url: https://management-davidsonhospitality.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: DCH Health Care Authority
+    url: https://careers-dchsystem.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Deer Valley Resort Company
+    url: https://alterra.wd1.myworkdayjobs.com/deervalleyresort
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Del Mar Vacations
+    url: https://ats.rippling.com/del-mar-vacations/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Denny's
+    url: https://dennys.wd1.myworkdayjobs.com/Dennys
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Denny's Canada
+    url: https://jobs.dayforcehcm.com/northlandproperties/DENNYS
+    ats: dayforce
+    countries: [CA]
+
+  - name: Desert Parkway Behavioral Healthcare Hospital
+    url: https://apply.workable.com/desert-parkway/
+    ats: workable
+    countries: [US]
+
+  - name: Devereux
+    url: https://careers-devereux.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Dexterra
+    url: https://careers.smartrecruiters.com/dexterra
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: Di Rezze Family Office
+    url: https://job-boards.greenhouse.io/dfo
+    ats: greenhouse
+    countries: [US]
+
+  - name: DIG INN Chefs-In-Training
+    url: https://job-boards.greenhouse.io/diginnother
+    ats: greenhouse
+    countries: [US]
+
+  - name: DIG INN Restaurant Teams
+    url: https://job-boards.greenhouse.io/digrestaurants
+    ats: greenhouse
+    countries: [US]
+
+  - name: Disney
+    url: https://disney.wd5.myworkdayjobs.com/disneycareer
+    ats: workday
+    countries: [US, CA, AU, IN]
+    options:
+      max_jobs: 3000
+
+  - name: Do you love croissants, baguettes, coffee, and good company?
+    url: https://ats.rippling.com/fresh-baguette/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Doherty Enterprises
+    url: https://careers-dohertyinc.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Dole Packaged Foods
+    url: https://careers-dole.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Domino's
+    url: https://careers.smartrecruiters.com/dominos
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: DoorDash
+    url: https://job-boards.greenhouse.io/doordashusa
+    ats: greenhouse
+    countries: [US]
+
+  - name: DotDash Meredith
+    url: https://meredith.wd5.myworkdayjobs.com/EXT
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: doTERRA International
+    url: https://doterra.wd1.myworkdayjobs.com/doTERRACareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Downer
+    url: https://fa-exfs-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [AU]
+
+  - name: DPS
+    url: https://esgj.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Dreamscape Flamingo Road Management
+    url: https://dreamscaperio.wd5.myworkdayjobs.com/Rio_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Driscoll Children's Health Plan
+    url: https://driscoll.wd1.myworkdayjobs.com/DHS
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Drury Hotels Company
+    url: https://druryhotels.wd5.myworkdayjobs.com/druryjobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Duke University
+    url: https://careers.duke.edu/
+    ats: successfactors
+    countries: [US]
+
+  - name: Duncannon Burger King
+    url: https://onvo.wd108.myworkdayjobs.com/onvocareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Dundee Resort Development
+    url: https://alterra.wd1.myworkdayjobs.com/ArapahoeBasin
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Earls Kitchen + Bar
+    url: https://earls.ca/careers/
+    platform: custom
+    enabled: false
+
+  - name: East Bank Club
+    url: https://apply.workable.com/east-bank-club/
+    ats: workable
+    countries: [US]
+
+  - name: East West Hospitality
+    url: https://ats.rippling.com/east-west-hospitality/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Eataly North America
+    url: https://careers.smartrecruiters.com/eataly
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: EAU Holdings
+    url: https://uline.wd1.myworkdayjobs.com/EAU_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Ed Morse Automotive
+    url: https://careers-edmorse.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: EHC
+    url: https://ibwsjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Einstein Noah Restaurant Group
+    url: https://bagelbrands.wd504.myworkdayjobs.com/bagelbrands
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: El Camino Hospital
+    url: https://ech.wd5.myworkdayjobs.com/ech
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Emanate Health
+    url: https://cvhp.wd5.myworkdayjobs.com/EmanateHealth
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Embark Behavioral Health Careers and Mental Health
+    url: https://careers-embarkbh.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Emily Program
+    url: https://job-boards.greenhouse.io/the858emily123program
+    ats: greenhouse
+    countries: [US]
+
+  - name: Emory
+    url: https://non-clinical-emory.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Englewood
+    url: https://careers-englewood.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Equus
+    url: https://careers.smartrecruiters.com/equus
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Erickson Senior Living
+    url: https://erickson.wd108.myworkdayjobs.com/external
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Esprit
+    url: https://loewshotels.wd5.myworkdayjobs.com/loewshotels
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Estia Health
+    url: https://estiahealth.wd105.myworkdayjobs.com/Estia_Health_Careers
+    ats: workday
+    countries: [US, CA, AU]
+    options:
+      max_jobs: 200
+
+  - name: ETCH East Tennessee Children's Hospital Association
+    url: https://etch.wd5.myworkdayjobs.com/ETCH
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Evergreen Alliance Golf Limited LP dba Arcis Golf
+    url: https://arcis.wd12.myworkdayjobs.com/extna
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Evolution
+    url: https://careers.smartrecruiters.com/evolution
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: Experience Senior Living
+    url: https://apply.workable.com/experience-sl-co/
+    ats: workable
+    countries: [US]
+
+  - name: Extendicare
+    url: https://extendicare.wd10.myworkdayjobs.com/extendicare2023
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: EōS Fitness
+    url: https://job-boards.greenhouse.io/eosfitness
+    ats: greenhouse
+    countries: [US]
+
+  - name: Family Office
+    url: https://job-boards.greenhouse.io/fo
+    ats: greenhouse
+    countries: [US]
+
+  - name: Fanatics Inc.
+    url: https://job-boards.greenhouse.io/fanaticsinc
+    ats: greenhouse
+    countries: [US]
+
+  - name: FDLC
+    url: https://fa-evcm-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Fedcap Group
+    url: https://eckb.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: Fennies Day Nurseries
+    url: https://job-boards.eu.greenhouse.io/fenniesdaynurseries
+    ats: greenhouse
+    countries: [US, CA]
+
+  - name: Festival Fun Parks
+    url: https://hfecorp.wd503.myworkdayjobs.com/palace_jobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Firebirds Wood Fired Grill
+    url: https://jobs-firebirdsrestaurants.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: FirstEnergy
+    url: https://fa-etjd-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/FirstEnergyCareers/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Five Star Correctional Services
+    url: https://apply.workable.com/five-star-correctional-services-inc/
+    ats: workable
+    countries: [US]
+
+  - name: Flagship Facility Services
+    url: https://flagshipinc.wd5.myworkdayjobs.com/flagshipinc
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Flanigans
+    url: https://careers-flanigans.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Flexjet
+    url: https://flexjet.hrmdirect.com/employment/job-openings.php?search=true&cust_sort1=196974
+    ats: hrmdirect
+    countries: [US, CA]
+
+  - name: FMOL Health
+    url: https://eqtm.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Fond du Lac Band
+    url: https://fa-ewrl-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Fontainebleau Florida Hotel
+    url: https://careers-fontainebleau.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Foundations Early Learning Center
+    url: https://apply.workable.com/foundations-early-learning-center/
+    ats: workable
+    countries: [US]
+
+  - name: FOX
+    url: https://fox.wd1.myworkdayjobs.com/Domestic
+    ats: workday
+    countries: [US, AU, IN]
+    options:
+      max_jobs: 200
+
+  - name: Fran's ExploreMore Travel
+    url: https://apply.workable.com/exploremore-with-fran/
+    ats: workable
+    countries: [US]
+
+  - name: Frank Residences
+    url: https://job-boards.greenhouse.io/frankresidences
+    ats: greenhouse
+    countries: [US]
+
+  - name: Freeport-McMoRan
+    url: https://fcx.eightfold.ai/careers
+    ats: eightfold
+    countries: [US, CA]
+    options:
+      location: ''
+
+  - name: Fresh Thyme Market
+    url: https://meijer.wd5.myworkdayjobs.com/Fresh_Thyme_Stores_External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Frette
+    url: https://careers.smartrecruiters.com/frette
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Gables Residential Services
+    url: https://gables.wd5.myworkdayjobs.com/Gables_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Gap International
+    url: https://job-boards.greenhouse.io/gapinternational
+    ats: greenhouse
+    countries: [US]
+
+  - name: Gate Gourmet
+    url: https://gategroup.wd3.myworkdayjobs.com/GateGroup_External_Careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Geeks on Site
+    url: https://apply.workable.com/geeks-on-site/
+    ats: workable
+    countries: [US]
+
+  - name: Geisinger
+    url: https://geisinger.wd5.myworkdayjobs.com/geisingerexternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Genetec
+    url: https://apply.workable.com/genetec-inc/
+    ats: workable
+    countries: [US, CA, AU, IN]
+
+  - name: Germain Hotels
+    url: https://recruiting.ultipro.ca/GRO5006GRGEI/JobBoard/c725386f-f3f1-4e11-803c-94583205f547/
+    platform: ukg
+    enabled: false
+
+  - name: Gibson Dunn
+    url: https://job-boards.greenhouse.io/gibsondunn
+    ats: greenhouse
+    countries: [US]
+
+  - name: Glens Falls Hospital
+    url: https://hdbg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Global Partners
+    url: https://global.wd1.myworkdayjobs.com/globalpartnerscareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Goldkey
+    url: https://hourlynoassessment-goldkeyphr.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Good Samaritan
+    url: https://fa-exgl-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/JoinOurTeam/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Government of Nunavut
+    url: https://fa-exux-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_5/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Grand Canyon University
+    url: https://gcu.wd1.myworkdayjobs.com/GCU
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Grand Central Bakery
+    url: https://ats.rippling.com/grandcentralbakery/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Grand Terrace
+    url: https://ensign.wd1.myworkdayjobs.com/GrandTerraceHealthCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Granite State Manufacturing
+    url: https://apply.workable.com/granite-state-manufacturing/
+    ats: workable
+    countries: [US]
+
+  - name: Grant Thornton Australia
+    url: https://grantthorntonaus.wd105.myworkdayjobs.com/GTA
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Grayscale (Sandbox)
+    url: https://job-boards.greenhouse.io/grayscale
+    ats: greenhouse
+    countries: [US]
+
+  - name: Great Canadian Entertainment
+    url: https://elvk.fa.ca3.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Grey Eagle Resort & Casino
+    url: https://www.greyeagleresortandcasino.ca/careers/
+    platform: njoyn
+    enabled: false
+
+  - name: Guest Services
+    url: https://guestservices.wd5.myworkdayjobs.com/gsi
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Guilford College
+    url: https://guilford.wd1.myworkdayjobs.com/Guilford_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Guthrie
+    url: https://elfw.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Guzman y Gomez
+    url: https://careers.smartrecruiters.com/guzmanygomez
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Habitat Health
+    url: https://job-boards.greenhouse.io/habitathealth
+    ats: greenhouse
+    countries: [US]
+
+  - name: Hadley Designs
+    url: https://apply.workable.com/hadley-designs/
+    ats: workable
+    countries: [US, CA, AU, IN]
+
+  - name: Halifax Hospice
+    url: https://halifaxhealth.wd12.myworkdayjobs.com/HalifaxHealth
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Hamilton
+    url: https://careers-hamilton.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hampton Bar Harbor
+    url: https://apply.workable.com/barharborhampton/
+    ats: workable
+    countries: [US]
+
+  - name: Harlem Children's Zone
+    url: https://apply.workable.com/harlem-childrens-zone/
+    ats: workable
+    countries: [US]
+
+  - name: Harrah's Cherokee Casino Resort
+    url: https://epgr.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1002/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Harrison Group General
+    url: https://ats.rippling.com/harrison-group/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: HCPS
+    url: https://fa-exea-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Health Fitness
+    url: https://trustmark.wd1.myworkdayjobs.com/healthfitnesscareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Healthcare Services Group
+    url: https://careers-hcsgcorp.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: HealthPartners
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: HealthPartners/GHI
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/healthpartners-ghi/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Hebrew Rehabilitation Center
+    url: https://hebrewseniorlife.wd501.myworkdayjobs.com/HebrewSeniorLifeCareers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: HelloFresh
+    url: https://job-boards.greenhouse.io/hellofresh
+    ats: greenhouse
+    countries: [US, CA, AU]
+
+  - name: Henry Ford Health
+    url: https://careers.smartrecruiters.com/henryfordhealth1
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Hersha Hospitality Management
+    url: https://careers-hhmlp.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hershey
+    url: https://careers.thehersheycompany.com/
+    ats: successfactors
+    countries: [US, CA]
+
+  - name: HHS Environmental Services
+    url: https://hhs.wd12.myworkdayjobs.com/HHS1HourlyJobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Hidden Valley Orchards
+    url: https://apply.workable.com/hiddenvalleyorchards/
+    ats: workable
+    countries: [US]
+
+  - name: Highgate Hotels
+    url: https://externalmanagement-highgate.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hill House Home
+    url: https://job-boards.greenhouse.io/hillhousehome
+    ats: greenhouse
+    countries: [US]
+
+  - name: Hillel International
+    url: https://job-boards.greenhouse.io/hillel
+    ats: greenhouse
+    countries: [US, CA]
+
+  - name: Hilton
+    url: https://efet.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US, CA, AU, IN]
+
+  - name: Hilton Grand Vacations
+    url: https://efuq.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: Hoag
+    url: https://iaucqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Home Chef
+    url: https://job-boards.greenhouse.io/homechef
+    ats: greenhouse
+    countries: [US]
+
+  - name: HOMES
+    url: https://apply.workable.com/homes/
+    ats: workable
+    countries: [US]
+
+  - name: Homes for Independent Living of Wisconsin
+    url: https://mypath.wd115.myworkdayjobs.com/mypathcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Homeview
+    url: https://careers-homeview.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hormel Foods Family of Companies
+    url: https://ekkh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2002/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Hospital Housekeeping Systems
+    url: https://hhs.wd12.myworkdayjobs.com/hhs1jobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Hospitality Management
+    url: https://careers-coraltreehospitality.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hospitality Training Centers
+    url: https://apply.workable.com/uhesf/
+    ats: workable
+    countries: [US]
+
+  - name: Hudson Hospital
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/hudson-hospital/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: HUNGRY Marketplace
+    url: https://apply.workable.com/hungry-marketplace/
+    ats: workable
+    countries: [US, CA]
+
+  - name: Husky Mountain Acquisition
+    url: https://alterra.wd1.myworkdayjobs.com/Schweitzer
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Hustlercasino
+    url: https://careers-hustlercasino.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Hy-Vee
+    url: https://hyvee.wd1.myworkdayjobs.com/HyVeeCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Hyatt
+    url: https://careers.hyatt.com/
+    platform: custom
+    enabled: false
+
+  - name: IHG Hotels & Resorts
+    url: https://careers.ihg.com/
+    platform: custom
+    enabled: false
+
+  - name: Immiland Canada
+    url: https://jobs.lever.co/immiland-canada-inc
+    ats: lever
+    countries: [US, CA]
+
+  - name: Information Technology
+    url: https://careers-slco.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Innisfree Hotels
+    url: https://innisfree.wd5.myworkdayjobs.com/Innisfree
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Innovis Health
+    url: https://essentiahealth.wd1.myworkdayjobs.com/Essentia_Health
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: InnVentures
+    url: https://externalhourly-innventures.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Inspira Health
+    url: https://ernh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: INTEGRIS Health
+    url: https://ertr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: International Dairy Queen
+    url: https://careers.smartrecruiters.com/internationaldairyqueen
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: International House at UC Berkeley
+    url: https://job-boards.greenhouse.io/internationalhouseberkeley
+    ats: greenhouse
+    countries: [US]
+
+  - name: Intown Golf Club
+    url: https://job-boards.greenhouse.io/intowngolfclub
+    ats: greenhouse
+    countries: [US]
+
+  - name: InTown Services
+    url: https://intownsuites.wd503.myworkdayjobs.com/Intown_careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Intrawest/Winter Park Ops
+    url: https://alterra.wd1.myworkdayjobs.com/WinterParkResort
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Iowa State University
+    url: https://isu.wd1.myworkdayjobs.com/IowaStateJobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Irvine Ice Foundation
+    url: https://anaheimducks.wd5.myworkdayjobs.com/gp
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: It's a Secret Med Spa
+    url: https://ats.rippling.com/ias-careers/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: IU Health
+    url: https://ekcm.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Ivy Tech Community College
+    url: https://ivytech.wd1.myworkdayjobs.com/ivy_tech_careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Jack Link's Protein Snacks
+    url: https://careers.smartrecruiters.com/jacklinksproteinsnacks
+    ats: smartrecruiters
+    countries: [US, AU]
+
+  - name: Jackson Rancheria
+    url: https://careers-jacksoncasino.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Joe & the Juice / United States
+    url: https://job-boards.eu.greenhouse.io/jjus
+    ats: greenhouse
+    countries: [US]
+
+  - name: JOEY Restaurants
+    url: https://apply.workable.com/joey-restaurants-1/
+    ats: workable
+    countries: [CA]
+
+  - name: Johns Hopkins Medicine Intrastaff
+    url: https://careers-intrastaff.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Journey Beyond
+    url: https://apply.workable.com/journey-beyond/
+    ats: workable
+    countries: [AU]
+
+  - name: Jubilant Corporate
+    url: https://fa-exph-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/jubilant/jobs
+    ats: oracle_hcm
+    countries: [IN]
+
+  - name: June
+    url: https://apply.workable.com/the-june/
+    ats: workable
+    countries: [US]
+
+  - name: Junior Adventures Group
+    url: https://careers.smartrecruiters.com/junioradventuresgroup
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Karriere bei der Motel One Group
+    url: https://careers.smartrecruiters.com/motelone
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: KDC GA
+    url: https://kissusa.wd12.myworkdayjobs.com/KISS_Careers_External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Kettering Health
+    url: https://careers-ketteringhealth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Kid's Country
+    url: https://job-boards.greenhouse.io/kidscountry
+    ats: greenhouse
+    countries: [US]
+
+  - name: Kinder's
+    url: https://job-boards.greenhouse.io/kinders
+    ats: greenhouse
+    countries: [US]
+
+  - name: King's Hawaiian Bakery Southeast
+    url: https://ifg.wd1.myworkdayjobs.com/KH
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Kingman Regional Medical Center
+    url: https://fa-ewqy-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: KIPP
+    url: https://careers.smartrecruiters.com/kipp
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Kisco Senior Living
+    url: https://careers-kiscoseniorliving.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Kona Brewing Hawaii
+    url: https://ats.rippling.com/konabrewinghawaii/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Kroger Co
+    url: https://eluq.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Lab37
+    url: https://job-boards.greenhouse.io/lab37
+    ats: greenhouse
+    countries: [US]
+
+  - name: Ladybird Grove & Mess Hall
+    url: https://ats.rippling.com/ladybird/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Lafrance Hospitality
+    url: https://apply.workable.com/lafrance-hospitality/
+    ats: workable
+    countries: [US]
+
+  - name: Lake Louise Ski Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=fcb2267e-267d-4be2-8138-f6ce889a61db&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
+  - name: Lakeview Hospital
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/lakeview-hospital/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Learning Care Group
+    url: https://ejql.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Lettuce Entertain You Restaurants
+    url: https://careers-leye.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Lewis County General Hospital
+    url: https://job-boards.greenhouse.io/lewiscountygeneralhospital
+    ats: greenhouse
+    countries: [US]
+
+  - name: Lewis Energy Group
+    url: https://uscareers-lewisenergy.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Lexington Assisted Living
+    url: https://pennant.wd1.myworkdayjobs.com/LexingtonALCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Liberty Behavioral & Community Services
+    url: https://apply.workable.com/liberty-behavioraland-community-services-inc/
+    ats: workable
+    countries: [US]
+
+  - name: Liberty Military Housing
+    url: https://careers-livelmh.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Lifepoint Health
+    url: https://ibnjjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: LifeView Group
+    url: https://etud.fa.us8.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Lighthouse Senior Living
+    url: https://ats.rippling.com/lighthouse-senior-living/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Little Beet
+    url: https://convive.wd12.myworkdayjobs.com/Littlebeet
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Live Nation Entertainment
+    url: https://livenation.wd503.myworkdayjobs.com/LNExternalSite
+    ats: workday
+    countries: [US, CA, AU, IN]
+    options:
+      max_jobs: 200
+
+  - name: Living Spaces
+    url: https://livingspaces.wd5.myworkdayjobs.com/ls
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Loblaw Companies
+    url: https://myview.wd3.myworkdayjobs.com/paradox_careers
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: LOCAL Public Eatery
+    url: https://apply.workable.com/local-490/
+    ats: workable
+    countries: [CA]
+
+  - name: Loma Linda
+    url: https://egln.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Lookout Tavern
+    url: https://apply.workable.com/lookout-tavern/
+    ats: workable
+    countries: [US]
+
+  - name: Lorain County Community College
+    url: https://ccyj.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Loro Restaurant Group
+    url: https://haihospitality.wd12.myworkdayjobs.com/LORORestaurants
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: LPQ
+    url: https://convive.wd12.myworkdayjobs.com/convive
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: LTFMGTCO LTF Club Management Co
+    url: https://wd1.myworkdaysite.com/recruiting/lifetime/lifetime
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Lucky Lady LA Casino in Gardena, CA and Apply Now
+    url: https://careers-lfluckyladycasino.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Luminis Health
+    url: https://job-boards.greenhouse.io/luminishealth
+    ats: greenhouse
+    countries: [US]
+
+  - name: Luna's Tacos & Tequila
+    url: https://ats.rippling.com/lunastacos/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: LV Collective
+    url: https://apply.workable.com/lvcollective/
+    ats: workable
+    countries: [US]
+
+  - name: Lvhn
+    url: https://lvhn.wd1.myworkdayjobs.com/lvhn
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: LW Entertainment
+    url: https://ats.rippling.com/strangersinparadise/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Lyle DC
+    url: https://wd103.myworkdaysite.com/recruiting/loregroup/LoreGroupExternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Mackenzie Health
+    url: https://employment-mackenziehealth.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: Macy's
+    url: https://ebwh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: MadTree
+    url: https://ats.rippling.com/madtree-careers/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Maggiano's
+    url: https://fa-etjg-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Maggianos/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Magnolia
+    url: https://job-boards.greenhouse.io/magnolia
+    ats: greenhouse
+    countries: [US]
+
+  - name: MaineGeneral Health
+    url: https://mainegeneral.wd5.myworkdayjobs.com/MaineGeneralCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Mammoth Mountain Ski Area
+    url: https://alterra.wd1.myworkdayjobs.com/MammothMountain
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Maple Leaf Sports & Entertainment Partnership (MLSE)
+    url: https://mlse.wd3.myworkdayjobs.com/MLSE
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Maricopa County
+    url: https://maricopa.wd1.myworkdayjobs.com/JB_External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Marriott
+    url: https://ejwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US, CA, AU, IN]
+
+  - name: Maryland Assisted Living & Skilled Nursing Communities
+    url: https://careers-lorienhealth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Mason
+    url: https://careers-mason.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Mass General Brigham
+    url: https://massgeneralbrigham.wd1.myworkdayjobs.com/mgbexternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Mather in Evanston
+    url: https://job-boards.greenhouse.io/thematherevanston
+    ats: greenhouse
+    countries: [US]
+
+  - name: Mather in Tysons
+    url: https://job-boards.greenhouse.io/matherintysons
+    ats: greenhouse
+    countries: [US]
+
+  - name: Mather Place
+    url: https://job-boards.greenhouse.io/matherplace
+    ats: greenhouse
+    countries: [US]
+
+  - name: Mattel
+    url: https://careers.smartrecruiters.com/mattelinc
+    ats: smartrecruiters
+    countries: [US, CA, AU, IN]
+
+  - name: McClure Oil
+    url: https://job-boards.greenhouse.io/mcclureoilcorporation
+    ats: greenhouse
+    countries: [US]
+
+  - name: Meijer Stores
+    url: https://meijer.wd5.myworkdayjobs.com/Meijer_Market_Format
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Memorial Sloan Kettering Cancer Center
+    url: https://msk.wd108.myworkdayjobs.com/MSKCC_Careers_Primary
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Messiah University
+    url: https://messiah-ibvrjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Method Co
+    url: https://job-boards.greenhouse.io/methodco
+    ats: greenhouse
+    countries: [US]
+
+  - name: Methodist Hospitals
+    url: https://careers-methodisthospitals.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Metro Nashville Public Schools
+    url: https://ibqhjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/MNPS/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: MHC Property Management
+    url: https://equitylifestyleproperties.wd5.myworkdayjobs.com/els
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Middlebury College
+    url: https://apply.workable.com/middleburycollege/
+    ats: workable
+    countries: [US]
+
+  - name: Midlandhealth
+    url: https://hospital-midlandhealth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Midmark Corporation
+    url: https://hcor.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Midtown Athletic Clubs
+    url: https://midtown.wd1.myworkdayjobs.com/Midtown_Careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Miele US (VG USA)
+    url: https://miele.wd3.myworkdayjobs.com/miele-jobs
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Mike Wiegele Helicopter Skiing
+    url: https://alterra.wd1.myworkdayjobs.com/MikeWiegeleHelicopterSkiing
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Miller's Ale House
+    url: https://management-millersalehouse.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Minto
+    url: https://fa-erjt-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: Mohegan Sun Mohegan Tribal Gaming Authority
+    url: https://mohegan.wd1.myworkdayjobs.com/Mohegan
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Monarch Communities
+    url: https://careers.smartrecruiters.com/monarchcommunities
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Mont Tremblant Resort
+    url: https://alterra.wd1.myworkdayjobs.com/Mont-Tremblant
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Montage Deer Valley
+    url: https://montage.wd1.myworkdayjobs.com/Montage_International
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Morgan's Early Learning Centers
+    url: https://job-boards.greenhouse.io/morgans
+    ats: greenhouse
+    countries: [US]
+
+  - name: Moss New York
+    url: https://job-boards.greenhouse.io/mossnewyorkllc
+    ats: greenhouse
+    countries: [US]
+
+  - name: Mount Nittany Health
+    url: https://mnh-ibosjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/MountNittanyHealthCareers/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Mount Sinai
+    url: https://ejis.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Mountaire
+    url: https://ebtg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Career-Site/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Moxie's
+    url: https://moxies.com/careers-listing/
+    platform: workstream
+    enabled: false
+
+  - name: MSL Community Management
+    url: https://mbk.wd5.myworkdayjobs.com/MSLCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: MTC
+    url: https://fa-euud-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Munson Healthcare
+    url: https://careers.smartrecruiters.com/munsonhealthcare1
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Murfreesboro Embassy Suites
+    url: https://atriumhospitality.wd5.myworkdayjobs.com/AtriumHospitality
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Museum of Science
+    url: https://job-boards.greenhouse.io/themuseumofscience
+    ats: greenhouse
+    countries: [US]
+
+  - name: My NRMA
+    url: https://careers.smartrecruiters.com/mynrma
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Naked Farmer
+    url: https://job-boards.greenhouse.io/nakedfarmer
+    ats: greenhouse
+    countries: [US]
+
+  - name: Nando's Australia
+    url: https://nandosanz.wd3.myworkdayjobs.com/nandosanz
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Nashville Zoo
+    url: https://job-boards.greenhouse.io/nashvillezoo
+    ats: greenhouse
+    countries: [US]
+
+  - name: National Audubon Society
+    url: https://audubon.wd503.myworkdayjobs.com/Audubon
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: National Health Care Associates
+    url: https://careers-nathealthcare.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: National Lutheran Communities & Services
+    url: https://job-boards.greenhouse.io/nationallutheraninc
+    ats: greenhouse
+    countries: [US]
+
+  - name: Nationwide Children's Hospital
+    url: https://nationwidechildrens.wd5.myworkdayjobs.com/NCHCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Navigators
+    url: https://navigators.wd1.myworkdayjobs.com/External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Navion Senior Solutions
+    url: https://apply.workable.com/navionsl/
+    ats: workable
+    countries: [US]
+
+  - name: New Life Ranch
+    url: https://ats.rippling.com/new-life-ranch/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: New River Valley Community Services
+    url: https://fa-euwx-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: New York Institute of Technology
+    url: https://careers-nyit.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: NEXDINE
+    url: https://nexdine.wd1.myworkdayjobs.com/nexdine
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Nobu Hotel Toronto
+    url: https://job-boards.greenhouse.io/nobuhoteltoronto
+    ats: greenhouse
+    countries: [CA]
+
+  - name: NoGigiddy
+    url: https://apply.workable.com/nogigiddy/
+    ats: workable
+    countries: [US]
+
+  - name: Nordstrom
+    url: https://nordstrom.wd501.myworkdayjobs.com/nordstrom_careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Norfolk County
+    url: https://apply.workable.com/norfolk-county/
+    ats: workable
+    countries: [CA]
+
+  - name: North Point Hospitality
+    url: https://ats.rippling.com/north-point-hospitality/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Northbay
+    url: https://erou.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Northern Montana Hospital
+    url: https://ats.rippling.com/northern-montana-hospital/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Northwell
+    url: https://eppr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: NorthWest Arkansas Community College
+    url: https://nwacc.wd1.myworkdayjobs.com/NWACC_External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Northwest Mississippi Community College
+    url: https://emor.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Northwestern Memorial Healthcare
+    url: https://careers.smartrecruiters.com/northwesternmedicine
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Northwestern Mutual
+    url: https://northwesternmutual.wd5.myworkdayjobs.com/corporate-careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Nph
+    url: https://careers-nph.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: NYC Government
+    url: https://careers.smartrecruiters.com/cityofnewyork
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: O2B Early Education
+    url: https://apply.workable.com/o2b-kids/
+    ats: workable
+    countries: [US]
+
+  - name: Oak Hill Senior Living
+    url: https://careers-oakhill.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Oak View Group
+    url: https://teamwork-ovg.icims.com/jobs/search
+    ats: icims
+    countries: [US, CA]
+
+  - name: OakBend Medical Center
+    url: https://careers-obmc.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Ocean Casino Resort
+    url: https://apply.workable.com/theoceanac/
+    ats: workable
+    countries: [US]
+
+  - name: Ochsner Health
+    url: https://ochsner.wd1.myworkdayjobs.com/ochsner
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Ohio State University
+    url: https://osu.wd1.myworkdayjobs.com/OSUCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: OJC Oaklawn Jockey Club
+    url: https://oaklawn.wd5.myworkdayjobs.com/Oaklawn
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Olathe Public Schools
+    url: https://fa-ewbu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Old Saloon
+    url: https://apply.workable.com/the-old-saloon/
+    ats: workable
+    countries: [US]
+
+  - name: Olympus Property
+    url: https://job-boards.greenhouse.io/olympusproperty
+    ats: greenhouse
+    countries: [US]
+
+  - name: Omni Hotels & Resorts
+    url: https://externalhourly-omnihotels.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: One Lifestyle
+    url: https://lifestylecommunities.wd1.myworkdayjobs.com/Lifestyle_Communities_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Onni Properties
+    url: https://onni.wd10.myworkdayjobs.com/Onni_External_Careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Orange County Public Schools
+    url: https://administrators-ocps.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: OSU Medical Center
+    url: https://osumc-iborjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/OSUMC/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Otterbein SeniorLife
+    url: https://job-boards.greenhouse.io/otterbein
+    ats: greenhouse
+    countries: [US]
+
+  - name: Ouzinkie
+    url: https://apply.workable.com/ouzinkie/
+    ats: workable
+    countries: [US]
+
+  - name: Ovation
+    url: https://apply.workable.com/ovation/
+    ats: workable
+    countries: [US]
+
+  - name: Pacific Care Center
+    url: https://ensign.wd1.myworkdayjobs.com/PacificCareCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Pacifica Housing
+    url: https://apply.workable.com/pacifica-housing/
+    ats: workable
+    countries: [CA]
+
+  - name: Padel Haus
+    url: https://ats.rippling.com/padel-haus/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Palisades Tahoe Resort
+    url: https://alterra.wd1.myworkdayjobs.com/PalisadesTahoe
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Paradigm Treatment Centers
+    url: https://job-boards.greenhouse.io/paradigmtreatmentcenters
+    ats: greenhouse
+    countries: [US]
+
+  - name: Parallel Employment
+    url: https://apply.workable.com/parallelemployment/
+    ats: workable
+    countries: [US]
+
+  - name: Park Nicollet
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/park-nicollet/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Park Place Assisted Living
+    url: https://pennant.wd1.myworkdayjobs.com/ParkPlaceALCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Parker
+    url: https://elje.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Parkwest Casinos / Fortiss
+    url: https://careers-fortiss.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Pasadena Hospital Association, LTD dba Huntington Health
+    url: https://huntingtonhospital.wd5.myworkdayjobs.com/HuntingtonHospitalCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Pattison Food Group
+    url: https://pfg.wd3.myworkdayjobs.com/QFCareers
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: PCC Community Markets
+    url: https://external-pccsea.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: PeakMade Real Estate
+    url: https://apply.workable.com/peak-made/
+    ats: workable
+    countries: [US, CA]
+
+  - name: Peckham
+    url: https://peckham.wd503.myworkdayjobs.com/team-member
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Peet's Coffee
+    url: https://peets.wd12.myworkdayjobs.com/Peets
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Peraton
+    url: https://careers-peraton.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Perry Homes
+    url: https://apply.workable.com/perryhomes/
+    ats: workable
+    countries: [US]
+
+  - name: Peter Piper
+    url: https://cecentertainment.wd5.myworkdayjobs.com/Peter_Piper_Pizza_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Phillips Farms Employment
+    url: https://ats.rippling.com/phillips-farms-employment/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Philz Coffee
+    url: https://job-boards.greenhouse.io/philzcoffeecareers
+    ats: greenhouse
+    countries: [US]
+
+  - name: Pilot Company
+    url: https://careers.smartrecruiters.com/pilotcompany
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: Pine Cove
+    url: https://pinecove.wd1.myworkdayjobs.com/Pine_Cove
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Pinehurst Country Club
+    url: https://pinehurstcountryclub.wd108.myworkdayjobs.com/pinehurstcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Plumas District Hospital
+    url: https://careers-pdh.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: PMMA
+    url: https://ibdyqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Polkcountysheriffsoffice
+    url: https://careers-polkcountysheriffsoffice.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: PopStroke
+    url: https://ats.rippling.com/popstroke-job-board-1924/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Portillos Hot Dogs
+    url: https://portillos.wd108.myworkdayjobs.com/Portillos_External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Presbyterian Homes & Services
+    url: https://careers-preshomes.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Presbyterian Medical Services
+    url: https://echs.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/PresbyterianMedicalServices/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Presbyterian Villages of Michigan
+    url: https://careers-pvm.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Prime
+    url: https://careers-primeinc.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Prime Healthcare
+    url: https://careers-primehealthcare.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Primrose Retirement Communities
+    url: https://ats.rippling.com/prc/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Printfresh
+    url: https://apply.workable.com/printfresh/
+    ats: workable
+    countries: [US]
+
+  - name: Procom Services
+    url: https://careers.smartrecruiters.com/procomservices
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Providence
+    url: https://evac.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: PSA Airlines
+    url: https://careers-psaairlines.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Pursuit
+    url: https://usa-pursuitcollection.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Pursuit Attractions and Hospitality
+    url: https://pursuitcollection.wd501.myworkdayjobs.com/pursuit
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Pyramid Foods
+    url: https://hungryjacks.wd105.myworkdayjobs.com/HungryJacksCareers
+    ats: workday
+    countries: [US, AU]
+    options:
+      max_jobs: 200
+
+  - name: Pyramid Litchfield Management
+    url: https://benchmark.wd1.myworkdayjobs.com/PGH_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Quad
+    url: https://ebud.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: R+L Carriers
+    url: https://erhk.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Radisson
+    url: https://careers.smartrecruiters.com/rhg
+    ats: smartrecruiters
+    countries: [AU, IN]
+
+  - name: Raley's Company
+    url: https://fa-epss-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Recovery Village
+    url: https://apply.workable.com/therecoveryvillage/
+    ats: workable
+    countries: [US]
+
+  - name: Red Robin International
+    url: https://redrobin.wd1.myworkdayjobs.com/RedRobin_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Red Wing Shoe Company
+    url: https://careers.smartrecruiters.com/redwingshoecompany
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Redmond Care & Rehab
+    url: https://ensign.wd1.myworkdayjobs.com/RedmondCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Redstone Residential
+    url: https://job-boards.greenhouse.io/redstoneresidential
+    ats: greenhouse
+    countries: [US]
+
+  - name: Regions Hospital & RHSC
+    url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/regions-hospital/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Reitmr
+    url: https://reitmr.wd5.myworkdayjobs.com/Sonesta
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Relais & Châteaux
+    url: https://careers.smartrecruiters.com/relaischateaux
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: Residential Treatment Center for Teen Girls (Ages 14-18)
+    url: https://careers-newhaven.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Revera
+    url: https://revera.wd3.myworkdayjobs.com/talemetry_external
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Rewarding Health Care Careers in a Job at Stanford Medicine Children’s
+    url: https://careers.smartrecruiters.com/stanfordmedicinechildrenshealth
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: RFCUNY
+    url: https://rfcuny.wd108.myworkdayjobs.com/RFCUNY
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: RH
+    url: https://hcqq.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_5004/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: Rhode Island School of Design
+    url: https://risd.wd5.myworkdayjobs.com/risd
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Riboli Family Wines
+    url: https://job-boards.greenhouse.io/ribolifamilywines
+    ats: greenhouse
+    countries: [US]
+
+  - name: Rice University Minimal Template
+    url: https://emdz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Ricoh
+    url: https://cbha.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US, CA]
+
+  - name: Ridge RTC
+    url: https://job-boards.greenhouse.io/theridge
+    ats: greenhouse
+    countries: [US]
+
+  - name: Rinks Foundation
+    url: https://anaheimducks.wd5.myworkdayjobs.com/rinks
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Riot Hospitality Group
+    url: https://apply.workable.com/riot-hospitality-group/
+    ats: workable
+    countries: [US]
+
+  - name: River Cree Resort
+    url: https://careers-rivercree.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: Riverside Hospital
+    url: https://rivhs.wd1.myworkdayjobs.com/Non-ProviderRHS
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Roche Bros. Supermarkets
+    url: https://careers-rochebros.icims.com/jobs/search
+    ats: icims
+    countries: [US, CA]
+
+  - name: Rolling
+    url: https://careers-rolling.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Roost
+    url: https://apply.workable.com/roosttx/
+    ats: workable
+    countries: [US]
+
+  - name: Roswell Park Comprehensive Cancer Center
+    url: https://roswellpark.wd5.myworkdayjobs.com/ExternalCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Rpmliving
+    url: https://careers2-rpmliving.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: RSC
+    url: https://fa-etjg-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/RSC/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Ruvilla Solutions
+    url: https://job-boards.greenhouse.io/ruvillasolutionsllc
+    ats: greenhouse
+    countries: [US]
+
+  - name: S&R Group of Companies
+    url: https://careers.smartrecruiters.com/srgroupofcompanies
+    ats: smartrecruiters
+    countries: [CA]
+
+  - name: Sage + Sound
+    url: https://ats.rippling.com/sage-sound/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Sage Hospitality
+    url: https://careers-sagehospitality.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Saks & CO
+    url: https://saks.wd1.myworkdayjobs.com/careers_at_saks
+    ats: workday
+    countries: [US, IN]
+    options:
+      max_jobs: 200
+
+  - name: SALTLIK
+    url: https://apply.workable.com/saltlik/
+    ats: workable
+    countries: [CA]
+
+  - name: Salvation Army (VIC) Prpty Trust atf Social Work
+    url: https://salvationarmy.wd3.myworkdayjobs.com/Salvos
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: Samaritan Daytop Village
+    url: https://careers-samaritanvillage.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: San Antonio Behavioral Healthcare Hospital
+    url: https://apply.workable.com/sanantoniobehavioral/
+    ats: workable
+    countries: [US]
+
+  - name: San Francisco Campus for Jewish Living
+    url: https://job-boards.greenhouse.io/sanfranciscocampusforjewishliving
+    ats: greenhouse
+    countries: [US]
+
+  - name: Sandman Hotel Group
+    url: https://jobs.dayforcehcm.com/northlandproperties/SANDMANHOTELGROUP
+    ats: dayforce
+    countries: [US, CA]
+
+  - name: Sandstone Care
+    url: https://job-boards.greenhouse.io/sandstonecare
+    ats: greenhouse
+    countries: [US]
+
+  - name: Sanford Health
+    url: https://sanford.wd5.myworkdayjobs.com/sanfordhealth
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: SAS
+    url: https://globalcareers-sas.icims.com/jobs/search
+    ats: icims
+    countries: [US, CA, AU, IN]
+
+  - name: Saskatchewan Health Authority
+    url: https://emqk.fa.ca3.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Sauk Prairie Healthcare
+    url: https://saukprairiehealthcare.wd12.myworkdayjobs.com/Sauk_Prairie_Healthcare_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sbcos
+    url: https://sbcos.wd1.myworkdayjobs.com/sbcos2
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: SCR Scripps College
+    url: https://theclaremontcolleges.wd1.myworkdayjobs.com/SCR_Career_Staff
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sedanos
+    url: https://careers-sedanos.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Seneca Niagara Falls Gaming
+    url: https://senecacasinos.wd12.myworkdayjobs.com/SGC
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: 'Senior LIFE: Living Independence for the Elderly'
+    url: https://careers-seniorlifepa.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Senior Lifestyle
+    url: https://careers.smartrecruiters.com/seniorlifestyle1
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Senior Living
+    url: https://careers-astralatfranklin.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Senior Living Communities (All Jobs)
+    url: https://eexs.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/AllJobs/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Senior Living Communities Near Me
+    url: https://careers-astralatauburn.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Sensei Wellness Holdings
+    url: https://job-boards.greenhouse.io/sensei
+    ats: greenhouse
+    countries: [US]
+
+  - name: Sentry Insurance
+    url: https://sentryinsurance.wd1.myworkdayjobs.com/SentryCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Servicon Systems
+    url: https://apply-servicon.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: SFO
+    url: https://external-flysfo.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Shake Shack
+    url: https://shakeshack.wd5.myworkdayjobs.com/External
+    ats: workday
+    countries: [US, IN]
+    options:
+      max_jobs: 200
+
+  - name: SHANER
+    url: https://ebwv.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Shelter House
+    url: https://apply.workable.com/shelter-house/
+    ats: workable
+    countries: [US]
+
+  - name: Shenandoah Valley Organic
+    url: https://farmerfocus.wd5.myworkdayjobs.com/FarmerFocus
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Shepherd Center
+    url: https://shepherd.wd5.myworkdayjobs.com/ShepherdCenter
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Shirley Ryan AbilityLab
+    url: https://sralab.wd1.myworkdayjobs.com/SRAlabCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Shriners Hospitals for Children
+    url: https://shrinerschildrens.wd12.myworkdayjobs.com/Shriners
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: SIGA
+    url: https://iaayzv.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/SIGA/jobs
+    ats: oracle_hcm
+    countries: [CA]
+
+  - name: Signethealth
+    url: https://careers-signethealth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: SIL Central Services Company
+    url: https://wycliffe.wd1.myworkdayjobs.com/SIL_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Silverado
+    url: https://job-boards.greenhouse.io/silverado
+    ats: greenhouse
+    countries: [US]
+
+  - name: Simon Property Group
+    url: https://simon.wd1.myworkdayjobs.com/Simon
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: SIR Corp
+    url: https://careersen-sircorp.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: Ski Butlers Holdings
+    url: https://alterra.wd1.myworkdayjobs.com/SkiButlers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Skidmore
+    url: https://eodq.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Skyport Hospitality
+    url: https://ats.rippling.com/first-meridian-services/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Sleeman Breweries
+    url: https://sleeman.wd3.myworkdayjobs.com/SBL
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: SMGHA Nevada
+    url: https://sanmanuel.wd1.myworkdayjobs.com/SMGHANevada
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Snowshoe Mountain
+    url: https://alterra.wd1.myworkdayjobs.com/snowshoemountain
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sodexo
+    url: https://careers.smartrecruiters.com/sodexo
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Sodexo Canada
+    url: https://careers.smartrecruiters.com/sodexocanadaltd
+    ats: smartrecruiters
+    countries: [CA]
+
+  - name: Sofive
+    url: https://ats.rippling.com/sofive/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Soho House & Co
+    url: https://job-boards.eu.greenhouse.io/sohohouseco
+    ats: greenhouse
+    countries: [US, CA, IN]
+
+  - name: SoLa Impact
+    url: https://apply.workable.com/solaimpact/
+    ats: workable
+    countries: [US]
+
+  - name: Solitude Mountain Ski Area
+    url: https://alterra.wd1.myworkdayjobs.com/solitudemountainresort
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sonder
+    url: https://sonder.wd1.myworkdayjobs.com/join_sonder
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Southwest Mississippi Regional Medical Center
+    url: https://fa-evlp-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: SpaceX
+    url: https://job-boards.greenhouse.io/spacex
+    ats: greenhouse
+    countries: [US]
+
+  - name: SpartanNash Associates
+    url: https://spartannash.wd1.myworkdayjobs.com/SpartanNash_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Spectrum Retirement Communities
+    url: https://careers.smartrecruiters.com/spectrumretirementcommunities
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: SPH Careers 2023
+    url: https://fa-eqec-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Splendido
+    url: https://job-boards.greenhouse.io/mathersplendido
+    ats: greenhouse
+    countries: [US]
+
+  - name: SRC Texas Scottish Rite for Children
+    url: https://src.wd1.myworkdayjobs.com/ScottishRiteforChildren
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: St Vincent's Care Services
+    url: https://svha.wd3.myworkdayjobs.com/broadbean_external
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: St Vincent's Hospital Melbourne
+    url: https://svha.wd3.myworkdayjobs.com/svha_svha
+    ats: workday
+    countries: [AU]
+    options:
+      max_jobs: 200
+
+  - name: St. Joseph's Health
+    url: https://fa-eyip-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_4001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: St. Jude Children's Research Hospital
+    url: https://stjude.wd1.myworkdayjobs.com/stjude
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: St. Norbert College
+    url: https://stnorbert.wd1.myworkdayjobs.com/SNC_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: St. Olaf Student
+    url: https://fa-ewur-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Staff and Faculty
+    url: https://ehwy.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Stanford
+    url: https://fa-exuf-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Stanford/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Stanmar
+    url: https://resortcareers-littlegemresorts.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Starbucks
+    url: https://starbucks.eightfold.ai/careers
+    ats: eightfold
+    countries: [US, CA]
+    options:
+      location: ''
+
+  - name: State of Nebraska
+    url: https://son.wd108.myworkdayjobs.com/NebraskaStateCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Station Casinos
+    url: https://ejfh.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Durango/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Stauffers of Kissel Hill
+    url: https://careers-skh.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Stayton
+    url: https://job-boards.greenhouse.io/stayton
+    ats: greenhouse
+    countries: [US]
+
+  - name: Steamboat Ski & Resort
+    url: https://alterra.wd1.myworkdayjobs.com/SteamboatSkiResort
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Steinhafels
+    url: https://careers-steinhafels.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Stormont-Vail HealthCare
+    url: https://stormontvail.wd1.myworkdayjobs.com/SVH
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Strategic HR Client
+    url: https://job-boards.greenhouse.io/strategichr
+    ats: greenhouse
+    countries: [US]
+
+  - name: Stratton
+    url: https://alterra.wd1.myworkdayjobs.com/StrattonMountain
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Stumptown Coffee
+    url: https://peets.wd12.myworkdayjobs.com/Stumptown
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Suffolkcountyny
+    url: https://suffolkcountyny.wd1.myworkdayjobs.com/Suffolkcounty1
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sugarbush Mountain Resort
+    url: https://alterra.wd1.myworkdayjobs.com/SugarbushResort
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Sundae Artisan Ice Cream
+    url: https://apply.workable.com/sundae/
+    ats: workable
+    countries: [US]
+
+  - name: Sunrise Senior Living Mgmt
+    url: https://sunriseseniorliving.wd12.myworkdayjobs.com/SUNRISE_EXT_CAREERS
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Sunshine House
+    url: https://apply.workable.com/sunshine-house/
+    ats: workable
+    countries: [US]
+
+  - name: sweetgreen
+    url: https://job-boards.greenhouse.io/sweetgreen
+    ats: greenhouse
+    countries: [US]
+
+  - name: Taco MacTaco Mac
+    url: https://careers-tmacrestaurants.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Tao Group Hospitality
+    url: https://fa-euyb-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Tapestry
+    url: https://tapestry.wd108.myworkdayjobs.com/tapestry_careers
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Target
+    url: https://target.wd5.myworkdayjobs.com/targetcareers
+    ats: workday
+    countries: [US, IN]
+    options:
+      max_jobs: 200
+
+  - name: Tarleton State University
+    url: https://tamus.wd1.myworkdayjobs.com/TARLETON_External
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: TCS Transwestern Commercial Services, L.L.C
+    url: https://transwestern.wd1.myworkdayjobs.com/TWCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Team-Focused
+    url: https://careers-ho-chunk.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Ted Turner Driver
+    url: https://valorhospitality.wd503.myworkdayjobs.com/who-we-are
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Teds Montana Grill
+    url: https://tedsmontanagrill.wd503.myworkdayjobs.com/TMG_External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tenet Healthcare
+    url: https://eodr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Terrible Herbst
+    url: https://terribleherbst.wd5.myworkdayjobs.com/terriblescareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: The Florida Panthers
+    url: https://job-boards.greenhouse.io/thefloridapanthers
+    ats: greenhouse
+    countries: [US]
+
+  - name: The Healthcare Resort of Topeka
+    url: https://ensign.wd1.myworkdayjobs.com/TheHealthcareResortofTopekaCareersite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: The Keg Steakhouse + Bar
+    url: https://thekeg.com/en/careers
+    platform: custom
+    enabled: false
+
+  - name: The Scion Group
+    url: https://job-boards.greenhouse.io/thesciongroupllc
+    ats: greenhouse
+    countries: [US]
+
+  - name: the squad
+    url: https://ats.rippling.com/muchacho/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: The Sutton Place Hotels
+    url: https://jobs.dayforcehcm.com/northlandproperties/THESUTTONPLACEHOTELS
+    ats: dayforce
+    countries: [CA]
+
+  - name: The Walt Disney Company
+    url: https://disney.wd5.myworkdayjobs.com/disneycareerdc
+    ats: workday
+    countries: [US, CA, AU, IN]
+    options:
+      max_jobs: 200
+
+  - name: Theracare
+    url: https://careers.smartrecruiters.com/theracareinc
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Tilray Brands
+    url: https://tilray.wd3.myworkdayjobs.com/Tilray
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Tim Hortons
+    url: https://careers.timhortons.ca/
+    platform: higherme
+    enabled: false
+
+  - name: Timber Ridge Health and Rehabilitation
+    url: https://ensign.wd1.myworkdayjobs.com/SNPCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tlingit Haida Tribal Business
+    url: https://job-boards.greenhouse.io/thtbc
+    ats: greenhouse
+    countries: [US]
+
+  - name: TMC Hospitality
+    url: https://ats.rippling.com/tmc-hospitality/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: TMR Operations
+    url: https://pacifichospitality.wd503.myworkdayjobs.com/PHG
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tommy Bahama Group
+    url: https://oxford.wd5.myworkdayjobs.com/TommyBahamaUS
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Too Sweet Cakes
+    url: https://apply.workable.com/too-sweet-cakes/
+    ats: workable
+    countries: [US]
+
+  - name: TooJay’s Deli
+    url: https://job-boards.greenhouse.io/toojaysdeli
+    ats: greenhouse
+    countries: [US]
+
+  - name: Toot'n Totum Food Stores
+    url: https://tootntotum.wd1.myworkdayjobs.com/TNT
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Topgolf Payroll Services
+    url: https://topgolf.wd501.myworkdayjobs.com/topgolfcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tournament Players Club at Sugarloaf
+    url: https://pgatour.wd5.myworkdayjobs.com/FTFExternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tournament Players Club of Massachusetts
+    url: https://pgatour.wd5.myworkdayjobs.com/tpcexternal
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Touro University
+    url: https://tcnycareers-touro.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Touro University of California
+    url: https://tuccareers-touro.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Townandcountrymarkets
+    url: https://jobs-townandcountrymarkets.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Transforming Age Associates
+    url: https://transformingage.wd108.myworkdayjobs.com/JoinUs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Travel and Leisure Australia
+    url: https://wynd.wd5.myworkdayjobs.com/external
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Treasure Hills Healthcare and Rehabilitation Center
+    url: https://ensign.wd1.myworkdayjobs.com/TreasureHillsCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tricoci University
+    url: https://apply.workable.com/tricoci-university/
+    ats: workable
+    countries: [US]
+
+  - name: TriHealth
+    url: https://fa-evly-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Trustees of Reservations
+    url: https://apply.workable.com/thetrustees/
+    ats: workable
+    countries: [US]
+
+  - name: Turlock Nursing and Rehabilitation Center
+    url: https://ensign.wd1.myworkdayjobs.com/TurlockCareerSite
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Tutera Senior Living & Health Care
+    url: https://communities-tutera.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: U-Haul
+    url: https://uhaul.wd1.myworkdayjobs.com/UhaulJobs
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Uchi Philadelphia
+    url: https://haihospitality.wd12.myworkdayjobs.com/HaiHospitality-Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: UCHI United Church Homes
+    url: https://unitedchurchhomes.wd1.myworkdayjobs.com/uchcareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: UCM
+    url: https://fa-etnf-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Uhnjcareers
+    url: https://careers-uhnjcareers.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: UK Mission Enterprise
+    url: https://ukme.wd103.myworkdayjobs.com/UKME
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: UNIQLO New Jersey
+    url: https://fastretailing.wd3.myworkdayjobs.com/retail_us_Uniqlo
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: United Regional
+    url: https://iaoxqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/unitedregionalcareers/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: United Talent Agency
+    url: https://jobs.ashbyhq.com/united-talent-agency
+    ats: ashby
+    countries: [US]
+
+  - name: University of British Columbia
+    url: https://ubc.wd10.myworkdayjobs.com/ubcstaffjobs
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: University of Miami
+    url: https://umiami.wd1.myworkdayjobs.com/UMCareerStaff
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: University of Mount Saint Vincent
+    url: https://apply.workable.com/university-of-mount-saint-vincent/
+    ats: workable
+    countries: [US]
+
+  - name: University of Rochester
+    url: https://rochester.wd5.myworkdayjobs.com/UR_Staff
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: University of Southern California
+    url: https://usc.wd5.myworkdayjobs.com/ExternalUSCCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: University of Texas - Austin
+    url: https://utaustin.wd1.myworkdayjobs.com/UTstaff
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: University of Waterloo
+    url: https://uwaterloo.wd3.myworkdayjobs.com/uw_careers
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
+
+  - name: Upbring
+    url: https://careers-upbring.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Upper Crust Food Service
+    url: https://ats.rippling.com/careers-ucfs/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Urschel Laboratories
+    url: https://job-boards.greenhouse.io/urschellaboratoriesinc
+    ats: greenhouse
+    countries: [US]
+
+  - name: UVM Medical Center
+    url: https://uvmhealth.wd1.myworkdayjobs.com/external
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: UW Health
+    url: https://eimy.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Vail Health Hospital
+    url: https://job-boards.greenhouse.io/vailclinicincdbavailhealthhospital
+    ats: greenhouse
+    countries: [US]
+
+  - name: Vancouver Coastal Health
+    url: https://careers-vch.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
+
+  - name: Vanderbilt Health
+    url: https://vumc.wd1.myworkdayjobs.com/vumccareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Vanderbilt University
+    url: https://ecsr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Village Green
+    url: https://careers.smartrecruiters.com/villagegreen1
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Virginia Beach Operations
+    url: https://harmonyseniorservices.wd108.myworkdayjobs.com/Harmony_Careers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Vuori
+    url: https://careers.smartrecruiters.com/vuoriinc
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Wagner
+    url: https://fa-exad-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Wake Forest University
+    url: https://wfu.wd1.myworkdayjobs.com/staff_career_website_live
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Wal-Mart Canada
+    url: https://walmart.wd504.myworkdayjobs.com/WalmartExternal
+    ats: workday
+    countries: [US, CA, IN]
+    options:
+      max_jobs: 200
+
+  - name: Warhorsecasino
+    url: https://careers-warhorsecasino.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Washington and Lee University
+    url: https://wlu.wd5.myworkdayjobs.com/WLUCareers
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Washington State University
+    url: https://wsu.wd5.myworkdayjobs.com/wsu_jobs
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Waverly Health Center
+    url: https://waverlyhealthcenter.wd12.myworkdayjobs.com/WHC
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Wayne County
+    url: https://emqz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Weekender Hotels
+    url: https://ats.rippling.com/weekenderhotels/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Wegmans Food Markets
+    url: https://wegmans.wd1.myworkdayjobs.com/wegmans
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Weinstein Properties
+    url: https://job-boards.greenhouse.io/weinsteinproperties
+    ats: greenhouse
+    countries: [US]
+
+  - name: WellSpan Health
+    url: https://fa-evzu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Wellthy Care Network
+    url: https://job-boards.greenhouse.io/wellthy-care-network
+    ats: greenhouse
+    countries: [US, CA]
+
+  - name: WES Health System
+    url: https://apply.workable.com/wes-health-system-2/
+    ats: workable
+    countries: [US]
+
+  - name: Westborough Behavioral Healthcare Hospital
+    url: https://apply.workable.com/westborough-behavioral-healthcare-hospital-1/
+    ats: workable
+    countries: [US]
+
+  - name: Western Camps
+    url: https://ats.rippling.com/western-camps-inc/jobs
+    ats: rippling
+    countries: [US]
+
+  - name: Westfield
+    url: https://fa-exdv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Careers/jobs
+    ats: oracle_hcm
+    countries: [US]
+
+  - name: Westin Tampa Waterside
+    url: https://wd12.myworkdaysite.com/recruiting/heihotels/external_career_site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: WestJet
+    url: https://jobs.dayforcehcm.com/en-CA/westjet/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Westmont Hospitality Group
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=1c7fb0ee-a452-42a0-bb0d-786747fc0bb0
+    ats: adp
+    countries: [US]
+
+  - name: Whataburger Restaurants
+    url: https://whataburger.wd5.myworkdayjobs.com/WAB_CAREERS
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Willett Distillery
+    url: https://apply.workable.com/willett-distillery/
+    ats: workable
+    countries: [US]
+
+  - name: Williams College
+    url: https://wd5.myworkdaysite.com/recruiting/williamscollege/External_Career_Site
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Willow Valley
+    url: https://careers-willowvalleycommunities.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Wingstop Global Support Center
+    url: https://iaxmqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Wingstop-GSC/jobs
+    ats: oracle_hcm
+    countries: [US, IN]
+
+  - name: Winnipeg Football Club
+    url: https://apply.workable.com/winnipeg-football-club/
+    ats: workable
+    countries: [CA]
+
+  - name: WinShape Foundation
+    url: https://careers-winshape.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: WinSport
+    url: https://recruiting.ultipro.ca/WIN5001WNSP/JobBoard/0ee2c49f-be5a-4fb6-9069-5c834c672fd0/
+    platform: ukg
+    enabled: false
+
+  - name: Wleeflowers
+    url: https://careers-wleeflowers.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: Wonderful Company
+    url: https://careers.smartrecruiters.com/thewonderfulcompany
+    ats: smartrecruiters
+    countries: [US, CA]
+
+  - name: Woodbine Entertainment Group
+    url: https://woodbineentertainment.wd10.myworkdayjobs.com/EXT
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Woongjin
+    url: https://careers.smartrecruiters.com/wjcompany
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: work @ HOEM
+    url: https://ats.rippling.com/workathoem/jobs
+    ats: rippling
+    countries: [CA]
+
+  - name: World Travel Holdings
+    url: https://careers-wth.icims.com/jobs/search
+    ats: icims
+    countries: [US]
+
+  - name: WSH Group
+    url: https://careers.smartrecruiters.com/wshgroup
+    ats: smartrecruiters
+    countries: [CA]
+
+  - name: WSU Tech
+    url: https://apply.workable.com/wsutech/
+    ats: workable
+    countries: [US]
+
+  - name: xAI
+    url: https://job-boards.greenhouse.io/xai
+    ats: greenhouse
+    countries: [US, CA, AU]
+
+  - name: Yiros Shop
+    url: https://careers.smartrecruiters.com/theyirosshop
+    ats: smartrecruiters
+    countries: [AU]
+
+  - name: Young Life
+    url: https://younglife.wd5.myworkdayjobs.com/YoungLife_CampingOpenings
+    ats: workday
+    countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Young Minds Development Center
+    url: https://job-boards.greenhouse.io/youngmindsdc
+    ats: greenhouse
+    countries: [US]
+
+  - name: Your Hospitality Career Journey Starts Here
+    url: https://careers.smartrecruiters.com/westgateresorts
+    ats: smartrecruiters
+    countries: [US]
+
+  - name: Zeta Charter Schools
+    url: https://job-boards.greenhouse.io/zetacharterschools
+    ats: greenhouse
+    countries: [US]

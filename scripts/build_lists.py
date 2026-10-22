@@ -2,7 +2,7 @@
 
 Run from the project root:
   python -m scripts.build_lists --results data/sweep/results.jsonl [--names data/sweep/names.json]
-                                [--export DIR] [--dry-run]
+                                [--export DIR] [--profession NAME] [--dry-run]
 
 --results is a board sweep (scripts/sweep_boards.py): every board's job titles and locations.
 --names maps a board URL to its page title, for boards the sweep couldn't name (Oracle, Eightfold).
@@ -12,10 +12,12 @@ of the companies already on the Tech list, so those also hiring for another prof
 A company joins a profession's list when at least one of its jobs has one of that profession's
 titles (onboarding.PROFESSIONS, less its "other kinds of work"), in one of the target countries
 (US, CA, AU, IN). Its `countries` are every target country any of its jobs is in. Left out:
-companies already on the list (by URL or name), staffing agencies and job sites, and, for Tech,
-the employers removed before (docs/company-coverage.md) and boards whose tech jobs mostly need a
-security clearance. Tech's list is config/companies.yaml, where they're added in a section at the
-end; the others are config/accounting.yaml and config/healthcare.yaml, written whole.
+companies already on the list (by URL or name), staffing agencies and job sites; for Tech, the
+employers removed before (docs/company-coverage.md) and boards whose tech jobs mostly need a
+security clearance; and for Hospitality, boards whose only matches are titles offices and clinics
+use too (front desk, events, travel), unless the name sounds like a hotel, restaurant or resort. Tech's list is config/companies.yaml, where they're added in a section at the
+end; the others are config/accounting.yaml, config/healthcare.yaml and config/hospitality.yaml, written
+whole. --profession builds only that one's list.
 """
 
 from __future__ import annotations
@@ -39,10 +41,12 @@ from role_radar.scrapers import ats_name
 from scripts.countries import TARGETS, default_classifier
 
 LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-LIST_FILES = {"tech": "companies.yaml", "accounting": "accounting.yaml", "healthcare": "healthcare.yaml"}
+LIST_FILES = {"tech": "companies.yaml", "accounting": "accounting.yaml", "healthcare": "healthcare.yaml",
+              "hospitality": "hospitality.yaml"}
 ABOUT = {
     "accounting": "accounting and finance jobs (accountants, audit, tax, FP&A, payroll)",
     "healthcare": "healthcare jobs (nurses, doctors, pharmacists, therapists, technologists)",
+    "hospitality": "hospitality jobs (hotels, restaurants, bars, kitchens, events, casinos, resorts, travel)",
 }
 # Readers that search for tech roles themselves, or need tech-specific options: never copied
 # from the Tech list to another profession's.
@@ -75,6 +79,30 @@ REMOVED_FROM_TECH = re.compile(
     r"federal reserve|albertsons)|"
     r"(?:rtx|saic|caci|v2x|parsons|moog|coherent|nxp|eaton|denso|adt|citizens|pimco|ascensus|gartner)$)", re.I)
 CLEARANCE = re.compile(r"\b(?:clearance|cleared|TS/SCI|top secret|secret|polygraph|SCI)\b", re.I)
+# Hospitality titles that offices, clinics, schools and stores use too: a board joins the Hospitality list when
+# one of its jobs has another of its titles and would alert as Setup starts (not a director's, not a food
+# company's sales job), or when its name sounds like a hotel, restaurant, bar, resort or travel company.
+SHARED_HOSPITALITY_TITLES = {
+    "front desk", "front office", "front of house", "guest services", "guest experience", "guest relations", "concierge",
+    "reservations", "reservation agent", "valet", "host", "event coordinator", "events coordinator", "event planner",
+    "event manager", "events manager", "conference services", "convention services", "meeting planner",
+    "wedding coordinator", "night manager", "duty manager", "food and beverage", "food & beverage", "F&B", "steward",
+    "culinary", "travel consultant", "travel agent", "travel advisor", "tour guide", "tour director", "lift operator"}
+HOSPITALITY_NAME = re.compile(
+    r"\b(?:hotels?|resorts?|inns?|suites|lodges?|hospitality|restaurants?|bars?|grill|kitchens?|caf[eé]s?|coffee|"
+    r"bakery|catering|caterers?|casinos?|cruises?|airlines?|airways|travel|tours|vacations?|golf|ski|spa)\b", re.I)
+# Left off the Hospitality list (docs/company-coverage.md): recruiters and job sites, test and demo boards, and
+# employers whose hospitality-titled jobs are in factories, offices or sales (a plant's "Tub Cook", a lab's
+# dishwasher, "Account Manager, Foodservice").
+NOT_HOSPITALITY = re.compile(
+    r"^(?:integrated resources|apt resources|hire resolve|jobsforhumanity|prosidian|example$|vision$|"
+    r"site configuration documentation|karriere bei mcdonald|kh india|kraft heinz|pladis|treehouse foods|nestl[eé]|"
+    r"ingredion|unilever|mars$|tyson foods|general mills|delimex|toppan|jdi$|red bull|us foods|nidec|abbott$|"
+    r"jpmorgan|jabil|veeva|nbcuniversal|fidelity investments|cox enterprises|edison international|lls lineage|"
+    r"albus laundry|holland america group|private destinations|all community$)", re.I)
+HOSPITALITY_CORE = JobFilter(include_keywords=[t for t in PROFESSIONS["hospitality"]["titles"]
+                                               if t not in SHARED_HOSPITALITY_TITLES],
+                             exclude_keywords=PROFESSIONS["hospitality"]["exclude"])
 
 # -- names ----------------------------------------------------------------------------------------
 
@@ -250,6 +278,11 @@ def left_out(profession: str, name: str, matched: list[tuple[str, list[str]]]) -
         return "removed from the Tech list before"
     if profession == "tech" and sum(bool(CLEARANCE.search(t)) for t, _ in matched) * 2 >= len(matched):
         return "tech jobs mostly need a clearance"
+    if profession == "hospitality" and NOT_HOSPITALITY.search(name):
+        return "not a hospitality employer"
+    if profession == "hospitality" and not HOSPITALITY_NAME.search(name) and not any(
+            HOSPITALITY_CORE.evaluate(JobPosting(company="-", title=t, url="", source="-")) for t, _ in matched):
+        return "only titles offices and clinics use too"
     return None
 
 
@@ -340,6 +373,7 @@ def main() -> None:
     parser.add_argument("--date", default="2026-09-30", help="when the sweep ran, for the files' notes")
     parser.add_argument("--found", default="Boards on the job sites Role Radar reads, from Common Crawl's index, each read once\n"
                         "from AWS.", help="where the boards came from and how they were read, for the Tech list's note")
+    parser.add_argument("--profession", choices=sorted(LIST_FILES), help="build only this profession's list")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -352,6 +386,8 @@ def main() -> None:
     tech = yaml.load(tech_text, Loader=LOADER)["companies"]
 
     for profession, filename in LIST_FILES.items():
+        if args.profession and profession != args.profession:
+            continue
         path = args.config / filename
         current = tech if profession == "tech" else (
             (yaml.load(path.read_text(encoding="utf-8"), Loader=LOADER) or {}).get("companies") or [] if path.exists() else [])

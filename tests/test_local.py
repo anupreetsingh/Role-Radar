@@ -119,7 +119,7 @@ def test_company_countries_are_checked(files, line):
 
 def test_the_profession_must_be_one_setup_offers(files):
     files.with_name("profile.yaml").write_text(PROFILE + "  profession: law\n")
-    with pytest.raises(ValueError, match="settings.profession must be one of tech, accounting, healthcare"):
+    with pytest.raises(ValueError, match="settings.profession must be one of tech, accounting, healthcare, hospitality"):
         load_config(files, profile_path(files))
 
 
