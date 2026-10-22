@@ -773,6 +773,7 @@ def test_dayforce_quick_check_reads_the_newest_page():
 @pytest.mark.parametrize("url, parts", [
     ("https://jobs.dayforcehcm.com/en-CA/WestJet/CANDIDATEPORTAL", ("en-CA", "WestJet", "CANDIDATEPORTAL")),
     ("https://jobs.dayforcehcm.com/sunshine/CANDIDATEPORTAL", (None, "sunshine", "CANDIDATEPORTAL")),
+    ("https://jobs.dayforcehcm.com/gm/CANDIDATEPORTAL", (None, "gm", "CANDIDATEPORTAL")),
     ("https://can241.dayforcehcm.com/CandidatePortal/en-US/northlandproperties/Site/SANDMANHOTELGROUP",
      ("en-US", "northlandproperties", "SANDMANHOTELGROUP")),
     ("https://canr57.dayforcehcm.com/CandidatePortal/en-US/coasthotels", ("en-US", "coasthotels", None)),

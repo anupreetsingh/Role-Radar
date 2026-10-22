@@ -593,8 +593,10 @@ Pinpoint, BambooHR, Teamtailor (North America), Breezy and Recruitee boards were
 (5,925 boards; 7 Canadian employers joined, such as Les 3 Brasseurs, GolfNorth and Longo's; Dutch
 boards that only looked Canadian, "NB" being Noord-Brabant, stayed off). The Canadian Oracle and
 iCIMS boards the sweep had seen but not listed were searched for "food" and "guest" (340 boards;
-Oak View Group's Canadian board joined). The list then had 1,006 read employers, 199 posting in
-Canada. Not reached: the Government of Canada's Job Bank (its server doesn't answer this laptop),
+Oak View Group's Canadian board joined). The list then had 1,005 read employers, 198 posting in
+Canada (Northland's own CANDIDATEPORTAL board was dropped: it repeats its brands' jobs under other
+posting numbers). A Dayforce board answers in the culture it's asked for, so Quebec boards carry
+theirs (`/fr-CA/`); asked in en-US, Le Groupe Maurice's showed no jobs. Not reached: the Government of Canada's Job Bank (its server doesn't answer this laptop),
 ADP Workforce Now boards (Common Crawl's index server timed out; an Athena query would list them),
 Compass Group Canada (its site lists jobs through an API it doesn't publish), and Workday boards
 with Canadian jobs (535 not yet searched for hospitality titles).

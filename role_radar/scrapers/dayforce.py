@@ -36,7 +36,8 @@ def board_of(url: str) -> tuple[str | None, str | None, str | None]:
         client = segments[0] if segments else None
         board = segments[2] if len(segments) > 2 and segments[1].lower() == "site" else None
         return culture, client, board
-    culture = segments.pop(0) if segments and _CULTURE.match(segments[0]) else None
+    # A culture only before a client and a board: "gm" in /gm/CANDIDATEPORTAL is a client (Le Groupe Maurice).
+    culture = segments.pop(0) if len(segments) > 2 and _CULTURE.match(segments[0]) else None
     return culture, (segments[0] if segments else None), (segments[1] if len(segments) > 1 else None)
 
 

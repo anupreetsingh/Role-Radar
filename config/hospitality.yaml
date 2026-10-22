@@ -52,7 +52,7 @@ companies:
       search: Canada
 
   - name: Accor Apartments & Realty
-    url: https://jobs.dayforcehcm.com/accorpacific/INDEEDPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/accorpacific/INDEEDPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -380,12 +380,12 @@ companies:
       max_jobs: 200
 
   - name: Australian Red Cross
-    url: https://jobs.dayforcehcm.com/ausredcross/SEEKVOLUNTEERSITE
+    url: https://jobs.dayforcehcm.com/en-AU/ausredcross/SEEKVOLUNTEERSITE
     ats: dayforce
     countries: [AU]
 
   - name: Australian Red Cross (Redcrossvolunteersite)
-    url: https://jobs.dayforcehcm.com/ausredcross/REDCROSSVOLUNTEERSITE
+    url: https://jobs.dayforcehcm.com/en-AU/ausredcross/REDCROSSVOLUNTEERSITE
     ats: dayforce
     countries: [AU]
 
@@ -789,12 +789,12 @@ companies:
     countries: [CA]
 
   - name: Caloundra RSL
-    url: https://jobs.dayforcehcm.com/caloundrarsl/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/caloundrarsl/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
   - name: Caloundra RSL (Crsl)
-    url: https://jobs.dayforcehcm.com/caloundrarsl/CRSL
+    url: https://jobs.dayforcehcm.com/en-AU/caloundrarsl/CRSL
     ats: dayforce
     countries: [AU]
 
@@ -883,7 +883,7 @@ companies:
     countries: [US]
 
   - name: Catholic Healthcare
-    url: https://jobs.dayforcehcm.com/chl/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/chl/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -1170,7 +1170,7 @@ companies:
     countries: [US]
 
   - name: Contemporary Catering
-    url: https://jobs.dayforcehcm.com/cc1/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/cc1/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -1720,12 +1720,12 @@ companies:
     countries: [US, CA]
 
   - name: EVT Group
-    url: https://jobs.dayforcehcm.com/evtelevate/EVT
+    url: https://jobs.dayforcehcm.com/en-AU/evtelevate/EVT
     ats: dayforce
     countries: [AU]
 
   - name: EVT Group (118612)
-    url: https://jobs.dayforcehcm.com/evtelevate/118612
+    url: https://jobs.dayforcehcm.com/en-AU/evtelevate/118612
     ats: dayforce
     countries: [AU]
 
@@ -1735,7 +1735,7 @@ companies:
     countries: [US]
 
   - name: Explorers Early Learning
-    url: https://jobs.dayforcehcm.com/explorers/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/explorers/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -1866,7 +1866,7 @@ companies:
     countries: [US]
 
   - name: ForHealth Group
-    url: https://jobs.dayforcehcm.com/forhealthgroup/NURSEMEDCTR
+    url: https://jobs.dayforcehcm.com/en-AU/forhealthgroup/NURSEMEDCTR
     ats: dayforce
     countries: [AU]
 
@@ -1917,7 +1917,7 @@ companies:
       max_jobs: 200
 
   - name: Freson Bros.
-    url: https://jobs.dayforcehcm.com/fresonbros/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-CA/fresonbros/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
 
@@ -1971,7 +1971,7 @@ companies:
     countries: [US]
 
   - name: GEF Seniors Housing
-    url: https://jobs.dayforcehcm.com/gefportal/GEFCLIENTCAREERSITE
+    url: https://jobs.dayforcehcm.com/en-CA/gefportal/GEFCLIENTCAREERSITE
     ats: dayforce
     countries: [CA]
 
@@ -2131,7 +2131,7 @@ companies:
     countries: [US]
 
   - name: Grey County
-    url: https://jobs.dayforcehcm.com/greycounty/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-CA/greycounty/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
 
@@ -2141,7 +2141,7 @@ companies:
     enabled: false
 
   - name: Groupe CH
-    url: https://jobs.dayforcehcm.com/groupech/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/fr-CA/groupech/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
 
@@ -2350,7 +2350,7 @@ companies:
       max_jobs: 200
 
   - name: Homestyle Aged Care
-    url: https://jobs.dayforcehcm.com/hsac/110370
+    url: https://jobs.dayforcehcm.com/en-AU/hsac/110370
     ats: dayforce
     countries: [AU]
 
@@ -2476,7 +2476,7 @@ companies:
     countries: [US]
 
   - name: Ingenia
-    url: https://jobs.dayforcehcm.com/ingenia/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/ingenia/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -2640,7 +2640,7 @@ companies:
     countries: [US]
 
   - name: Kandor
-    url: https://jobs.dayforcehcm.com/kandor/EVERCLEAN
+    url: https://jobs.dayforcehcm.com/en-CA/kandor/EVERCLEAN
     ats: dayforce
     countries: [CA]
 
@@ -2754,7 +2754,7 @@ companies:
     countries: [US]
 
   - name: Le Groupe Maurice
-    url: https://jobs.dayforcehcm.com/gm/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/fr-CA/gm/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
 
@@ -3093,7 +3093,7 @@ companies:
       max_jobs: 200
 
   - name: MercyCare
-    url: https://jobs.dayforcehcm.com/mercycare/MCCAREERSSITE
+    url: https://jobs.dayforcehcm.com/en-AU/mercycare/MCCAREERSSITE
     ats: dayforce
     countries: [AU]
 
@@ -3427,11 +3427,6 @@ companies:
     ats: rippling
     countries: [US]
 
-  - name: Northland Properties
-    url: https://jobs.dayforcehcm.com/northlandproperties/CANDIDATEPORTAL
-    ats: dayforce
-    countries: [CA]
-
   - name: Northwell
     url: https://eppr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
     ats: oracle_hcm
@@ -3577,17 +3572,17 @@ companies:
       max_jobs: 200
 
   - name: Opal HealthCare
-    url: https://jobs.dayforcehcm.com/opalhealthcare/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/opalhealthcare/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
   - name: Opal HealthCare (117005)
-    url: https://jobs.dayforcehcm.com/opalhealthcare/117005
+    url: https://jobs.dayforcehcm.com/en-AU/opalhealthcare/117005
     ats: dayforce
     countries: [AU]
 
   - name: Opal HealthCare (Candidateportalhospitality)
-    url: https://jobs.dayforcehcm.com/opalhealthcare/CANDIDATEPORTALHOSPITALITY
+    url: https://jobs.dayforcehcm.com/en-AU/opalhealthcare/CANDIDATEPORTALHOSPITALITY
     ats: dayforce
     countries: [AU]
 
@@ -3617,12 +3612,12 @@ companies:
     countries: [US]
 
   - name: OTR Group
-    url: https://jobs.dayforcehcm.com/vivaenergyau/OTRSITE
+    url: https://jobs.dayforcehcm.com/en-AU/vivaenergyau/OTRSITE
     ats: dayforce
     countries: [AU]
 
   - name: OTR Group (Qsrsite)
-    url: https://jobs.dayforcehcm.com/vivaenergyau/QSRSITE
+    url: https://jobs.dayforcehcm.com/en-AU/vivaenergyau/QSRSITE
     ats: dayforce
     countries: [AU]
 
@@ -4238,7 +4233,7 @@ companies:
       max_jobs: 200
 
   - name: Scandinave Spa
-    url: https://jobs.dayforcehcm.com/gscandinave/BLUEMOUNTAIN
+    url: https://jobs.dayforcehcm.com/en-CA/gscandinave/BLUEMOUNTAIN
     ats: dayforce
     countries: [CA]
 
@@ -4379,7 +4374,7 @@ companies:
       max_jobs: 200
 
   - name: Siesta Suites
-    url: https://jobs.dayforcehcm.com/lcm/SIESTASUITESPOSTINGSITE
+    url: https://jobs.dayforcehcm.com/en-CA/lcm/SIESTASUITESPOSTINGSITE
     ats: dayforce
     countries: [CA]
 
@@ -4413,7 +4408,7 @@ companies:
       max_jobs: 200
 
   - name: Sinai Health
-    url: https://jobs.dayforcehcm.com/sinaihealth/SINAIHEALTHCAREERS
+    url: https://jobs.dayforcehcm.com/en-CA/sinaihealth/SINAIHEALTHCAREERS
     ats: dayforce
     countries: [CA]
 
@@ -4452,7 +4447,7 @@ companies:
       max_jobs: 200
 
   - name: SMCT
-    url: https://jobs.dayforcehcm.com/smct/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/smct/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -4471,7 +4466,7 @@ companies:
       max_jobs: 200
 
   - name: Sobeys
-    url: https://jobs.dayforcehcm.com/sobeys/PRIVATECLIENTSITE
+    url: https://jobs.dayforcehcm.com/en-CA/sobeys/PRIVATECLIENTSITE
     ats: dayforce
     countries: [CA]
 
@@ -4832,7 +4827,7 @@ companies:
       max_jobs: 200
 
   - name: TEEG (Timezone, Zone Bowling & Kingpin)
-    url: https://jobs.dayforcehcm.com/teeg/ZONEBOWLINGCAREERS
+    url: https://jobs.dayforcehcm.com/en-NZ/teeg/ZONEBOWLINGCAREERS
     ats: dayforce
     countries: [AU]
 
@@ -4854,7 +4849,7 @@ companies:
       max_jobs: 200
 
   - name: TFE Hotels / Adina Apartment Hotels
-    url: https://jobs.dayforcehcm.com/tfehotels/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/tfehotels/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -4864,7 +4859,7 @@ companies:
     countries: [AU]
 
   - name: TFE Hotels / Adina Apartment Hotels (Hannahstcandidateportal)
-    url: https://jobs.dayforcehcm.com/tfehotels/HANNAHSTCANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-AU/tfehotels/HANNAHSTCANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
 
@@ -5187,7 +5182,7 @@ companies:
     countries: [US]
 
   - name: Uniting NSW.ACT
-    url: https://jobs.dayforcehcm.com/unitingaunsw/UNITINGCCS
+    url: https://jobs.dayforcehcm.com/en-AU/unitingaunsw/UNITINGCCS
     ats: dayforce
     countries: [AU]
 
@@ -5271,7 +5266,7 @@ companies:
     countries: [US]
 
   - name: Vacances Air Canada Vacations / Air Canada Rouge
-    url: https://jobs.dayforcehcm.com/acvrouge/ROUGECLIENTCAREERSSITE
+    url: https://jobs.dayforcehcm.com/en-CA/acvrouge/ROUGECLIENTCAREERSSITE
     ats: dayforce
     countries: [CA]
 
@@ -5422,7 +5417,7 @@ companies:
     countries: [US]
 
   - name: West Edmonton Mall
-    url: https://jobs.dayforcehcm.com/wem/CANDIDATEPORTAL
+    url: https://jobs.dayforcehcm.com/en-CA/wem/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
 
