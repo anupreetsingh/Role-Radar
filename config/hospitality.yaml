@@ -12,6 +12,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: 3 Brasseurs Canada
+    url: https://3brasseurs.breezy.hr/
+    ats: breezy
+    countries: [CA]
+
   - name: 3IF MPM Epic Tampa
     url: https://mainsailhotels.wd5.myworkdayjobs.com/Mainsail_Property_Management
     ats: workday
@@ -29,6 +34,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Accessible Space
+    url: https://jobs.dayforcehcm.com/accessible/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Accor
     url: https://careers.smartrecruiters.com/accorhotel
     ats: smartrecruiters
@@ -40,6 +50,16 @@ companies:
     countries: [CA]
     options:
       search: Canada
+
+  - name: Accor Apartments & Realty
+    url: https://jobs.dayforcehcm.com/accorpacific/INDEEDPORTAL
+    ats: dayforce
+    countries: [AU]
+
+  - name: Accor Apartments & Realty (Candidateportal)
+    url: https://jobs.dayforcehcm.com/accorpacific/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: Ace Hardware
     url: https://acehardware.wd1.myworkdayjobs.com/External
@@ -174,6 +194,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: AMS of UBC
+    url: https://jobs.dayforcehcm.com/almamater/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Anaheim Arena Management, LLC (F&B)
     url: https://anaheimducks.wd5.myworkdayjobs.com/allco
     ats: workday
@@ -181,12 +206,27 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Andrew Peller Limited
+    url: https://jobs.dayforcehcm.com/andrewpeller/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Andrews Senior Care
+    url: https://andrews-senior-care.breezy.hr/
+    ats: breezy
+    countries: [CA]
+
   - name: Anheuser-Busch
     url: https://abinbev.wd1.myworkdayjobs.com/USA
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Anne Carlsen Center
+    url: https://jobs.dayforcehcm.com/ana/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Anne's Pantry
     url: https://careers.smartrecruiters.com/annespantry
@@ -273,6 +313,16 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Associated Students Inc., CSUF
+    url: https://jobs.dayforcehcm.com/asicsuf/SACANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Associated Students Inc., CSUF (Candidateportal)
+    url: https://jobs.dayforcehcm.com/asicsuf/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: ATCO
     url: https://eezy.fa.ca2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
@@ -312,6 +362,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Au Bon Pain Careers
+    url: https://jobs.dayforcehcm.com/aubonpain/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Au Cheval
     url: https://job-boards.greenhouse.io/auchevalnashville
     ats: greenhouse
@@ -323,6 +378,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Australian Red Cross
+    url: https://jobs.dayforcehcm.com/ausredcross/SEEKVOLUNTEERSITE
+    ats: dayforce
+    countries: [AU]
+
+  - name: Australian Red Cross (Redcrossvolunteersite)
+    url: https://jobs.dayforcehcm.com/ausredcross/REDCROSSVOLUNTEERSITE
+    ats: dayforce
+    countries: [AU]
 
   - name: Ausvenueco
     url: https://ausvenueco.wd105.myworkdayjobs.com/AVC
@@ -362,6 +427,11 @@ companies:
     url: https://jobs.ashbyhq.com/away
     ats: ashby
     countries: [US, CA]
+
+  - name: Añejo
+    url: https://jobs.dayforcehcm.com/recipe/ANEJOCAREERS
+    ats: dayforce
+    countries: [CA]
 
   - name: Bahs
     url: https://jobs-bahs.icims.com/jobs/search
@@ -424,6 +494,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Benchmark Senior Living
+    url: https://jobs.dayforcehcm.com/benchmark/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Berwick
     url: https://wd105.myworkdaysite.com/recruiting/sjog/SJGHC_External_Career_Site
     ats: workday
@@ -460,6 +535,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Bier Markt
+    url: https://jobs.dayforcehcm.com/recipe/BIERMARKTCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: Billingsleycareers
     url: https://ats.rippling.com/billingsleycareers/jobs
     ats: rippling
@@ -491,6 +571,11 @@ companies:
     countries: [CA]
     options:
       max_jobs: 200
+
+  - name: Bluegreen Vacations Corporation
+    url: https://jobs.dayforcehcm.com/bluegreen/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Boca Recovery Center
     url: https://apply.workable.com/boca-recovery/
@@ -526,6 +611,11 @@ companies:
     ats: icims
     countries: [CA]
 
+  - name: Bouygues Energies and Services Canada
+    url: https://jobs.dayforcehcm.com/byes/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Boys Town
     url: https://boystown.wd1.myworkdayjobs.com/boystowncareers
     ats: workday
@@ -533,9 +623,24 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Bozzuto's Inc.
+    url: https://jobs.dayforcehcm.com/bozzutos/ADAMSEXTERNALCAREER
+    ats: dayforce
+    countries: [US]
+
+  - name: Bozzuto's Inc. (Candidateportal)
+    url: https://jobs.dayforcehcm.com/bozzutos/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Bradley Center
     url: https://apply.workable.com/thebradleycenter/
     ats: workable
+    countries: [US]
+
+  - name: Breaking Ground
+    url: https://jobs.dayforcehcm.com/cxb/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Breeden's Orchard
@@ -550,9 +655,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Bria Communities
+    url: https://jobs.dayforcehcm.com/centurygroup/BRIACOMMUNITIES
+    ats: dayforce
+    countries: [CA]
+
   - name: Bridgewater
     url: https://careers-bridgewater.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Briggs Ranch Golf Club
+    url: https://jobs.dayforcehcm.com/dormienetwork/BRIGGSRANCH
+    ats: dayforce
     countries: [US]
 
   - name: Brigham Young University
@@ -562,12 +677,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Brightline Trains
+    url: https://jobs.dayforcehcm.com/brightline/BLFCAREERSSITE
+    ats: dayforce
+    countries: [US]
+
   - name: Brighton Care Center
     url: https://ensign.wd1.myworkdayjobs.com/BrightonCareerSite
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: BROE Group and it's managed affiliates
+    url: https://jobs.dayforcehcm.com/omnitrax/BRESCANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Brookdale Senior Living
     url: https://ibmwjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
@@ -602,12 +727,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Brookstreet
+    url: https://jobs.dayforcehcm.com/wesleyclover/BROOKSTREET
+    ats: dayforce
+    countries: [CA]
+
   - name: Buc-ee's Murfreesboro
     url: https://cfr.wd5.myworkdayjobs.com/Buc-careers
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Buehler's Fresh Foods\t\t\t\t\t
+    url: https://jobs.dayforcehcm.com/ehfamily/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Bullis Charter School
     url: https://job-boards.greenhouse.io/bullischarterschool
@@ -653,6 +788,16 @@ companies:
     ats: adp
     countries: [CA]
 
+  - name: Caloundra RSL
+    url: https://jobs.dayforcehcm.com/caloundrarsl/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
+  - name: Caloundra RSL (Crsl)
+    url: https://jobs.dayforcehcm.com/caloundrarsl/CRSL
+    ats: dayforce
+    countries: [AU]
+
   - name: Calvary Hospital
     url: https://apply.workable.com/calvary-hospital/
     ats: workable
@@ -665,9 +810,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Canyon County
+    url: https://jobs.dayforcehcm.com/canyoncounty/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Capitol View Transitional Care Center
     url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/capitol-view-transitional-care-center/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Care Initiatives
+    url: https://jobs.dayforcehcm.com/cwu/CAREINITIATIVESCAREERS
+    ats: dayforce
     countries: [US]
 
   - name: Care One NEW
@@ -697,6 +852,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA]
 
+  - name: Carolina Meadows Careers
+    url: https://jobs.dayforcehcm.com/carolinameadows/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: CarolinaEast
     url: https://enpu.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -707,10 +867,25 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Cascadia Senior Living
+    url: https://jobs.dayforcehcm.com/cascadiasl/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Cascadia Senior Living (Hwcareersite)
+    url: https://jobs.dayforcehcm.com/cascadiasl/HWCAREERSITE
+    ats: dayforce
+    countries: [US]
+
   - name: Catch
     url: https://apply.workable.com/the-catch/
     ats: workable
     countries: [US]
+
+  - name: Catholic Healthcare
+    url: https://jobs.dayforcehcm.com/chl/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: CEC Entertainment
     url: https://cecentertainment.wd5.myworkdayjobs.com/CEC_Careers
@@ -751,6 +926,11 @@ companies:
     ats: rippling
     countries: [US, CA]
 
+  - name: CF Montréal
+    url: https://careers.smartrecruiters.com/cfmontreal
+    ats: smartrecruiters
+    countries: [CA]
+
   - name: Champions Club Texas
     url: https://job-boards.greenhouse.io/championsclubtexas
     ats: greenhouse
@@ -770,6 +950,11 @@ companies:
     url: https://enmv.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Chicopee
+    url: https://jobs.dayforcehcm.com/chicopee/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Child Start
     url: https://apply.workable.com/childstart/
@@ -841,6 +1026,11 @@ companies:
     ats: oracle_hcm
     countries: [CA, AU]
 
+  - name: Civic Hotel
+    url: https://jobs.dayforcehcm.com/centurygroup/CIVICHOTEL
+    ats: dayforce
+    countries: [CA]
+
   - name: ClearSky Rehabilitation Hospital of Eau Claire
     url: https://clearskyhealth.wd1.myworkdayjobs.com/csh
     ats: workday
@@ -885,6 +1075,11 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Columbia Hospitality
+    url: https://jobs.dayforcehcm.com/chi/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Columbus State Community College
     url: https://cscc.wd1.myworkdayjobs.com/CSCC_ext
     ats: workday
@@ -904,6 +1099,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Commerce Casino
+    url: https://jobs.dayforcehcm.com/commercecasino/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Community Action Partnership of San Luis Obispo County, Inc.
+    url: https://jobs.dayforcehcm.com/capslo/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Community FoodBank of New Jersey
     url: https://apply.workable.com/community-foodbank-of-new-jersey/
     ats: workable
@@ -918,6 +1123,11 @@ companies:
     url: https://apply.workable.com/community-sports-partners/
     ats: workable
     countries: [US, CA]
+
+  - name: Compass Group Canada
+    url: https://careers.compass-canada.com/
+    platform: custom
+    enabled: false
 
   - name: Comstock
     url: https://job-boards.greenhouse.io/comstock
@@ -934,6 +1144,11 @@ companies:
     platform: ukg
     enabled: false
 
+  - name: Concordia Lutheran Ministries and Affiliates
+    url: https://jobs.dayforcehcm.com/clh/CVSJ
+    ats: dayforce
+    countries: [US]
+
   - name: Condadocollection
     url: https://careers-condadocollection.icims.com/jobs/search
     ats: icims
@@ -944,10 +1159,20 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Connective
+    url: https://jobs.dayforcehcm.com/connective/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Contact Our Hotels In Rochester, MN
     url: https://careers-kahlerhospitalitygroup.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Contemporary Catering
+    url: https://jobs.dayforcehcm.com/cc1/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: Contour Education
     url: https://ats.rippling.com/contour-education/jobs
@@ -1030,12 +1255,32 @@ companies:
     options:
       max_jobs: 200
 
+  - name: County of Door
+    url: https://jobs.dayforcehcm.com/doorcounty/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: County of Elgin
+    url: https://jobs.dayforcehcm.com/elgincounty/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: County of Marathon
     url: https://ccitc.wd1.myworkdayjobs.com/Marathon_County_Careers
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Coury Hospitality
+    url: https://jobs.dayforcehcm.com/couryhospitality/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Covenant Care + Covenant Living
+    url: https://jobs.dayforcehcm.com/covcareliving/COVCAREBRANDING
+    ats: dayforce
+    countries: [CA]
 
   - name: Covenant House New York
     url: https://ats.rippling.com/covenant-house-new-york/jobs
@@ -1148,6 +1393,11 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Delmanor (Tridel)
+    url: https://jobs.dayforcehcm.com/tridel/DSCLIENTCAREERSSITE
+    ats: dayforce
+    countries: [CA]
+
   - name: Denny's
     url: https://dennys.wd1.myworkdayjobs.com/Dennys
     ats: workday
@@ -1190,12 +1440,22 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Discovery Behavioral Health
+    url: https://jobs.dayforcehcm.com/dbh/DMAPEXTERNAL
+    ats: dayforce
+    countries: [US]
+
   - name: Disney
     url: https://disney.wd5.myworkdayjobs.com/disneycareer
     ats: workday
     countries: [US, CA, AU, IN]
     options:
       max_jobs: 3000
+
+  - name: DNATA US Inflight Catering
+    url: https://jobs.dayforcehcm.com/dcrusa/JOIN-US
+    ats: dayforce
+    countries: [US]
 
   - name: Do you love croissants, baguettes, coffee, and good company?
     url: https://ats.rippling.com/fresh-baguette/jobs
@@ -1212,10 +1472,20 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Dominion Bar + Kitchen
+    url: https://jobs.dayforcehcm.com/centurygroup/DOMINIONBARKITCHEN
+    ats: dayforce
+    countries: [CA]
+
   - name: Domino's
     url: https://careers.smartrecruiters.com/dominos
     ats: smartrecruiters
     countries: [US]
+
+  - name: Donalda Club
+    url: https://jobs.dayforcehcm.com/donaldaclub/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: DoorDash
     url: https://job-boards.greenhouse.io/doordashusa
@@ -1246,12 +1516,22 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Dr. Phillips Center
+    url: https://jobs.dayforcehcm.com/drphillips/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Dreamscape Flamingo Road Management
     url: https://dreamscaperio.wd5.myworkdayjobs.com/Rio_Careers
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Driftwood Hospitality
+    url: https://jobs.dayforcehcm.com/dhm/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Driscoll Children's Health Plan
     url: https://driscoll.wd1.myworkdayjobs.com/DHS
@@ -1296,6 +1576,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: East Side Mario's
+    url: https://jobs.dayforcehcm.com/recipe/EASTSIDEMARIOSCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: East West Hospitality
     url: https://ats.rippling.com/east-west-hospitality/jobs
     ats: rippling
@@ -1337,6 +1622,21 @@ companies:
     options:
       max_jobs: 200
 
+  - name: El Pollo Loco
+    url: https://jobs.dayforcehcm.com/loco/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Elephant & Castle
+    url: https://jobs.dayforcehcm.com/recipe/ELEPHANTANDCASTLECAREERS
+    ats: dayforce
+    countries: [CA]
+
+  - name: Elvis Presley Enterprises
+    url: https://jobs.dayforcehcm.com/epeinc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Emanate Health
     url: https://cvhp.wd5.myworkdayjobs.com/EmanateHealth
     ats: workday
@@ -1362,6 +1662,11 @@ companies:
   - name: Englewood
     url: https://careers-englewood.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Ensemble Hospitality
+    url: https://jobs.dayforcehcm.com/ensemble/HOSPITALITYCAREERSSITE
+    ats: dayforce
     countries: [US]
 
   - name: Equus
@@ -1397,6 +1702,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Event Network
+    url: https://jobs.dayforcehcm.com/eventnetwork/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Evergreen Alliance Golf Limited LP dba Arcis Golf
     url: https://arcis.wd12.myworkdayjobs.com/extna
     ats: workday
@@ -1409,10 +1719,25 @@ companies:
     ats: smartrecruiters
     countries: [US, CA]
 
+  - name: EVT Group
+    url: https://jobs.dayforcehcm.com/evtelevate/EVT
+    ats: dayforce
+    countries: [AU]
+
+  - name: EVT Group (118612)
+    url: https://jobs.dayforcehcm.com/evtelevate/118612
+    ats: dayforce
+    countries: [AU]
+
   - name: Experience Senior Living
     url: https://apply.workable.com/experience-sl-co/
     ats: workable
     countries: [US]
+
+  - name: Explorers Early Learning
+    url: https://jobs.dayforcehcm.com/explorers/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: Extendicare
     url: https://extendicare.wd10.myworkdayjobs.com/extendicare2023
@@ -1425,6 +1750,11 @@ companies:
     url: https://job-boards.greenhouse.io/eosfitness
     ats: greenhouse
     countries: [US]
+
+  - name: Family Day Care Services
+    url: https://jobs.dayforcehcm.com/fdcs/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Family Office
     url: https://job-boards.greenhouse.io/fo
@@ -1495,6 +1825,36 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Foley Entertainment Group LLC
+    url: https://jobs.dayforcehcm.com/feg/HLMCAREERSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Foley Entertainment Group LLC (Blackwalnutinnandvineyard)
+    url: https://jobs.dayforcehcm.com/feg/BLACKWALNUTINNANDVINEYARD
+    ats: dayforce
+    countries: [US]
+
+  - name: Foley Entertainment Group LLC (Candidateportal)
+    url: https://jobs.dayforcehcm.com/feg/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Foley Entertainment Group LLC (Farmhouseinncareer)
+    url: https://jobs.dayforcehcm.com/feg/FARMHOUSEINNCAREER
+    ats: dayforce
+    countries: [US]
+
+  - name: Foley Entertainment Group LLC (Hccareersite)
+    url: https://jobs.dayforcehcm.com/feg/HCCAREERSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Foley Entertainment Group LLC (Macarthurplacehotelcareersite)
+    url: https://jobs.dayforcehcm.com/feg/MACARTHURPLACEHOTELCAREERSITE
+    ats: dayforce
+    countries: [US]
+
   - name: Fond du Lac Band
     url: https://fa-ewrl-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -1505,9 +1865,24 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: ForHealth Group
+    url: https://jobs.dayforcehcm.com/forhealthgroup/NURSEMEDCTR
+    ats: dayforce
+    countries: [AU]
+
+  - name: Fort Worth Zoo
+    url: https://jobs.dayforcehcm.com/fwzoo/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Foundations Early Learning Center
     url: https://apply.workable.com/foundations-early-learning-center/
     ats: workable
+    countries: [US]
+
+  - name: Foundry Commercial
+    url: https://jobs.dayforcehcm.com/foundry/ALLEGROCANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: FOX
@@ -1541,9 +1916,24 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Freson Bros.
+    url: https://jobs.dayforcehcm.com/fresonbros/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Frette
     url: https://careers.smartrecruiters.com/frette
     ats: smartrecruiters
+    countries: [US]
+
+  - name: Friendship Retirement Community
+    url: https://jobs.dayforcehcm.com/frc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: FSA SBU
+    url: https://jobs.dayforcehcm.com/fsasbu/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Gables Residential Services
@@ -1565,10 +1955,25 @@ companies:
     options:
       max_jobs: 200
 
+  - name: GATE HR
+    url: https://jobs.dayforcehcm.com/gate/GATESTORECORPFUEL
+    ats: dayforce
+    countries: [US]
+
+  - name: GATE HR (Hospitality)
+    url: https://jobs.dayforcehcm.com/gate/HOSPITALITY
+    ats: dayforce
+    countries: [US]
+
   - name: Geeks on Site
     url: https://apply.workable.com/geeks-on-site/
     ats: workable
     countries: [US]
+
+  - name: GEF Seniors Housing
+    url: https://jobs.dayforcehcm.com/gefportal/GEFCLIENTCAREERSITE
+    ats: dayforce
+    countries: [CA]
 
   - name: Geisinger
     url: https://geisinger.wd5.myworkdayjobs.com/geisingerexternal
@@ -1576,6 +1981,21 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Genesis Global Group
+    url: https://jobs.dayforcehcm.com/ggg/GENESISGLOBALGROUPCLIENTCAREERSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Genesis Global Group (Candidateportal)
+    url: https://jobs.dayforcehcm.com/ggg/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Genesis Global Group (Genesishospitalitycareersite)
+    url: https://jobs.dayforcehcm.com/ggg/GENESISHOSPITALITYCAREERSITE
+    ats: dayforce
+    countries: [US]
 
   - name: Genetec
     url: https://apply.workable.com/genetec-inc/
@@ -1609,9 +2029,39 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: GolfNorth Properties
+    url: https://golfnorth-properties-inc.breezy.hr/
+    ats: breezy
+    countries: [CA]
+
+  - name: Good Food Holdings Companies
+    url: https://jobs.dayforcehcm.com/gfh/BRISTOLFARMS
+    ats: dayforce
+    countries: [US]
+
+  - name: Good Food Holdings Companies (Lazyacres)
+    url: https://jobs.dayforcehcm.com/gfh/LAZYACRES
+    ats: dayforce
+    countries: [US]
+
+  - name: Good Food Holdings Companies (Newleaf)
+    url: https://jobs.dayforcehcm.com/gfh/NEWLEAF
+    ats: dayforce
+    countries: [US]
+
+  - name: Good Food Holdings Companies (Newseasonsmarketexternalexternal)
+    url: https://jobs.dayforcehcm.com/gfh/NEWSEASONSMARKETEXTERNALEXTERNAL
+    ats: dayforce
+    countries: [US]
+
   - name: Good Samaritan
     url: https://fa-exgl-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/JoinOurTeam/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Goodwill Southern California
+    url: https://jobs.dayforcehcm.com/goodwillsocal/WEXSITE
+    ats: dayforce
     countries: [US]
 
   - name: Government of Nunavut
@@ -1638,6 +2088,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Grand Traverse Resort and Spa
+    url: https://jobs.dayforcehcm.com/gtr/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Granite Golf Club
+    url: https://jobs.dayforcehcm.com/granite/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Granite State Manufacturing
     url: https://apply.workable.com/granite-state-manufacturing/
     ats: workable
@@ -1660,10 +2120,35 @@ companies:
     ats: oracle_hcm
     countries: [CA]
 
+  - name: Great Gulf Group
+    url: https://jobs.dayforcehcm.com/greatgulf/GG
+    ats: dayforce
+    countries: [CA]
+
+  - name: Greater Philadelphia YMCA
+    url: https://jobs.dayforcehcm.com/philaymca/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Grey County
+    url: https://jobs.dayforcehcm.com/greycounty/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Grey Eagle Resort & Casino
     url: https://www.greyeagleresortandcasino.ca/careers/
     platform: njoyn
     enabled: false
+
+  - name: Groupe CH
+    url: https://jobs.dayforcehcm.com/groupech/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Grouse Mountain
+    url: https://jobs.dayforcehcm.com/northlandproperties/GROUSEMOUNTAIN
+    ats: dayforce
+    countries: [CA]
 
   - name: Guest Services
     url: https://guestservices.wd5.myworkdayjobs.com/gsi
@@ -1711,6 +2196,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Hamister Group
+    url: https://jobs.dayforcehcm.com/hamistergroup/HEALTHCARE
+    ats: dayforce
+    countries: [US]
+
   - name: Hampton Bar Harbor
     url: https://apply.workable.com/barharborhampton/
     ats: workable
@@ -1719,6 +2209,11 @@ companies:
   - name: Harlem Children's Zone
     url: https://apply.workable.com/harlem-childrens-zone/
     ats: workable
+    countries: [US]
+
+  - name: Harmons
+    url: https://jobs.dayforcehcm.com/harmons/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Harrah's Cherokee Casino Resort
@@ -1730,6 +2225,11 @@ companies:
     url: https://ats.rippling.com/harrison-group/jobs
     ats: rippling
     countries: [US]
+
+  - name: Harvey's
+    url: https://jobs.dayforcehcm.com/recipe/HARVEYSCAREERS
+    ats: dayforce
+    countries: [CA]
 
   - name: HCPS
     url: https://fa-exea-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
@@ -1807,6 +2307,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Hillcrest Health & LIving
+    url: https://jobs.dayforcehcm.com/hillcrest/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Hillel International
     url: https://job-boards.greenhouse.io/hillel
     ats: greenhouse
@@ -1844,6 +2349,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Homestyle Aged Care
+    url: https://jobs.dayforcehcm.com/hsac/110370
+    ats: dayforce
+    countries: [AU]
+
   - name: Homeview
     url: https://careers-homeview.icims.com/jobs/search
     ats: icims
@@ -1853,6 +2363,11 @@ companies:
     url: https://ekkh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2002/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Hornblower Group Inc.
+    url: https://jobs.dayforcehcm.com/hornblower/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US, CA]
 
   - name: Hospital Housekeeping Systems
     url: https://hhs.wd12.myworkdayjobs.com/hhs1jobs
@@ -1871,9 +2386,44 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Hotels and Resorts of Halekulani
+    url: https://jobs.dayforcehcm.com/halekulani/COMPANYWEBSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Houston Zoo
+    url: https://jobs.dayforcehcm.com/houstonzoo/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Hudson Hospital
     url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/hudson-hospital/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Human Resources
+    url: https://jobs.dayforcehcm.com/buschgroupphg/THEMERITAGERESORT
+    ats: dayforce
+    countries: [US]
+
+  - name: Human Resources (Candidateportal)
+    url: https://jobs.dayforcehcm.com/buschgroupphg/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Human Resources (Pasea)
+    url: https://jobs.dayforcehcm.com/buschgroupphg/PASEA
+    ats: dayforce
+    countries: [US]
+
+  - name: Human Resources Team
+    url: https://jobs.dayforcehcm.com/prh/PRINCEWAIKIKI
+    ats: dayforce
+    countries: [US]
+
+  - name: Human Resources Team (Candidateportal)
+    url: https://jobs.dayforcehcm.com/prh/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: HUNGRY Marketplace
@@ -1910,6 +2460,11 @@ companies:
     platform: custom
     enabled: false
 
+  - name: IMG Academy
+    url: https://jobs.dayforcehcm.com/imgacademy/IMGACADEMYCORPORATECAREERS
+    ats: dayforce
+    countries: [US]
+
   - name: Immiland Canada
     url: https://jobs.lever.co/immiland-canada-inc
     ats: lever
@@ -1919,6 +2474,11 @@ companies:
     url: https://careers-slco.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Ingenia
+    url: https://jobs.dayforcehcm.com/ingenia/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: Innisfree Hotels
     url: https://innisfree.wd5.myworkdayjobs.com/Innisfree
@@ -1947,6 +2507,11 @@ companies:
   - name: INTEGRIS Health
     url: https://ertr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Intermountain Centers
+    url: https://jobs.dayforcehcm.com/intermountain/INTERMOUNTAINCENTERS
+    ats: dayforce
     countries: [US]
 
   - name: International Dairy Queen
@@ -2019,6 +2584,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Jacksons Companies
+    url: https://jobs.dayforcehcm.com/jacksons/EXTRAMILE
+    ats: dayforce
+    countries: [US]
+
   - name: Joe & the Juice / United States
     url: https://job-boards.eu.greenhouse.io/jjus
     ats: greenhouse
@@ -2054,6 +2624,26 @@ companies:
     ats: smartrecruiters
     countries: [AU]
 
+  - name: Kalispel Tribe Careers
+    url: https://jobs.dayforcehcm.com/kalispel/NQRCCLIENTSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Kalispel Tribe Careers (Kgccclientsite)
+    url: https://jobs.dayforcehcm.com/kalispel/KGCCCLIENTSITE
+    ats: dayforce
+    countries: [US]
+
+  - name: Kampgrounds Of America, Inc.
+    url: https://jobs.dayforcehcm.com/koa/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Kandor
+    url: https://jobs.dayforcehcm.com/kandor/EVERCLEAN
+    ats: dayforce
+    countries: [CA]
+
   - name: Karriere bei der Motel One Group
     url: https://careers.smartrecruiters.com/motelone
     ats: smartrecruiters
@@ -2066,9 +2656,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Kelseys
+    url: https://jobs.dayforcehcm.com/recipe/KELSEYSCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: Kettering Health
     url: https://careers-ketteringhealth.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Kiawah Island Golf Resort
+    url: https://jobs.dayforcehcm.com/kiawah/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Kid's Country
@@ -2113,6 +2713,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Kualoa Ranch Hawai'i Human Resources
+    url: https://jobs.dayforcehcm.com/kualoa/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Lab37
     url: https://job-boards.greenhouse.io/lab37
     ats: greenhouse
@@ -2138,9 +2743,44 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Langham Hospitality Group
+    url: https://fa-eqgp-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
+    ats: oracle_hcm
+    countries: [US, CA, AU]
+
+  - name: Lazy Dog Family, LLC
+    url: https://jobs.dayforcehcm.com/lazydog/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Le Groupe Maurice
+    url: https://jobs.dayforcehcm.com/gm/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Learning Care Group
     url: https://ejql.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Legacy Health Services
+    url: https://jobs.dayforcehcm.com/lhs/PLEASANTLAKEVILLA
+    ats: dayforce
+    countries: [US]
+
+  - name: Legacy Health Services (Candidateportal)
+    url: https://jobs.dayforcehcm.com/lhs/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Legacy Health Services (Cedarwoodplaza)
+    url: https://jobs.dayforcehcm.com/lhs/CEDARWOODPLAZA
+    ats: dayforce
+    countries: [US]
+
+  - name: Legacy Health Services (Franklinplaza)
+    url: https://jobs.dayforcehcm.com/lhs/FRANKLINPLAZA
+    ats: dayforce
     countries: [US]
 
   - name: Lettuce Entertain You Restaurants
@@ -2228,6 +2868,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Longo's
+    url: https://jobs.jobvite.com/longos
+    ats: jobvite
+    countries: [US, CA]
+
   - name: Lookout Tavern
     url: https://apply.workable.com/lookout-tavern/
     ats: workable
@@ -2267,6 +2912,11 @@ companies:
   - name: Luminis Health
     url: https://job-boards.greenhouse.io/luminishealth
     ats: greenhouse
+    countries: [US]
+
+  - name: Luna Grill
+    url: https://jobs.dayforcehcm.com/lunagrill/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Luna's Tacos & Tequila
@@ -2330,6 +2980,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Mall of America
+    url: https://jobs.dayforcehcm.com/admoa/NUJOBS
+    ats: dayforce
+    countries: [US]
+
+  - name: Mall of America (Moajobs)
+    url: https://jobs.dayforcehcm.com/admoa/MOAJOBS
+    ats: dayforce
+    countries: [US]
+
   - name: Mammoth Mountain Ski Area
     url: https://alterra.wd1.myworkdayjobs.com/MammothMountain
     ats: workday
@@ -2351,10 +3011,20 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Marquette Transportation Company, LLC
+    url: https://jobs.dayforcehcm.com/marquette/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Marriott
     url: https://ejwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
     countries: [US, CA, AU, IN]
+
+  - name: Martin & Bayley, Inc., DBA Huck's Market
+    url: https://jobs.dayforcehcm.com/hucks/HUCKSMARKET
+    ats: dayforce
+    countries: [US]
 
   - name: Maryland Assisted Living & Skilled Nursing Communities
     url: https://careers-lorienhealth.icims.com/jobs/search
@@ -2393,9 +3063,19 @@ companies:
     ats: smartrecruiters
     countries: [US, CA, AU, IN]
 
+  - name: Mauna Kea Beach Hotel
+    url: https://jobs.dayforcehcm.com/prh/MAUNAKEA
+    ats: dayforce
+    countries: [US]
+
   - name: McClure Oil
     url: https://job-boards.greenhouse.io/mcclureoilcorporation
     ats: greenhouse
+    countries: [US]
+
+  - name: MCR
+    url: https://jobs.dayforcehcm.com/mcr/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Meijer Stores
@@ -2411,6 +3091,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: MercyCare
+    url: https://jobs.dayforcehcm.com/mercycare/MCCAREERSSITE
+    ats: dayforce
+    countries: [AU]
+
+  - name: Mesquite Gaming Employment Center
+    url: https://jobs.dayforcehcm.com/mesquitegaming/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Messiah University
     url: https://messiah-ibvrjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
@@ -2430,6 +3120,16 @@ companies:
   - name: Metro Nashville Public Schools
     url: https://ibqhjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/MNPS/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Meyer Jabara Hotels
+    url: https://jobs.dayforcehcm.com/mjh/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: MFA Oil Company
+    url: https://jobs.dayforcehcm.com/mfaoil/BREAKTIME
+    ats: dayforce
     countries: [US]
 
   - name: MHC Property Management
@@ -2485,6 +3185,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA]
 
+  - name: Mister Car Wash
+    url: https://jobs.dayforcehcm.com/mcw/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Mohegan Sun Mohegan Tribal Gaming Authority
     url: https://mohegan.wd1.myworkdayjobs.com/Mohegan
     ats: workday
@@ -2511,6 +3216,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Montana's
+    url: https://jobs.dayforcehcm.com/recipe/MONTANASCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: Morgan's Early Learning Centers
     url: https://job-boards.greenhouse.io/morgans
     ats: greenhouse
@@ -2531,15 +3241,20 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Mountain View Seniors' Housing
+    url: https://jobs.dayforcehcm.com/mvsh/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Mountaire
     url: https://ebtg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Career-Site/jobs
     ats: oracle_hcm
     countries: [US]
 
   - name: Moxie's
-    url: https://moxies.com/careers-listing/
-    platform: workstream
-    enabled: false
+    url: https://jobs.dayforcehcm.com/northlandproperties/MOXIES
+    ats: dayforce
+    countries: [CA]
 
   - name: MSL Community Management
     url: https://mbk.wd5.myworkdayjobs.com/MSLCareers
@@ -2548,9 +3263,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Mt. Hood Meadows
+    url: https://jobs.dayforcehcm.com/meadows/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: MTC
     url: https://fa-euud-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Multnomah Athletic Club
+    url: https://jobs.dayforcehcm.com/themac/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Munson Healthcare
@@ -2586,6 +3311,11 @@ companies:
     countries: [AU]
     options:
       max_jobs: 200
+
+  - name: Nashville Soccer Club
+    url: https://jobs.dayforcehcm.com/nashvillesc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Nashville Zoo
     url: https://job-boards.greenhouse.io/nashvillezoo
@@ -2628,6 +3358,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Neighbourly Pharmacy
+    url: https://jobs.dayforcehcm.com/loder/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: New Life Ranch
     url: https://ats.rippling.com/new-life-ranch/jobs
     ats: rippling
@@ -2637,6 +3372,11 @@ companies:
     url: https://fa-euwx-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: New York Fries
+    url: https://jobs.dayforcehcm.com/recipe/NEWYORKFRIESCAREERS
+    ats: dayforce
+    countries: [CA]
 
   - name: New York Institute of Technology
     url: https://careers-nyit.icims.com/jobs/search
@@ -2687,6 +3427,11 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Northland Properties
+    url: https://jobs.dayforcehcm.com/northlandproperties/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Northwell
     url: https://eppr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
     ats: oracle_hcm
@@ -2736,10 +3481,20 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Oak Hill/Gilead
+    url: https://jobs.dayforcehcm.com/oakhill/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Oak View Group
     url: https://teamwork-ovg.icims.com/jobs/search
     ats: icims
     countries: [US, CA]
+
+  - name: Oak View Group Canada
+    url: https://careers-ovgcan.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
 
   - name: OakBend Medical Center
     url: https://careers-obmc.icims.com/jobs/search
@@ -2772,6 +3527,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Oki Golf
+    url: https://jobs.dayforcehcm.com/okigolf/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Olathe Public Schools
     url: https://fa-ewbu-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
@@ -2782,6 +3542,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Olive Garden Canada
+    url: https://jobs.dayforcehcm.com/recipe/OLIVEGARDENCANADA
+    ats: dayforce
+    countries: [CA]
+
   - name: Olympus Property
     url: https://job-boards.greenhouse.io/olympusproperty
     ats: greenhouse
@@ -2791,6 +3556,11 @@ companies:
     url: https://externalhourly-omnihotels.icims.com/jobs/search
     ats: icims
     countries: [CA]
+
+  - name: Omni Hotels &amp; Resorts
+    url: https://jobs.dayforcehcm.com/ohmc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: One Lifestyle
     url: https://lifestylecommunities.wd1.myworkdayjobs.com/Lifestyle_Communities_Careers
@@ -2806,6 +3576,26 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Opal HealthCare
+    url: https://jobs.dayforcehcm.com/opalhealthcare/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
+  - name: Opal HealthCare (117005)
+    url: https://jobs.dayforcehcm.com/opalhealthcare/117005
+    ats: dayforce
+    countries: [AU]
+
+  - name: Opal HealthCare (Candidateportalhospitality)
+    url: https://jobs.dayforcehcm.com/opalhealthcare/CANDIDATEPORTALHOSPITALITY
+    ats: dayforce
+    countries: [AU]
+
+  - name: Optima Living
+    url: https://jobs.dayforcehcm.com/optimaliving/JOINUS
+    ats: dayforce
+    countries: [CA]
+
   - name: Orange County Public Schools
     url: https://administrators-ocps.icims.com/jobs/search
     ats: icims
@@ -2816,9 +3606,34 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: OTG
+    url: https://jobs.dayforcehcm.com/otg/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US, CA]
+
+  - name: OTH Hotels Resorts
+    url: https://jobs.dayforcehcm.com/othhotels/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: OTR Group
+    url: https://jobs.dayforcehcm.com/vivaenergyau/OTRSITE
+    ats: dayforce
+    countries: [AU]
+
+  - name: OTR Group (Qsrsite)
+    url: https://jobs.dayforcehcm.com/vivaenergyau/QSRSITE
+    ats: dayforce
+    countries: [AU]
+
   - name: Otterbein SeniorLife
     url: https://job-boards.greenhouse.io/otterbein
     ats: greenhouse
+    countries: [US]
+
+  - name: Outpost Natural Foods
+    url: https://jobs.dayforcehcm.com/outpost/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Ouzinkie
@@ -2855,6 +3670,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Panorama Mountain Resort
+    url: https://jobs.dayforcehcm.com/panorama/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Paradigm Treatment Centers
     url: https://job-boards.greenhouse.io/paradigmtreatmentcenters
     ats: greenhouse
@@ -2880,6 +3700,11 @@ companies:
   - name: Parker
     url: https://elje.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Parking Management Company
+    url: https://jobs.dayforcehcm.com/parkingmgt/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Parkwest Casinos / Fortiss
@@ -2942,6 +3767,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Phil's BBQ
+    url: https://jobs.dayforcehcm.com/philsbbq/CAREERS
+    ats: dayforce
+    countries: [US]
+
   - name: Phillips Farms Employment
     url: https://ats.rippling.com/phillips-farms-employment/jobs
     ats: rippling
@@ -2964,12 +3794,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Pinehurst Careers
+    url: https://jobs.dayforcehcm.com/pinehurst/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Pinehurst Country Club
     url: https://pinehurstcountryclub.wd108.myworkdayjobs.com/pinehurstcareers
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Player 15 Group
+    url: https://jobs.dayforcehcm.com/slp/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Plumas District Hospital
     url: https://careers-pdh.icims.com/jobs/search
@@ -2980,6 +3820,11 @@ companies:
     url: https://ibdyqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: PNE
+    url: https://careers-pne.icims.com/jobs/search
+    ats: icims
+    countries: [CA]
 
   - name: Polkcountysheriffsoffice
     url: https://careers-polkcountysheriffsoffice.icims.com/jobs/search
@@ -2997,6 +3842,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Power Wellness
+    url: https://jobs.dayforcehcm.com/powerwell/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Presbyterian Homes & Services
     url: https://careers-preshomes.icims.com/jobs/search
@@ -3089,10 +3939,20 @@ companies:
     ats: smartrecruiters
     countries: [AU, IN]
 
+  - name: RainCity Housing and Support Society
+    url: https://jobs.dayforcehcm.com/raincity/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Raley's Company
     url: https://fa-epss-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Recipe Unlimited
+    url: https://jobs.dayforcehcm.com/recipe/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Recovery Village
     url: https://apply.workable.com/therecoveryvillage/
@@ -3139,6 +3999,11 @@ companies:
     url: https://careers.smartrecruiters.com/relaischateaux
     ats: smartrecruiters
     countries: [US, CA]
+
+  - name: Renaissance Edmonton Airport Hotel
+    url: https://jobs.dayforcehcm.com/platinum/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Residential Treatment Center for Teen Girls (Ages 14-18)
     url: https://careers-newhaven.icims.com/jobs/search
@@ -3225,6 +4090,11 @@ companies:
     ats: icims
     countries: [US, CA]
 
+  - name: Rocking J
+    url: https://jobs.dayforcehcm.com/rockingj/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Rolling
     url: https://careers-rolling.icims.com/jobs/search
     ats: icims
@@ -3262,6 +4132,11 @@ companies:
     ats: smartrecruiters
     countries: [CA]
 
+  - name: SA Hospitality Group
+    url: https://jobs.dayforcehcm.com/sahg/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Sage + Sound
     url: https://ats.rippling.com/sage-sound/jobs
     ats: rippling
@@ -3270,6 +4145,11 @@ companies:
   - name: Sage Hospitality
     url: https://careers-sagehospitality.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Sagelife
+    url: https://jobs.dayforcehcm.com/sagelife/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Saks & CO
@@ -3299,6 +4179,16 @@ companies:
   - name: San Antonio Behavioral Healthcare Hospital
     url: https://apply.workable.com/sanantoniobehavioral/
     ats: workable
+    countries: [US]
+
+  - name: San Diego Zoo Wildlife Alliance
+    url: https://jobs.dayforcehcm.com/sdzwa/SANDIEGOZOOCAREERSEXTERNAL
+    ats: dayforce
+    countries: [US]
+
+  - name: San Diego Zoo Wildlife Alliance (Safariparkcareersexternal)
+    url: https://jobs.dayforcehcm.com/sdzwa/SAFARIPARKCAREERSEXTERNAL
+    ats: dayforce
     countries: [US]
 
   - name: San Francisco Campus for Jewish Living
@@ -3347,6 +4237,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Scandinave Spa
+    url: https://jobs.dayforcehcm.com/gscandinave/BLUEMOUNTAIN
+    ats: dayforce
+    countries: [CA]
+
   - name: SCR Scripps College
     url: https://theclaremontcolleges.wd1.myworkdayjobs.com/SCR_Career_Staff
     ats: workday
@@ -3357,6 +4252,11 @@ companies:
   - name: Sedanos
     url: https://careers-sedanos.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Select Water Solutions
+    url: https://jobs.dayforcehcm.com/select/POSCAREERSITE
+    ats: dayforce
     countries: [US]
 
   - name: Seneca Niagara Falls Gaming
@@ -3425,6 +4325,21 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Shark Club
+    url: https://jobs.dayforcehcm.com/northlandproperties/SHARKCLUB
+    ats: dayforce
+    countries: [US]
+
+  - name: Shawano County
+    url: https://jobs.dayforcehcm.com/shawano/SHAWANOCOUNTY
+    ats: dayforce
+    countries: [US]
+
+  - name: Shell Point Retirement Community
+    url: https://jobs.dayforcehcm.com/shellpoint/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Shelter House
     url: https://apply.workable.com/shelter-house/
     ats: workable
@@ -3444,6 +4359,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sheridan Student Union
+    url: https://jobs.dayforcehcm.com/ssu/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Shirley Ryan AbilityLab
     url: https://sralab.wd1.myworkdayjobs.com/SRAlabCareers
     ats: workday
@@ -3457,6 +4377,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Siesta Suites
+    url: https://jobs.dayforcehcm.com/lcm/SIESTASUITESPOSTINGSITE
+    ats: dayforce
+    countries: [CA]
 
   - name: SIGA
     url: https://iaayzv.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/SIGA/jobs
@@ -3487,6 +4412,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sinai Health
+    url: https://jobs.dayforcehcm.com/sinaihealth/SINAIHEALTHCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: SIR Corp
     url: https://careersen-sircorp.icims.com/jobs/search
     ats: icims
@@ -3509,12 +4439,22 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Skyservice Business Aviation
+    url: https://jobs.jobvite.com/skyservice
+    ats: jobvite
+    countries: [US, CA]
+
   - name: Sleeman Breweries
     url: https://sleeman.wd3.myworkdayjobs.com/SBL
     ats: workday
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: SMCT
+    url: https://jobs.dayforcehcm.com/smct/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
 
   - name: SMGHA Nevada
     url: https://sanmanuel.wd1.myworkdayjobs.com/SMGHANevada
@@ -3529,6 +4469,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Sobeys
+    url: https://jobs.dayforcehcm.com/sobeys/PRIVATECLIENTSITE
+    ats: dayforce
+    countries: [CA]
 
   - name: Sodexo
     url: https://careers.smartrecruiters.com/sodexo
@@ -3569,9 +4514,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Southbridge Healthcare LP
+    url: https://jobs.dayforcehcm.com/southbridge/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Southwest Mississippi Regional Medical Center
     url: https://fa-evlp-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Space Center Houston
+    url: https://jobs.dayforcehcm.com/myschdayforce/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: SpaceX
@@ -3596,6 +4551,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Spire Holdings, LLC. and affiliated companies
+    url: https://jobs.dayforcehcm.com/spireall/MOTORSPORTSRECRUITING
+    ats: dayforce
+    countries: [US]
+
   - name: Splendido
     url: https://job-boards.greenhouse.io/mathersplendido
     ats: greenhouse
@@ -3607,6 +4567,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: SSA Group, LLC
+    url: https://jobs.dayforcehcm.com/ssagroup/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: St Vincent's Care Services
     url: https://svha.wd3.myworkdayjobs.com/broadbean_external
@@ -3646,6 +4611,16 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: St. Paul's Senior Services
+    url: https://jobs.dayforcehcm.com/myspss/72197
+    ats: dayforce
+    countries: [US]
+
+  - name: St. Paul's Senior Services (Candidateportal)
+    url: https://jobs.dayforcehcm.com/myspss/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Staff and Faculty
     url: https://ehwy.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
@@ -3667,6 +4642,11 @@ companies:
     countries: [US, CA]
     options:
       location: ''
+
+  - name: State & Main
+    url: https://jobs.dayforcehcm.com/recipe/STATEANDMAINCAREERS
+    ats: dayforce
+    countries: [CA]
 
   - name: State of Nebraska
     url: https://son.wd108.myworkdayjobs.com/NebraskaStateCareers
@@ -3702,6 +4682,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Stew Leonard's
+    url: https://jobs.dayforcehcm.com/stewleonards/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Stormont-Vail HealthCare
     url: https://stormontvail.wd1.myworkdayjobs.com/SVH
     ats: workday
@@ -3713,6 +4698,11 @@ companies:
     url: https://job-boards.greenhouse.io/strategichr
     ats: greenhouse
     countries: [US]
+
+  - name: Stratford Festival
+    url: https://jobs.dayforcehcm.com/ssfoc/CANDIDATEPORTALV1
+    ats: dayforce
+    countries: [CA]
 
   - name: Stratton
     url: https://alterra.wd1.myworkdayjobs.com/StrattonMountain
@@ -3754,6 +4744,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sunroad Automotive
+    url: https://jobs.dayforcehcm.com/sunroad/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Sunshine House
     url: https://apply.workable.com/sunshine-house/
     ats: workable
@@ -3764,9 +4759,24 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Swiss Chalet
+    url: https://jobs.dayforcehcm.com/recipe/SWISSCHALETCAREERS
+    ats: dayforce
+    countries: [CA]
+
+  - name: Sycuan
+    url: https://jobs.dayforcehcm.com/sycuan/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: Taco MacTaco Mac
     url: https://careers-tmacrestaurants.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Tamarack Resort
+    url: https://jobs.dayforcehcm.com/tamarackresort/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Tao Group Hospitality
@@ -3821,6 +4831,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: TEEG (Timezone, Zone Bowling & Kingpin)
+    url: https://jobs.dayforcehcm.com/teeg/ZONEBOWLINGCAREERS
+    ats: dayforce
+    countries: [AU]
+
+  - name: TEEG (Timezone, Zone Bowling & Kingpin) (Kingpincareers)
+    url: https://jobs.dayforcehcm.com/teeg/KINGPINCAREERS
+    ats: dayforce
+    countries: [AU]
+
   - name: Tenet Healthcare
     url: https://eodr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -3832,6 +4852,41 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: TFE Hotels / Adina Apartment Hotels
+    url: https://jobs.dayforcehcm.com/tfehotels/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
+  - name: TFE Hotels / Adina Apartment Hotels (107605)
+    url: https://jobs.dayforcehcm.com/tfehotels/107605
+    ats: dayforce
+    countries: [AU]
+
+  - name: TFE Hotels / Adina Apartment Hotels (Hannahstcandidateportal)
+    url: https://jobs.dayforcehcm.com/tfehotels/HANNAHSTCANDIDATEPORTAL
+    ats: dayforce
+    countries: [AU]
+
+  - name: The Associated and its Agencies
+    url: https://jobs.dayforcehcm.com/associated/PEARLCANDIDPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Associated and its Agencies (Assocandidateportal)
+    url: https://jobs.dayforcehcm.com/associated/ASSOCANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Berkeley
+    url: https://the-berkeley.breezy.hr/
+    ats: breezy
+    countries: [CA]
+
+  - name: The Explorer Hotel
+    url: https://jobs.dayforcehcm.com/nun/EXPLORERHOTEL
+    ats: dayforce
+    countries: [CA]
 
   - name: The Florida Panthers
     url: https://job-boards.greenhouse.io/thefloridapanthers
@@ -3845,10 +4900,40 @@ companies:
     options:
       max_jobs: 200
 
+  - name: The Henry Ford
+    url: https://jobs.dayforcehcm.com/thehenryford/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Inland Real Estate Group of Companies
+    url: https://jobs.dayforcehcm.com/inlandgroup/RESIDENTIALPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Inland Real Estate Group of Companies (Inland-Candidateportal)
+    url: https://jobs.dayforcehcm.com/inlandgroup/INLAND-CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
   - name: The Keg Steakhouse + Bar
     url: https://thekeg.com/en/careers
     platform: custom
     enabled: false
+
+  - name: The Nutrition Group
+    url: https://jobs.dayforcehcm.com/tng/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The People Concern
+    url: https://jobs.dayforcehcm.com/pplco/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: The Salvation Army USA Southern Territory
+    url: https://jobs.dayforcehcm.com/tsa/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: The Scion Group
     url: https://job-boards.greenhouse.io/thesciongroupllc
@@ -3864,6 +4949,16 @@ companies:
     url: https://jobs.dayforcehcm.com/northlandproperties/THESUTTONPLACEHOTELS
     ats: dayforce
     countries: [CA]
+
+  - name: The Talent Team at Perimeter Aviation
+    url: https://jobs.dayforcehcm.com/perimeteravi/FLIGHT-OPERATIONS
+    ats: dayforce
+    countries: [CA]
+
+  - name: The Tavern Collective
+    url: https://jobs.dayforcehcm.com/northlandproperties/TAVERN
+    ats: dayforce
+    countries: [US, CA]
 
   - name: The Walt Disney Company
     url: https://disney.wd5.myworkdayjobs.com/disneycareerdc
@@ -3944,6 +5039,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Touchmark
+    url: https://jobs.dayforcehcm.com/tlc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US, CA]
+
   - name: Tournament Players Club at Sugarloaf
     url: https://pgatour.wd5.myworkdayjobs.com/FTFExternal
     ats: workday
@@ -3972,6 +5072,11 @@ companies:
     url: https://jobs-townandcountrymarkets.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Transat
+    url: https://careers.smartrecruiters.com/transatat1
+    ats: smartrecruiters
+    countries: [CA]
 
   - name: Transforming Age Associates
     url: https://transformingage.wd108.myworkdayjobs.com/JoinUs
@@ -4002,6 +5107,11 @@ companies:
   - name: TriHealth
     url: https://fa-evly-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: True Food Kitchen
+    url: https://jobs.dayforcehcm.com/truefood/CANDIDATEPORTAL
+    ats: dayforce
     countries: [US]
 
   - name: Trustees of Reservations
@@ -4076,6 +5186,11 @@ companies:
     ats: ashby
     countries: [US]
 
+  - name: Uniting NSW.ACT
+    url: https://jobs.dayforcehcm.com/unitingaunsw/UNITINGCCS
+    ats: dayforce
+    countries: [AU]
+
   - name: University of British Columbia
     url: https://ubc.wd10.myworkdayjobs.com/ubcstaffjobs
     ats: workday
@@ -4128,6 +5243,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Upper Canada Child Care
+    url: https://jobs.dayforcehcm.com/uccc/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Upper Crust Food Service
     url: https://ats.rippling.com/careers-ucfs/jobs
     ats: rippling
@@ -4149,6 +5269,11 @@ companies:
     url: https://eimy.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Vacances Air Canada Vacations / Air Canada Rouge
+    url: https://jobs.dayforcehcm.com/acvrouge/ROUGECLIENTCAREERSSITE
+    ats: dayforce
+    countries: [CA]
 
   - name: Vail Health Hospital
     url: https://job-boards.greenhouse.io/vailclinicincdbavailhealthhospital
@@ -4172,6 +5297,16 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Victoria University
+    url: https://jobs.dayforcehcm.com/victoriauniversity/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Villa Providence Shediac
+    url: https://villaprovidenceshediacinc.recruitee.com/
+    ats: recruitee
+    countries: [CA]
+
   - name: Village Green
     url: https://careers.smartrecruiters.com/villagegreen1
     ats: smartrecruiters
@@ -4183,6 +5318,21 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Von Maur/Dry Goods
+    url: https://jobs.dayforcehcm.com/vonmaur/CANDIDATEPORTALVONMAUR
+    ats: dayforce
+    countries: [US]
+
+  - name: VPNE
+    url: https://jobs.dayforcehcm.com/vpne/CAREERS
+    ats: dayforce
+    countries: [US]
+
+  - name: VPNE (Candidateportal)
+    url: https://jobs.dayforcehcm.com/vpne/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Vuori
     url: https://careers.smartrecruiters.com/vuoriinc
@@ -4271,10 +5421,30 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: West Edmonton Mall
+    url: https://jobs.dayforcehcm.com/wem/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
   - name: Westborough Behavioral Healthcare Hospital
     url: https://apply.workable.com/westborough-behavioral-healthcare-hospital-1/
     ats: workable
     countries: [US]
+
+  - name: Westcorp
+    url: https://jobs.dayforcehcm.com/westcorp/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: Westerkirk
+    url: https://jobs.dayforcehcm.com/westerkirk/PACIFICSKYCORPORATECAREERS
+    ats: dayforce
+    countries: [CA]
+
+  - name: Westerkirk Capital
+    url: https://jobs.dayforcehcm.com/westerkirk/WCICORPORATECAREERS
+    ats: dayforce
+    countries: [CA]
 
   - name: Western Camps
     url: https://ats.rippling.com/western-camps-inc/jobs
@@ -4310,6 +5480,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Wilderness Resort
+    url: https://jobs.dayforcehcm.com/whri/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: Wilderness Resort (Tnjobs)
+    url: https://jobs.dayforcehcm.com/whri/TNJOBS
+    ats: dayforce
+    countries: [US]
+
   - name: Willett Distillery
     url: https://apply.workable.com/willett-distillery/
     ats: workable
@@ -4331,6 +5511,11 @@ companies:
     url: https://iaxmqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Wingstop-GSC/jobs
     ats: oracle_hcm
     countries: [US, IN]
+
+  - name: Winnebago Comprehensive Healthcare System
+    url: https://jobs.dayforcehcm.com/wchs/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
 
   - name: Winnipeg Football Club
     url: https://apply.workable.com/winnipeg-football-club/
@@ -4398,6 +5583,31 @@ companies:
     url: https://careers.smartrecruiters.com/theyirosshop
     ats: smartrecruiters
     countries: [AU]
+
+  - name: YMCA Buffalo Niagara
+    url: https://jobs.dayforcehcm.com/ymcabuffalo/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: YMCA of Metropolitan Fort Worth
+    url: https://jobs.dayforcehcm.com/ymcafw/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: YMCA of Metropolitan Washington
+    url: https://jobs.dayforcehcm.com/ymcametrowash/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [US]
+
+  - name: YMCA of Northeastern Ontario
+    url: https://jobs.dayforcehcm.com/ymcanorth/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
+
+  - name: YMCA of Southwestern Ontario
+    url: https://jobs.dayforcehcm.com/wat0904/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Young Life
     url: https://younglife.wd5.myworkdayjobs.com/YoungLife_CampingOpenings

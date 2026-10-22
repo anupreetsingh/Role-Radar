@@ -818,3 +818,44 @@ def test_adp_lists_every_job_and_reads_a_description():
                         "?cid=abc&ccId=19000101_000001&jobId=9201048995157_1&lang=en_CA")
     assert admin.location == "Accra, Ghana; Calgary, Alberta, Calgary, AB, Canada"
     assert "lang=en_CA" in seen[0] and "%24top=100" in seen[0]
+
+
+def test_breezy_lists_every_position_in_one_request():
+    positions = [{"id": "098add712266", "friendly_id": "098add712266-line-cook", "name": "Line  Cook",
+                  "url": "https://bistro.breezy.hr/p/098add712266-line-cook", "published_date": "2026-10-15T19:27:46.115Z",
+                  "type": {"id": "partTime", "name": "Part-Time"}, "department": "Kitchen",
+                  "location": {"country": {"name": "Canada", "id": "CA"}, "state": {"id": "AB", "name": "Alberta"},
+                               "city": "Calgary", "is_remote": False, "name": "Calgary, AB"}},
+                 {"id": "adab5b22f937", "name": "Bookkeeper", "published_date": "2026-09-15T16:59:35.910Z",
+                  "location": {"country": {"name": "United States", "id": "US"}, "is_remote": True, "name": "United States"}}]
+    page = '<main><div class="description"><p>1 year on a line</p></div><div class="apply-button">Apply</div></main>'
+    routes = {"/json": positions, "/p/098add712266-line-cook": page}
+    seen = []
+    result = scrape("breezy", "https://bistro.breezy.hr/", routes, seen=seen)
+    cook, books = result.jobs
+    assert (cook.job_id, cook.title, cook.location) == ("098add712266", "Line Cook", "Calgary, Alberta, Canada")
+    assert (cook.employment_type, cook.department, cook.date_posted) == ("Part-Time", "Kitchen", date(2026, 10, 15))
+    assert books.location == "United States (Remote)" and books.url == "https://bistro.breezy.hr/p/adab5b22f937"
+    assert seen == ["https://bistro.breezy.hr/json"]
+
+    async def describe():
+        async with make_client(lambda r: httpx.Response(200, text=page)) as http:
+            return await SCRAPERS["breezy"](company(url="https://bistro.breezy.hr/"), http).fetch_description(cook)
+
+    assert asyncio.run(describe()) == "<p>1 year on a line</p></div>"
+
+
+def test_recruitee_lists_every_offer_with_its_description():
+    offers = {"offers": [{"id": 2745661, "slug": "server", "title": "Server", "careers_url": "https://bar.recruitee.com/o/server",
+                          "published_at": "2026-09-14 16:32:50 UTC", "employment_type_code": "parttime", "department": "Front of house",
+                          "description": "<p>Serve guests.</p>", "requirements": "<p>1 year serving</p>",
+                          "locations": [{"city": "Toronto", "state_code": "ON", "country": "Canada"},
+                                        {"city": "Louisville", "state_code": "KY", "country": "United States"}]},
+                         {"id": 7, "slug": "chef", "title": "Chef", "city": "Banff", "state_code": "AB", "country": "Canada",
+                          "remote": False}]}
+    result = scrape("recruitee", "https://bar.recruitee.com/", {"/api/offers/": offers})
+    server, chef = result.jobs
+    assert (server.job_id, server.url, server.location) == ("2745661", "https://bar.recruitee.com/o/server",
+                                                             "Toronto, ON, Canada; Louisville, KY, United States")
+    assert server.extra["description"] == "<p>Serve guests.</p><p>1 year serving</p>" and server.date_posted == date(2026, 9, 14)
+    assert (chef.location, chef.url) == ("Banff, AB, Canada", "https://bar.recruitee.com/o/chef")

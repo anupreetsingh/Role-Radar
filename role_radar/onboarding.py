@@ -232,7 +232,7 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                  r"re:\bchef(?:\(fe\)|[.·]fe\b|fe\b|\s+fe\b)|\bchef\s+(?:d['’\s]|de\s+(?!partie\b|cuisine\b|rang\b)|du\s|"
                  r"des\s|principal|adjoint|opérat|technique|RH\b|QA\b|artiste|mécanicien)|\bchef\s*[,–—-]\s*(?:analyse|"
                  r"planification|gestion|affaires|relations|ressources|opérations|projets?|équipe|section|division|"
-                 r"département|secteur)\b|\ben\s+chef\b"),
+                 r"département|secteur)\b|\bchef\s*[,–—-]\s*(?:[\wÀ-ÿ’']+\s+)?(?:de|du|des|d['’])\b|\ben\s+chef\b"),
                 ("account managers and sales reps", r"re:\b(?:accounts?\s+(?:managers?|executives?|specialists?|"
                                                     r"representatives?|leaders?|directors?)|key\s+accounts?|sales\s+"
                                                     r"(?:representatives?|reps?|consultants?|executives?|support))\b"),
@@ -242,6 +242,7 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                 ("forklift", r"re:\bfork[\s-]*lifts?\b"),
                 ("tool and uniform rooms", r"re:\b(?:tool|uniform|scale)\s+(?:room|house)\b"),
                 ("supply chain and logistics", r"re:\b(?:supply\s+chain|logistics|last\s+mile|warehouse)\b"),
+                ("retail stores", r"re:\b(?:retail|e-?commerce|stockroom|merchandis\w*)\b"),
                 "process server", "gas bar", "maintenance", "security", "delivery", "marketing", "category",
                 "construction", "equipment"]),
         ],

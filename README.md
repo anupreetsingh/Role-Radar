@@ -408,6 +408,8 @@ alert again. The previous version behaved the same way.
 | Sitemap + JobPosting | A career site's sitemap of job pages (`options.sitemap`, `options.job_path`), each page's schema.org JobPosting; set `ats: jobposting` (Dassault Systèmes, FedEx); checked hourly | a new job known only by its link, once, if its link's words could match the filter |
 | Dayforce | `jobs.dayforcehcm.com/[{culture}/]{client}/{board}`: the job search its pages call, with the token they send (25 a page, newest first, each with its places and description); WestJet, Northland Properties, Coast Hotels | no |
 | ADP Workforce Now | `workforcenow.adp.com/...recruitment.html?cid={id}`: the public job list its pages call (newest first, with places); Lake Louise Ski Resort, the Calgary Zoo | a match's description |
+| Breezy HR | `{company}.breezy.hr/json`, every position with its place in one request | a match's description |
+| Recruitee | `{site}/api/offers/`, every offer with its places and description in one request | no |
 | Comeet | The hosted careers page `www.comeet.com/jobs/{company}/{uid}`, whose `COMPANY_POSITIONS_DATA` holds every position, its place and usually its description | a match's description, when the list lacks it |
 | Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |

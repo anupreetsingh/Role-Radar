@@ -12,6 +12,7 @@ from role_radar.scrapers.apple import AppleScraper
 from role_radar.scrapers.ashby import AshbyScraper
 from role_radar.scrapers.avature import AvatureScraper
 from role_radar.scrapers.bamboohr import BambooHRScraper
+from role_radar.scrapers.breezy import BreezyScraper
 from role_radar.scrapers.base import BaseScraper, ScrapeResult, ScraperError
 from role_radar.scrapers.comeet import ComeetScraper
 from role_radar.scrapers.comsol import ComsolScraper
@@ -35,6 +36,7 @@ from role_radar.scrapers.oracle_hcm import OracleHcmScraper
 from role_radar.scrapers.phenom import PhenomScraper
 from role_radar.scrapers.pinpoint import PinpointScraper
 from role_radar.scrapers.radancy import RadancyScraper
+from role_radar.scrapers.recruitee import RecruiteeScraper
 from role_radar.scrapers.recruiterbox import RecruiterboxScraper
 from role_radar.scrapers.rippling import RipplingScraper
 from role_radar.scrapers.smartrecruiters import SmartRecruitersScraper
@@ -53,7 +55,7 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
         OracleHcmScraper, MetaScraper, TikTokScraper, RipplingScraper, SmartRecruitersScraper, WorkableScraper,
         SuccessFactorsScraper, PhenomScraper, DEShawScraper, GemScraper, DeelScraper, ComeetScraper,
         PinpointScraper, TeamtailorScraper, JobviteScraper, RadancyScraper, JobPostingScraper,
-        DayforceScraper, ADPScraper,
+        DayforceScraper, ADPScraper, BreezyScraper, RecruiteeScraper,
         GenericScraper,
     )
 }

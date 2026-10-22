@@ -580,6 +580,25 @@ Calgary.
   subsets of its AllJobs board, and Carnival's, Holland America's and Private Destinations' boards
   list the same jobs; only AllJobs and Carnival stay.
 
+**More Canadian employers (same day).** The first list had 122 employers posting in Canada against
+691 in the US, because the board sweeps had covered the job sites US employers use. Canada's
+hospitality employers use Dayforce above all, so every Dayforce board in the saved Common Crawl
+export (2,657 boards of 1,631 clients) had its newest page read once from the laptop (0.6 s apart,
+2,564 answered): 243 had hospitality jobs, 70 of them in Canada. Recipe Unlimited posts each brand on
+its own board, and the ones the export missed were tried by name (Swiss Chalet, Harvey's, Añejo, New
+York Fries, Elephant & Castle, State & Main); Northland Properties' Moxie's, The Tavern Collective,
+Grouse Mountain and Shark Club boards joined too (Moxie's is read now). Two more readers came out of
+it, Breezy (`{company}.breezy.hr/json`) and Recruitee (`/api/offers/`), and the export's Jobvite,
+Pinpoint, BambooHR, Teamtailor (North America), Breezy and Recruitee boards were read once each
+(5,925 boards; 7 Canadian employers joined, such as Les 3 Brasseurs, GolfNorth and Longo's; Dutch
+boards that only looked Canadian, "NB" being Noord-Brabant, stayed off). The Canadian Oracle and
+iCIMS boards the sweep had seen but not listed were searched for "food" and "guest" (340 boards;
+Oak View Group's Canadian board joined). The list then had 1,006 read employers, 199 posting in
+Canada. Not reached: the Government of Canada's Job Bank (its server doesn't answer this laptop),
+ADP Workforce Now boards (Common Crawl's index server timed out; an Athena query would list them),
+Compass Group Canada (its site lists jobs through an API it doesn't publish), and Workday boards
+with Canadian jobs (535 not yet searched for hospitality titles).
+
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
 search behind each board (the board's page shows only a few featured jobs); Workstream (Moxie's),
