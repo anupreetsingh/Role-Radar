@@ -10,7 +10,9 @@ A job matches when ALL of these hold:
   4. its employment type matches one of `employment_types` (if any are configured).
 
 Keywords are case-insensitive and match on word boundaries, so "AI" matches
-"AI Engineer" but not "Maintain". Spaces in a keyword also match hyphens,
+"AI Engineer" but not "Maintain". An include keyword also matches its plural ("cook"
+matches "Now Hiring Line Cooks", "pastry" "Pastries"); exclude keywords don't, since
+"senior" mustn't rule out "Cook - Seniors Living". Spaces in a keyword also match hyphens,
 slashes and underscores ("back end" matches "Back-End"). A keyword prefixed
 with "re:" is used as a raw regular expression.
 
@@ -40,13 +42,23 @@ FIELD_GETTERS: dict[str, Callable[[JobPosting], str | None]] = {
 }
 
 
-def compile_keyword(keyword: str) -> re.Pattern[str]:
+def compile_keyword(keyword: str, plural: bool = False) -> re.Pattern[str]:
+    """A keyword's pattern; with `plural`, its last word also matches its plural form."""
     keyword = keyword.strip()
     if keyword.startswith("re:"):
         return re.compile(keyword[3:], re.I)
     words = [re.escape(w) for w in re.split(r"[\s\-_/]+", keyword) if w]
+    if plural and words:
+        words[-1] = _plural(words[-1])
     body = r"[\s\-_/]*".join(words)
     return re.compile(rf"(?<![a-z0-9]){body}(?![a-z0-9])", re.I)
+
+
+def _plural(word: str) -> str:
+    """A word and its plural: "cook(?:e?s)?" (Cooks, Hostesses), "categor(?:y|ies)"."""
+    if re.search(r"[b-df-hj-np-tv-z]y$", word, re.I):
+        return word[:-1] + "(?:y|ies)"
+    return word + "(?:e?s)?" if re.search(r"[a-z]$", word, re.I) else word
 
 
 @dataclass
@@ -84,7 +96,7 @@ class JobFilter:
                 )
             if name not in FIELD_GETTERS:
                 raise ValueError(f"Unknown filter field {name!r}; choose from {sorted(FIELD_GETTERS)}")
-        self._include = [(k, compile_keyword(k)) for k in self.include_keywords]
+        self._include = [(k, compile_keyword(k, plural=True)) for k in self.include_keywords]
         self._exclude = [(k, compile_keyword(k)) for k in self.exclude_keywords]
         self._locations = [(k, compile_keyword(k)) for k in self.locations]
         self._types = [(k, compile_keyword(k)) for k in self.employment_types]

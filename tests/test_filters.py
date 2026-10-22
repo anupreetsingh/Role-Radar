@@ -65,6 +65,15 @@ def test_separator_tolerance():
     assert pattern.search("Backend Developer")
 
 
+def test_target_titles_match_their_plurals_but_ruled_out_words_dont():
+    f = JobFilter(include_keywords=["line cook", "server", "hostess", "pastry"], exclude_keywords=["senior"])
+    for title in ("Now Hiring Line Cooks", "Servers & Bartenders", "Hostesses Wanted", "Pastries Lead", "Line Cook"):
+        assert f.evaluate(job(title)), title
+    assert f.evaluate(job("Line Cook - Seniors Living"))  # "senior" isn't "Seniors"
+    assert not f.evaluate(job("Senior Line Cook"))
+    assert not f.evaluate(job("Line Cooking Class Host"))  # a plural, not any longer word
+
+
 def test_regex_keyword():
     f = JobFilter(include_keywords=[r"re:engineer\s+(i|1)\b"])
     assert f.evaluate(job("Software Engineer I"))
