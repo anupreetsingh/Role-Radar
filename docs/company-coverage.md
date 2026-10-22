@@ -601,6 +601,19 @@ ADP Workforce Now boards (Common Crawl's index server timed out; an Athena query
 Compass Group Canada (its site lists jobs through an API it doesn't publish), and Workday boards
 with Canadian jobs (535 not yet searched for hospitality titles).
 
+**Still more (same day, with the user's go-ahead for maximum coverage).** Target titles now match
+their plurals ("Now Hiring Line Cooks"). JazzHR publishes one job feed for Google of every client's
+open jobs (`app.jazz.co/feeds/google/xml/0`..`4`: 110,285 jobs of 7,502 employers); the 391 employers
+with a hospitality title there had their boards read once with the new `jazzhr` reader, and 277 joined
+(31 in Canada: Hotel Arts Group in Calgary, The Canadian Brewhouse, Westerner Park in Red Deer,
+Kelowna airport hotels, an A&W franchisee...), leaving out staffing, nanny, clinic, school, dealer and
+government boards. The 803 Workday boards with Canadian jobs not on the list (the sweep's 535 plus the
+other lists' Canadian ones) were each searched once for hospitality words with Workday's OR search
+(one request a second, no rate limiting): only five real hospitality employers joined, so Canada's
+Workday employers were mostly found already. Workable's public job search (jobs.workable.com) matches
+words in descriptions, so its Canadian results were mostly noise. The list then had 1,287 read
+employers, 231 posting in Canada.
+
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
 search behind each board (the board's page shows only a few featured jobs); Workstream (Moxie's),

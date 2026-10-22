@@ -224,8 +224,8 @@ PROFESSIONS: dict[str, dict[str, Any]] = {
                 ("software and IT", r"re:\b(?:software|developers?|engineers?|engineering|architects?|architecture|SQL|"
                                     r"database|DevOps|cloud|network|infrastructure|hardware|CPU|GPU|Linux|Windows|"
                                     r"ServiceNow|onboarding|data|analytics|analysts?|(?-i:IT|AI|ML|IO))\b"),
-                ("computer servers", r"re:\bservers?\s+(?:administrat\w+|product\w*|side|platforms?|specialists?|support|"
-                                     r"technicians?)\b|\b(?:content|MID|application|web|compute)\s+servers?\b"),
+                ("computer servers", r"re:\bservers?\s+(?:field\s+)?(?:administrat\w+|product\w*|side|platforms?|specialists?|"
+                                     r"support|technicians?)\b|\b(?:content|MID|application|web|compute|computer\s*&)\s+servers?\b"),
                 ("medical and dental", r"re:\b(?:medical|dental|dentist|clinic|nurse|infirmi\w*|physician|pharmacy|"
                                        r"pharmacist|veterinary|optometry|disease|researcher|postdoctoral)\b"),
                 ("chef d'équipe, chef de projet",

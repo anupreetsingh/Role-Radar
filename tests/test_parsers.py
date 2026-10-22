@@ -860,3 +860,19 @@ def test_recruitee_lists_every_offer_with_its_description():
                                                              "Toronto, ON, Canada; Louisville, KY, United States")
     assert server.extra["description"] == "<p>Serve guests.</p><p>1 year serving</p>" and server.date_posted == date(2026, 9, 14)
     assert (chef.location, chef.url) == ("Banff, AB, Canada", "https://bar.recruitee.com/o/chef")
+
+
+def test_jazzhr_reads_every_job_with_its_place_and_team():
+    page = """<ul class="list-group"><li class="list-group-item">
+      <h3 class='list-group-item-heading'><a href="https://aw.applytojob.com/apply/9NArJAGO9k/Cashier">
+          Cashier   </a></h3>
+      <ul class='list-inline list-group-item-text'><li><i class='fa fa-map-marker'></i>100 Mile House, BC, Canada</li>
+          <li><i class='fa fa-sitemap'></i>100 Mile House</li></ul></li>
+      <li class="list-group-item"><h3 class='list-group-item-heading'>
+          <a href="https://aw.applytojob.com/apply/srR1GG6TNI/Line-Cook">Line Cook &amp; Prep</a></h3>
+      <ul class='list-inline list-group-item-text'><li><i class='fa fa-map-marker'></i>Calgary, AB, Canada</li></ul></li></ul>"""
+    cashier, cook = scrape("jazzhr", "https://aw.applytojob.com/apply", {"/apply": page}).jobs
+    assert (cashier.job_id, cashier.title, cashier.location, cashier.department) == (
+        "9NArJAGO9k", "Cashier", "100 Mile House, BC, Canada", "100 Mile House")
+    assert (cook.title, cook.location, cook.department) == ("Line Cook & Prep", "Calgary, AB, Canada", None)
+    assert cook.url == "https://aw.applytojob.com/apply/srR1GG6TNI/Line-Cook"

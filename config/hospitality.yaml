@@ -29,6 +29,16 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: A&W Restaurants
+    url: https://mcmurraygroupofcompanies.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: A. Duda & Sons
+    url: https://adudasonsinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: ABM US
     url: https://eiqg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -87,6 +97,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Advanced Hospitality
+    url: https://mcinnis.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Advanced MedAesthetic Partners
     url: https://ats.rippling.com/advanced-medaesthetic-partners-inc/jobs
     ats: rippling
@@ -143,6 +158,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Aldenberg Hotel
+    url: https://sbghospitalityllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Alex Lee
     url: https://careers-lowesfoods.icims.com/jobs/search
     ats: icims
@@ -176,6 +196,11 @@ companies:
     countries: [AU]
     options:
       max_jobs: 200
+
+  - name: American Baptist Homes of the Midwest
+    url: https://americanbaptisthomes.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: American House Senior Living
     url: https://careers-americanhouse.icims.com/jobs/search
@@ -255,6 +280,16 @@ companies:
     ats: successfactors
     countries: [US, CA, AU, IN]
 
+  - name: Arc Herkimer
+    url: https://archerkimer.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Archetype Strategy
+    url: https://archetypestrategy.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Aritzia
     url: https://aritzia.wd3.myworkdayjobs.com/External
     ats: workday
@@ -272,6 +307,11 @@ companies:
   - name: Arlington County VA
     url: https://fa-exkk-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: ARTECHOUSE
+    url: https://artechouse.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Arterra Wines Canada
@@ -303,10 +343,20 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Ashbrook Hotel & Restaurant
+    url: https://theashbrookhotelrestaurant.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Ashton
     url: https://careers-ashton.icims.com/jobs/search
     ats: icims
     countries: [US, CA]
+
+  - name: Aspen Hospitality Group
+    url: https://ahg.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Aspen Skiing Company
     url: https://careers.smartrecruiters.com/aspenskiingcompany
@@ -321,6 +371,11 @@ companies:
   - name: Associated Students Inc., CSUF (Candidateportal)
     url: https://jobs.dayforcehcm.com/asicsuf/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: AT&T Hotel & Conference Center
+    url: https://atthotelconferencecenter.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: ATCO
@@ -433,9 +488,19 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: B Hospitality
+    url: https://butler.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Bahs
     url: https://jobs-bahs.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Baker Distributing
+    url: https://bakerdistributing.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Banff Caribou Properties
@@ -470,6 +535,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Bath Concepts Independent Dealers
+    url: https://bciacrylic.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Baystate Health
     url: https://baystatehealth.wd12.myworkdayjobs.com/External_Careers
     ats: workday
@@ -487,6 +557,11 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: BeachWalk Vacations
+    url: https://beachwalkvacations.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Beemok Hospitality Holdings
     url: https://beemok.wd5.myworkdayjobs.com/BHC_Careers
     ats: workday
@@ -497,6 +572,11 @@ companies:
   - name: Benchmark Senior Living
     url: https://jobs.dayforcehcm.com/benchmark/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Bern's Steak House
+    url: https://bernssteakhouse.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Berwick
@@ -540,9 +620,19 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Big Bear Retreat Center
+    url: https://bigbearretreat.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Billingsleycareers
     url: https://ats.rippling.com/billingsleycareers/jobs
     ats: rippling
+    countries: [US]
+
+  - name: Birchwood Inn Partners, LLLP
+    url: https://birchwoodinnpartnersllp.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Black Fodder Coffee Co
@@ -571,6 +661,16 @@ companies:
     countries: [CA]
     options:
       max_jobs: 200
+
+  - name: Bluegrass Hospitality Group
+    url: https://bluegrasshospitalitygroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Bluegrass Specialty Foods, Inc. dba, Zaxby’s
+    url: https://bluegrassspecialtyfoodsincdbazaxbys.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Bluegreen Vacations Corporation
     url: https://jobs.dayforcehcm.com/bluegreen/CANDIDATEPORTAL
@@ -616,6 +716,11 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Bowland, HeadPinz & FastTrax
+    url: https://bowlandheadpinzfasttrax.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Boys Town
     url: https://boystown.wd1.myworkdayjobs.com/boystowncareers
     ats: workday
@@ -636,6 +741,16 @@ companies:
   - name: Bradley Center
     url: https://apply.workable.com/thebradleycenter/
     ats: workable
+    countries: [US]
+
+  - name: Branch & Bird
+    url: https://branchbird.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Brar Brothers Cafe
+    url: https://brarbrotherscafellc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Breaking Ground
@@ -749,6 +864,16 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Bungalow Hospitality Group
+    url: https://thebungalowhuntingtonbeach.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Burmen
+    url: https://burmeninc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: C.H. Guenther
     url: https://chg.wd5.myworkdayjobs.com/US_External_Career_Site
     ats: workday
@@ -788,6 +913,11 @@ companies:
     ats: adp
     countries: [CA]
 
+  - name: Call Your Mother Deli
+    url: https://callyourmotherdeli.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Caloundra RSL
     url: https://jobs.dayforcehcm.com/en-AU/caloundrarsl/CANDIDATEPORTAL
     ats: dayforce
@@ -810,15 +940,55 @@ companies:
     options:
       max_jobs: 200
 
+  - name: CAMBA
+    url: https://camba.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Cambria Hotel Lake Placid
+    url: https://cambriahotellakeplacid.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Canada's National Ballet School
+    url: https://canadasnationalballetschool.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Canadian Brewhouse
+    url: https://thecanadianbrewhouse.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: cancel
+    url: https://ecimanagementgroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Canyon County
     url: https://jobs.dayforcehcm.com/canyoncounty/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Capilano Group
+    url: https://capilanogroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Capital City Club
+    url: https://capitalcityclub.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Capitol View Transitional Care Center
     url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/capitol-view-transitional-care-center/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Care Group
+    url: https://thecaregroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
 
   - name: Care Initiatives
     url: https://jobs.dayforcehcm.com/cwu/CAREINITIATIVESCAREERS
@@ -846,6 +1016,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: CARMELO'S Restaurant
+    url: https://carmelosrestaurantllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Carmen's Group
+    url: https://carmensgroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
 
   - name: Carnival
     url: https://eicl.fa.em5.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_4001/jobs
@@ -877,6 +1057,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Cassia
+    url: https://cassia.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Catch
     url: https://apply.workable.com/the-catch/
     ats: workable
@@ -893,6 +1078,11 @@ companies:
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: Cedar Court Services
+    url: https://cedarcourt.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Center for Strategic and International Studies
     url: https://job-boards.greenhouse.io/centerforstrategicandinternationalstudiesinc
@@ -931,9 +1121,24 @@ companies:
     ats: smartrecruiters
     countries: [CA]
 
+  - name: Challenge Unlimited
+    url: https://challengeunlimitedinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Champions Club Texas
     url: https://job-boards.greenhouse.io/championsclubtexas
     ats: greenhouse
+    countries: [US]
+
+  - name: Charlotte City Club
+    url: https://charlottecityclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Charlotte's Coffee House
+    url: https://charlottescoffeehouse.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Chartwell Retirement Residences
@@ -949,6 +1154,11 @@ companies:
   - name: Cherry Creek
     url: https://enmv.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2001/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Chick-fil-A North Druid Hills
+    url: https://chickfilanorthdruidhills.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Chicopee
@@ -978,6 +1188,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Choices Market
+    url: https://choicesmarkets.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: CHOP Steakhouse & Bar
     url: https://jobs.dayforcehcm.com/northlandproperties/CHOPSTEAKHOUSEBAR
     ats: dayforce
@@ -1000,6 +1215,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Ciela Senior Living
+    url: https://cielaseniorliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Cima Senior Living
+    url: https://cimaseniorliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Cinemark
     url: https://cinemark.wd1.myworkdayjobs.com/cinemark
     ats: workday
@@ -1014,12 +1239,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Cipriani
+    url: https://cipriani.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Circle K
     url: https://circlek.wd3.myworkdayjobs.com/circlekstorejobs
     ats: workday
     countries: [US, CA, IN]
     options:
       max_jobs: 200
+
+  - name: City Donut
+    url: https://citydonut.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Civeo
     url: https://fa-esyi-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
@@ -1104,6 +1339,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Commonwealth Joe Coffee Roasters
+    url: https://commonwealthjoecoffeeroasters.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Community Action Partnership of San Luis Obispo County, Inc.
     url: https://jobs.dayforcehcm.com/capslo/CANDIDATEPORTAL
     ats: dayforce
@@ -1112,6 +1352,11 @@ companies:
   - name: Community FoodBank of New Jersey
     url: https://apply.workable.com/community-foodbank-of-new-jersey/
     ats: workable
+    countries: [US]
+
+  - name: Community Forward SF
+    url: https://communityforwardsf.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Community Memorial Hospital
@@ -1248,6 +1493,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Cotton Patch
+    url: https://thecottonpatch1.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Country Inn & Suites by Radisson, Bothell
     url: https://choicehotels.wd5.myworkdayjobs.com/HotelExternal
     ats: workday
@@ -1263,6 +1513,11 @@ companies:
   - name: County of Elgin
     url: https://jobs.dayforcehcm.com/elgincounty/CANDIDATEPORTAL
     ats: dayforce
+    countries: [CA]
+
+  - name: County of Essex
+    url: https://countyofessex.applytojob.com/apply
+    ats: jazzhr
     countries: [CA]
 
   - name: County of Marathon
@@ -1376,6 +1631,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: DaySpring Services
+    url: https://dayspringserves.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: DCH Health Care Authority
     url: https://careers-dchsystem.icims.com/jobs/search
     ats: icims
@@ -1413,6 +1673,11 @@ companies:
   - name: Desert Parkway Behavioral Healthcare Hospital
     url: https://apply.workable.com/desert-parkway/
     ats: workable
+    countries: [US]
+
+  - name: Desert Sky Services
+    url: https://desertskyservicesllc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Devereux
@@ -1467,6 +1732,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Dolce Bakery
+    url: https://dolcebakery.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Dole Packaged Foods
     url: https://careers-dole.icims.com/jobs/search
     ats: icims
@@ -1505,6 +1775,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Dough Zone USA
+    url: https://doughzoneusa.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Downer
     url: https://fa-exfs-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_2/jobs
@@ -1566,10 +1841,20 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Eagle Creek Brewing Company
+    url: https://eaglecreek.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Earls Kitchen + Bar
     url: https://earls.ca/careers/
     platform: custom
     enabled: false
+
+  - name: Earth AND Sugar
+    url: https://earthandsugarllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: East Bank Club
     url: https://apply.workable.com/east-bank-club/
@@ -1627,10 +1912,20 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Eldorado Resort
+    url: https://eldoradoresort.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: Elephant & Castle
     url: https://jobs.dayforcehcm.com/recipe/ELEPHANTANDCASTLECAREERS
     ats: dayforce
     countries: [CA]
+
+  - name: Elite Sports Clubs
+    url: https://elitesportsclubs.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Elvis Presley Enterprises
     url: https://jobs.dayforcehcm.com/epeinc/CANDIDATEPORTAL
@@ -1649,6 +1944,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Ember Korean BBQ
+    url: https://emberkoreanbbq.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Emily Program
     url: https://job-boards.greenhouse.io/the858emily123program
     ats: greenhouse
@@ -1662,6 +1962,11 @@ companies:
   - name: Englewood
     url: https://careers-englewood.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: English TEA Room L L C
+    url: https://theenglishtearoomllc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Ensemble Hospitality
@@ -1729,6 +2034,21 @@ companies:
     ats: dayforce
     countries: [AU]
 
+  - name: EW Grobbel
+    url: https://ewgrobbelsons.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Excellence Services
+    url: https://excellenceservices.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Executive Aviation
+    url: https://executiveaviation.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: Experience Senior Living
     url: https://apply.workable.com/experience-sl-co/
     ats: workable
@@ -1761,6 +2081,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Family Service Rochester
+    url: https://familyservicerochester.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Fanatics Inc.
     url: https://job-boards.greenhouse.io/fanaticsinc
     ats: greenhouse
@@ -1769,6 +2094,11 @@ companies:
   - name: FDLC
     url: https://fa-evcm-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Feather Falls Casino
+    url: https://featherfallscasino.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Fedcap Group
@@ -1780,6 +2110,11 @@ companies:
     url: https://job-boards.eu.greenhouse.io/fenniesdaynurseries
     ats: greenhouse
     countries: [US, CA]
+
+  - name: Ferri Land Company
+    url: https://ferrienterprises.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Festival Fun Parks
     url: https://hfecorp.wd503.myworkdayjobs.com/palace_jobs
@@ -1815,6 +2150,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Flatrock Motorclub
+    url: https://flatrockmotorclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Flexjet
     url: https://flexjet.hrmdirect.com/employment/job-openings.php?search=true&cust_sort1=196974
     ats: hrmdirect
@@ -1823,6 +2163,11 @@ companies:
   - name: FMOL Health
     url: https://eqtm.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Focus DC
+    url: https://focusdcllc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Foley Entertainment Group LLC
@@ -1885,12 +2230,27 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Four Corners
+    url: https://fourcornerstaverngroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Four Points by Sheraton Kelowna Airport
+    url: https://fourpointskelownaairport.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: FOX
     url: https://fox.wd1.myworkdayjobs.com/Domestic
     ats: workday
     countries: [US, AU, IN]
     options:
       max_jobs: 200
+
+  - name: Fox Hill Club
+    url: https://foxhillclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Fran's ExploreMore Travel
     url: https://apply.workable.com/exploremore-with-fran/
@@ -1900,6 +2260,11 @@ companies:
   - name: Frank Residences
     url: https://job-boards.greenhouse.io/frankresidences
     ats: greenhouse
+    countries: [US]
+
+  - name: Free Fenix Salata Uptown
+    url: https://freefenixsalatauptownllc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Freeport-McMoRan
@@ -1926,14 +2291,39 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Frick Museums and Art of Pittsburgh
+    url: https://thefrickpittsburgh.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Friendship Retirement Community
     url: https://jobs.dayforcehcm.com/frc/CANDIDATEPORTAL
     ats: dayforce
     countries: [US]
 
+  - name: Frothy Monkey
+    url: https://frothymonkey.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: FSA SBU
     url: https://jobs.dayforcehcm.com/fsasbu/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Fuddruckers & Tropical Smoothie
+    url: https://fuddruckersvirginiabeach.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Furnished Quarters
+    url: https://furnishedquarters.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Future Bars Group
+    url: https://futurebars.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Gables Residential Services
@@ -1942,6 +2332,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Gallery Residential
+    url: https://galleryresidential.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Gap International
     url: https://job-boards.greenhouse.io/gapinternational
@@ -1965,6 +2360,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Gathering Spot
+    url: https://thegatheringspot.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Geeks on Site
     url: https://apply.workable.com/geeks-on-site/
     ats: workable
@@ -1981,6 +2381,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Gene Juarez Salons & Spas
+    url: https://genejuarezsalonsspas.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Genesis Global Group
     url: https://jobs.dayforcehcm.com/ggg/GENESISGLOBALGROUPCLIENTCAREERSITE
@@ -2007,9 +2412,24 @@ companies:
     platform: ukg
     enabled: false
 
+  - name: Ghirardelli Chocolate Company
+    url: https://ghirardelli.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Ghiringhellis Pizzeria
+    url: https://ghiringhellispizzeria.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Gibson Dunn
     url: https://job-boards.greenhouse.io/gibsondunn
     ats: greenhouse
+    countries: [US]
+
+  - name: Girl Scouts of Silver Sage
+    url: https://girlscoutsofsilversage.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Glens Falls Hospital
@@ -2064,10 +2484,20 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Goodworks Unlimited
+    url: https://goodworksunlimited.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Government of Nunavut
     url: https://fa-exux-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_5/jobs
     ats: oracle_hcm
     countries: [CA]
+
+  - name: Grace Federal Solutions
+    url: https://gracefederalsolutionsllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Grand Canyon University
     url: https://gcu.wd1.myworkdayjobs.com/GCU
@@ -2125,9 +2555,34 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Greater East Texas Community Action
+    url: https://greatereasttexascommunityaction.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Greater Philadelphia YMCA
     url: https://jobs.dayforcehcm.com/philaymca/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Green Lea Senior Living
+    url: https://greenleaseniorliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Green Tea Sushi-Pho
+    url: https://greenteasushipho.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Green Technology Group
+    url: https://thegreentechnologygroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Greenbrier Golf & Country Club
+    url: https://greenbriergolfcountryclub.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Grey County
@@ -2140,6 +2595,18 @@ companies:
     platform: njoyn
     enabled: false
 
+  - name: Greystar Management Services
+    url: https://greystar.wd1.myworkdayjobs.com/external
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
+  - name: Groovy Goat
+    url: https://sunshinesy1llc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Groupe CH
     url: https://jobs.dayforcehcm.com/fr-CA/groupech/CANDIDATEPORTAL
     ats: dayforce
@@ -2149,6 +2616,11 @@ companies:
     url: https://jobs.dayforcehcm.com/northlandproperties/GROUSEMOUNTAIN
     ats: dayforce
     countries: [CA]
+
+  - name: Grown Folks Social Club
+    url: https://grownfolkssocialclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Guest Services
     url: https://guestservices.wd5.myworkdayjobs.com/gsi
@@ -2184,6 +2656,11 @@ companies:
     ats: workable
     countries: [US, CA, AU, IN]
 
+  - name: Haliburton International
+    url: https://haliburtoninternational.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Halifax Hospice
     url: https://halifaxhealth.wd12.myworkdayjobs.com/HalifaxHealth
     ats: workday
@@ -2206,6 +2683,41 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Hampton Inn & Suites by Hilton Kelowna Airport
+    url: https://hamptoninnsuiteskelownaairport.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Hampton Inn & Suites Port St. Lucie
+    url: https://hamptoninnsuitesportstlucie.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Hampton Inn Albany
+    url: https://hamptoninnalbany.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Hampton Inn Jupiter/Juno Beach
+    url: https://hilton.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Hampton Inn Titusville/I-95 Kennedy Space Center
+    url: https://hamptoninntitusvillei95kennedyspacecenter.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: HANAC
+    url: https://hanac.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Happy Camper
+    url: https://happycamper.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Harlem Children's Zone
     url: https://apply.workable.com/harlem-childrens-zone/
     ats: workable
@@ -2226,10 +2738,20 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Harry Meyering Center
+    url: https://harrymeyering.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Harvey's
     url: https://jobs.dayforcehcm.com/recipe/HARVEYSCAREERS
     ats: dayforce
     countries: [CA]
+
+  - name: HASC Center
+    url: https://hasccenter.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: HCPS
     url: https://fa-exea-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
@@ -2258,6 +2780,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Hearts and Hands of Care
+    url: https://hahoc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Hebrew Rehabilitation Center
     url: https://hebrewseniorlife.wd501.myworkdayjobs.com/HebrewSeniorLifeCareers
     ats: workday
@@ -2269,6 +2796,11 @@ companies:
     url: https://job-boards.greenhouse.io/hellofresh
     ats: greenhouse
     countries: [US, CA, AU]
+
+  - name: Hen & Egg-Jackson
+    url: https://heneggjacksonllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Henry Ford Health
     url: https://careers.smartrecruiters.com/henryfordhealth1
@@ -2332,9 +2864,24 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Holiday Inn Express, Plattsburgh
+    url: https://holidayinnexpressplattsburgh.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Home Chef
     url: https://job-boards.greenhouse.io/homechef
     ats: greenhouse
+    countries: [US]
+
+  - name: Home2 Suites by Hilton Fort St. John
+    url: https://home2suitesfortstjohn.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Home2 Suites, Queensbury
+    url: https://home2suitesqueensbury.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: HOMES
@@ -2357,6 +2904,11 @@ companies:
   - name: Homeview
     url: https://careers-homeview.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Homewood Suites, Schenectady
+    url: https://homewoodsuitesschenectady.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Hormel Foods Family of Companies
@@ -2384,6 +2936,16 @@ companies:
   - name: Hospitality Training Centers
     url: https://apply.workable.com/uhesf/
     ats: workable
+    countries: [US]
+
+  - name: Hotel Arts Group
+    url: https://hotelartsgroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Hotel Mission de Oro
+    url: https://hotelmissiondeoro.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Hotels and Resorts of Halekulani
@@ -2424,6 +2986,11 @@ companies:
   - name: Human Resources Team (Candidateportal)
     url: https://jobs.dayforcehcm.com/prh/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Hume Christian Camps
+    url: https://humechristiancamp.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: HUNGRY Marketplace
@@ -2470,6 +3037,11 @@ companies:
     ats: lever
     countries: [US, CA]
 
+  - name: Impact Kitchen
+    url: https://impactkitchen.applytojob.com/apply
+    ats: jazzhr
+    countries: [US, CA]
+
   - name: Information Technology
     url: https://careers-slco.icims.com/jobs/search
     ats: icims
@@ -2479,6 +3051,11 @@ companies:
     url: https://jobs.dayforcehcm.com/en-AU/ingenia/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
+
+  - name: Ingleside
+    url: https://ingleside.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Innisfree Hotels
     url: https://innisfree.wd5.myworkdayjobs.com/Innisfree
@@ -2502,6 +3079,11 @@ companies:
   - name: Inspira Health
     url: https://ernh.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Inspiration
+    url: https://inspirationcorporation.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: INTEGRIS Health
@@ -2557,6 +3139,13 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Irving Energy
+    url: https://irvingoil.wd3.myworkdayjobs.com/iolcareers_allotherpositions
+    ats: workday
+    countries: [US, CA]
+    options:
+      max_jobs: 200
+
   - name: It's a Secret Med Spa
     url: https://ats.rippling.com/ias-careers/jobs
     ats: rippling
@@ -2584,9 +3173,24 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Jackson Services
+    url: https://jacksonservicesinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Jacksons Companies
     url: https://jobs.dayforcehcm.com/jacksons/EXTRAMILE
     ats: dayforce
+    countries: [US]
+
+  - name: Jake's Unlimited
+    url: https://jakesunlimited.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: JO Restaurant Group
+    url: https://677tablesinc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Joe & the Juice / United States
@@ -2598,6 +3202,16 @@ companies:
     url: https://apply.workable.com/joey-restaurants-1/
     ats: workable
     countries: [CA]
+
+  - name: Joffrey's Coffee & Tea Company
+    url: https://joffreyscoffeeandtea.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: John Knox Manor
+    url: https://johnknoxmanor.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Johns Hopkins Medicine Intrastaff
     url: https://careers-intrastaff.icims.com/jobs/search
@@ -2723,6 +3337,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: LaBelle Winery
+    url: https://labellewinery.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Ladybird Grove & Mess Hall
     url: https://ats.rippling.com/ladybird/jobs
     ats: rippling
@@ -2737,6 +3356,11 @@ companies:
     url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=fcb2267e-267d-4be2-8138-f6ce889a61db&ccId=19000101_000001&lang=en_CA
     ats: adp
     countries: [CA]
+
+  - name: Lakeshore Sport & Fitness
+    url: https://lakeshoresportandfitness.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Lakeview Hospital
     url: https://fa-etnv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/lakeview-hospital/jobs
@@ -2757,6 +3381,11 @@ companies:
     url: https://jobs.dayforcehcm.com/fr-CA/gm/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
+
+  - name: Leap Brands
+    url: https://leapbrands.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Learning Care Group
     url: https://ejql.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
@@ -2786,6 +3415,16 @@ companies:
   - name: Lettuce Entertain You Restaurants
     url: https://careers-leye.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Levante Living
+    url: https://levanteliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Levitate
+    url: https://levitatebrand.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Lewis County General Hospital
@@ -2836,6 +3475,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Little Hen
+    url: https://littlehen.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Live Nation Entertainment
     url: https://livenation.wd503.myworkdayjobs.com/LNExternalSite
@@ -2909,6 +3553,16 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Lucky's Gaming & Spirits
+    url: https://luckyslv.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Lula FAYE'S
+    url: https://lulafayesllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Luminis Health
     url: https://job-boards.greenhouse.io/luminishealth
     ats: greenhouse
@@ -2922,6 +3576,21 @@ companies:
   - name: Luna's Tacos & Tequila
     url: https://ats.rippling.com/lunastacos/jobs
     ats: rippling
+    countries: [US]
+
+  - name: Lund
+    url: https://lundvt.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Lutheran Home
+    url: https://lutheranhomecape.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Lutheran Life Communities
+    url: https://lutheranlifecommunities.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: LV Collective
@@ -2947,6 +3616,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Lyons HR
+    url: https://lyonshrllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Mackenzie Health
     url: https://employment-mackenziehealth.icims.com/jobs/search
@@ -2997,6 +3671,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Mane & Mani
+    url: https://stylesavantsllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Manny's Parkside
+    url: https://mannysparkside.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Maple Leaf Sports & Entertainment Partnership (MLSE)
     url: https://mlse.wd3.myworkdayjobs.com/MLSE
     ats: workday
@@ -3026,6 +3710,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Martis Camp
+    url: https://martiscamp.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Maryland Assisted Living & Skilled Nursing Communities
     url: https://careers-lorienhealth.icims.com/jobs/search
     ats: icims
@@ -3042,6 +3731,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Master Concessionair
+    url: https://mcaairports.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Mather in Evanston
     url: https://job-boards.greenhouse.io/thematherevanston
@@ -3073,6 +3767,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: McKinley Homes
+    url: https://mckinleyhomes.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: MCR
     url: https://jobs.dayforcehcm.com/mcr/CANDIDATEPORTAL
     ats: dayforce
@@ -3096,6 +3795,11 @@ companies:
     url: https://jobs.dayforcehcm.com/en-AU/mercycare/MCCAREERSSITE
     ats: dayforce
     countries: [AU]
+
+  - name: Merkin Vineyards
+    url: https://merkinvineyards.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Mesquite Gaming Employment Center
     url: https://jobs.dayforcehcm.com/mesquitegaming/CANDIDATEPORTAL
@@ -3161,12 +3865,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Midwest Skiing Company
+    url: https://midwestskiingcompanyllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Miele US (VG USA)
     url: https://miele.wd3.myworkdayjobs.com/miele-jobs
     ats: workday
     countries: [US, CA]
     options:
       max_jobs: 200
+
+  - name: MIKA Coral Gables
+    url: https://mikacoralgables.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Mike Wiegele Helicopter Skiing
     url: https://alterra.wd1.myworkdayjobs.com/MikeWiegeleHelicopterSkiing
@@ -3175,15 +3889,30 @@ companies:
     options:
       max_jobs: 200
 
+  - name: MileHigh Adjusters Houston
+    url: https://milehighadjustershoustoninc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Miller's Ale House
     url: https://management-millersalehouse.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Mint Cannabis
+    url: https://themintdispensary.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Minto
     url: https://fa-erjt-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_3001/jobs
     ats: oracle_hcm
     countries: [US, CA]
+
+  - name: Missions Inc Programs
+    url: https://missionsinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Mister Car Wash
     url: https://jobs.dayforcehcm.com/mcw/CANDIDATEPORTAL
@@ -3196,6 +3925,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Mollie Stone's Markets
+    url: https://molliestones.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Moments
+    url: https://themoments.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Monarch Communities
     url: https://careers.smartrecruiters.com/monarchcommunities
@@ -3221,14 +3960,34 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Moonrise Hotel
+    url: https://moonrisehotel.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Moore Ventures
+    url: https://mooreventuresllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Morgan's Early Learning Centers
     url: https://job-boards.greenhouse.io/morgans
     ats: greenhouse
     countries: [US]
 
+  - name: MorningStar Mission
+    url: https://morningstarmission.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Moss New York
     url: https://job-boards.greenhouse.io/mossnewyorkllc
     ats: greenhouse
+    countries: [US]
+
+  - name: Mott 32 Vegas Management
+    url: https://mott32vegasmanagement.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Mount Nittany Health
@@ -3256,6 +4015,11 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Mr C Coconut Grove
+    url: https://mrccoconutgrove.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: MSL Community Management
     url: https://mbk.wd5.myworkdayjobs.com/MSLCareers
     ats: workday
@@ -3266,6 +4030,11 @@ companies:
   - name: Mt. Hood Meadows
     url: https://jobs.dayforcehcm.com/meadows/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Mt. Olympus Water & Theme Park Resort
+    url: https://mtolympus.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: MTC
@@ -3299,6 +4068,11 @@ companies:
     url: https://careers.smartrecruiters.com/mynrma
     ats: smartrecruiters
     countries: [AU]
+
+  - name: N & G Restaurant Group, LLC dba 21North
+    url: https://ngrestaurantgroupllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Naked Farmer
     url: https://job-boards.greenhouse.io/nakedfarmer
@@ -3346,6 +4120,26 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Natural Retreats
+    url: https://naturalretreats.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Naturally Pacific Resort
+    url: https://naturallypacificresort.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Nature's Fare Markets
+    url: https://naturesfaremarkets.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Nature's Way
+    url: https://naturesway.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Navigators
     url: https://navigators.wd1.myworkdayjobs.com/External
     ats: workday
@@ -3358,10 +4152,25 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Nebraska Crossing
+    url: https://nebraskacrossing.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Neighbourly Pharmacy
     url: https://jobs.dayforcehcm.com/loder/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
+
+  - name: Neutral Ground Bistreaux
+    url: https://neutralgroundbistreauxllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: New Jersey Association on Correction
+    url: https://newjerseyassociationoncorrection.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: New Life Ranch
     url: https://ats.rippling.com/new-life-ranch/jobs
@@ -3390,6 +4199,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Ninfa's
+    url: https://ninfas.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Nobu Hotel Toronto
     url: https://job-boards.greenhouse.io/nobuhoteltoronto
     ats: greenhouse
@@ -3415,6 +4229,11 @@ companies:
   - name: North Point Hospitality
     url: https://ats.rippling.com/north-point-hospitality/jobs
     ats: rippling
+    countries: [US]
+
+  - name: North Star Maintenance Group
+    url: https://northstarmaintenancegroup.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Northbay
@@ -3456,14 +4275,29 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Notshyyy Maids
+    url: https://notshyyymaidsllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Nph
     url: https://careers-nph.icims.com/jobs/search
     ats: icims
     countries: [US]
 
+  - name: NU3S
+    url: https://nu3s.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: NYC Government
     url: https://careers.smartrecruiters.com/cityofnewyork
     ats: smartrecruiters
+    countries: [US]
+
+  - name: O'Hare Concessions
+    url: https://unisonmgmt.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: O2B Early Education
@@ -3508,6 +4342,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: OGS Restaurant
+    url: https://ogsrestaurant.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Ohio State University
     url: https://osu.wd1.myworkdayjobs.com/OSUCareers
     ats: workday
@@ -3525,6 +4364,16 @@ companies:
   - name: Oki Golf
     url: https://jobs.dayforcehcm.com/okigolf/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: Oklahoma Department of Mental Health and Substance Abuse Services
+    url: https://odmhsas.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Oklahoma Office of Juvenile Affairs
+    url: https://oja.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Olathe Public Schools
@@ -3557,12 +4406,22 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: One Duck Hospitality Group
+    url: https://oneduckhospitalitygroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: One Lifestyle
     url: https://lifestylecommunities.wd1.myworkdayjobs.com/Lifestyle_Communities_Careers
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: OneSpaWorld
+    url: https://osw.applytojob.com/apply
+    ats: jazzhr
+    countries: [US, CA, AU, IN]
 
   - name: Onni Properties
     url: https://onni.wd10.myworkdayjobs.com/Onni_External_Careers
@@ -3586,6 +4445,11 @@ companies:
     ats: dayforce
     countries: [AU]
 
+  - name: Optima
+    url: https://optimainc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Optima Living
     url: https://jobs.dayforcehcm.com/optimaliving/JOINUS
     ats: dayforce
@@ -3594,6 +4458,16 @@ companies:
   - name: Orange County Public Schools
     url: https://administrators-ocps.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Original X Productions
+    url: https://ogx.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Oshman Family JCC
+    url: https://oshmanfamilyjcc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: OSU Medical Center
@@ -3621,9 +4495,19 @@ companies:
     ats: dayforce
     countries: [AU]
 
+  - name: Otter Co-op
+    url: https://ottercoop.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: Otterbein SeniorLife
     url: https://job-boards.greenhouse.io/otterbein
     ats: greenhouse
+    countries: [US]
+
+  - name: Our Saviour's Community Services
+    url: https://oursaviourscommunityservices.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Outpost Natural Foods
@@ -3652,6 +4536,11 @@ companies:
     url: https://apply.workable.com/pacifica-housing/
     ats: workable
     countries: [CA]
+
+  - name: PACS Pennyrile Allied Community Services
+    url: https://pacspennyrilealliedcommunityservices.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Padel Haus
     url: https://ats.rippling.com/padel-haus/jobs
@@ -3692,6 +4581,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Park Place Seniors Living
+    url: https://parkplaceseniorsliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: Parker
     url: https://elje.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
@@ -3711,6 +4605,13 @@ companies:
     url: https://huntingtonhospital.wd5.myworkdayjobs.com/HuntingtonHospitalCareers
     ats: workday
     countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Patagonia
+    url: https://patagonia.wd503.myworkdayjobs.com/PWCareers
+    ats: workday
+    countries: [US, CA]
     options:
       max_jobs: 200
 
@@ -3745,9 +4646,34 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Penticton and District Society for Community Living
+    url: https://pdscl.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: People Serving People
+    url: https://peopleservingpeople.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Peraton
     url: https://careers-peraton.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Peregrine Team
+    url: https://peregrineteam.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Perkins Management Services Company
+    url: https://perkinsusa.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Perlant
+    url: https://theperlant.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Perry Homes
@@ -3767,6 +4693,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Philadelphia Visitor Center
+    url: https://philadelphiavisitorcentercorporation.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Phillips Farms Employment
     url: https://ats.rippling.com/phillips-farms-employment/jobs
     ats: rippling
@@ -3775,6 +4706,16 @@ companies:
   - name: Philz Coffee
     url: https://job-boards.greenhouse.io/philzcoffeecareers
     ats: greenhouse
+    countries: [US]
+
+  - name: Piazza's Fine Foods
+    url: https://piazzasfinefoodsinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Picerne Real Estate Group
+    url: https://picerne.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Pilot Company
@@ -3801,10 +4742,25 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Piney Branch Golf Club
+    url: https://pineybranchgolfclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Pixie, Noodles, Big Apple Bagel, B404 and Boston's
+    url: https://inspiredconcepts.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Player 15 Group
     url: https://jobs.dayforcehcm.com/slp/CANDIDATEPORTAL
     ats: dayforce
     countries: [US]
+
+  - name: Playground
+    url: https://playground.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
 
   - name: Plumas District Hospital
     url: https://careers-pdh.icims.com/jobs/search
@@ -3824,6 +4780,11 @@ companies:
   - name: Polkcountysheriffsoffice
     url: https://careers-polkcountysheriffsoffice.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Ponca City Development Authority
+    url: https://poncaworks.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: PopStroke
@@ -3858,9 +4819,19 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Prestige Demo/NFR
+    url: https://prestigedemo.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Prime
     url: https://careers-primeinc.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Prime 55
+    url: https://prime55llc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Prime Healthcare
@@ -3905,6 +4876,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: PUT-IN-BAY Yacht Club
+    url: https://putinbayyachtclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Pyramid Foods
     url: https://hungryjacks.wd105.myworkdayjobs.com/HungryJacksCareers
     ats: workday
@@ -3924,9 +4900,24 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Quail Park
+    url: https://quailpark.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Quarryville Presbyterian Retirement Community
+    url: https://quarryvillepresbyterianretirementcommunity.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: R+L Carriers
     url: https://erhk.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Racine Country Club
+    url: https://racinecountryclub.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Radisson
@@ -3942,6 +4933,16 @@ companies:
   - name: Raley's Company
     url: https://fa-epss-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: RAM Partners
+    url: https://rampartners.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: RC Hospitality Solutions and 30A Escapes
+    url: https://rchospitalitysolutions.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Recipe Unlimited
@@ -4003,6 +5004,11 @@ companies:
   - name: Residential Treatment Center for Teen Girls (Ages 14-18)
     url: https://careers-newhaven.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Restaurant Gwendolyn
+    url: https://restaurantgwendolyn.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Revera
@@ -4073,12 +5079,27 @@ companies:
     ats: icims
     countries: [CA]
 
+  - name: RiverBridge Specialty Hospital
+    url: https://riverbridgespecialtyhospital.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Riverside Hospital
     url: https://rivhs.wd1.myworkdayjobs.com/Non-ProviderRHS
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Road Home
+    url: https://theroadhome.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Road Ranger
+    url: https://roadranger.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Roche Bros. Supermarkets
     url: https://careers-rochebros.icims.com/jobs/search
@@ -4090,9 +5111,29 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Rockwell Care
+    url: https://rockwellcare.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Rolfson Oil
+    url: https://rolfsonoil.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Rolling
     url: https://careers-rolling.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Ronald McDonald House Charities Greater Las Vegas
+    url: https://ronaldmcdonaldhousecharitiesgreaterlasvegas.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Ronald McDonald House New Mexico
+    url: https://ronaldmcdonaldhousecharitiesofnewmexico.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Roost
@@ -4132,6 +5173,16 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Saddle & Cycle Club
+    url: https://saddlecycleclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: SAGA Senior Living
+    url: https://sagaseniorliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Sage + Sound
     url: https://ats.rippling.com/sage-sound/jobs
     ats: rippling
@@ -4153,6 +5204,16 @@ companies:
     countries: [US, IN]
     options:
       max_jobs: 200
+
+  - name: Sally’s Apizza
+    url: https://sallysapizza.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Salted
+    url: https://saltedinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: SALTLIK
     url: https://apply.workable.com/saltlik/
@@ -4225,6 +5286,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Savory Selections
+    url: https://savoryselections.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Sbcos
     url: https://sbcos.wd1.myworkdayjobs.com/sbcos2
     ats: workday
@@ -4252,6 +5318,11 @@ companies:
   - name: Select Water Solutions
     url: https://jobs.dayforcehcm.com/select/POSCAREERSITE
     ats: dayforce
+    countries: [US]
+
+  - name: Selfie Rest
+    url: https://selfierest.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Seneca Niagara Falls Gaming
@@ -4298,14 +5369,29 @@ companies:
     options:
       max_jobs: 200
 
+  - name: SeoulSpice
+    url: https://seoulspice.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Servicon Systems
     url: https://apply-servicon.icims.com/jobs/search
     ats: icims
     countries: [US]
 
+  - name: Sewickley Heights Golf Club
+    url: https://sewickleyheightsgolfclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: SFO
     url: https://external-flysfo.icims.com/jobs/search
     ats: icims
+    countries: [US]
+
+  - name: Shady Nook Inn
+    url: https://shadynook.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Shake Shack
@@ -4340,6 +5426,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Sheltering Arms
+    url: https://getjob.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Shenandoah Valley Organic
     url: https://farmerfocus.wd5.myworkdayjobs.com/FarmerFocus
     ats: workday
@@ -4359,6 +5450,11 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Sherman Bier Haus
+    url: https://shermanbierhausllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Shirley Ryan AbilityLab
     url: https://sralab.wd1.myworkdayjobs.com/SRAlabCareers
     ats: workday
@@ -4372,6 +5468,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Shunk Gulley
+    url: https://gallions.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Shy Bird
+    url: https://shybird.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Siesta Suites
     url: https://jobs.dayforcehcm.com/en-CA/lcm/SIESTASUITESPOSTINGSITE
@@ -4395,9 +5501,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Silver Support Solutions
+    url: https://silversupportsolutionsllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Silverado
     url: https://job-boards.greenhouse.io/silverado
     ats: greenhouse
+    countries: [US]
+
+  - name: SilverCrest
+    url: https://silvercrest.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Simon Property Group
@@ -4423,6 +5539,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Ski Meadowlark
+    url: https://skimeadowlarkllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Skidmore
     url: https://eodq.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
@@ -4457,6 +5578,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Smooth Living
+    url: https://smoothliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Snowshoe Mountain
     url: https://alterra.wd1.myworkdayjobs.com/snowshoemountain
@@ -4509,10 +5635,20 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sorrel River Ranch
+    url: https://sorrelriverranch.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Southbridge Healthcare LP
     url: https://jobs.dayforcehcm.com/southbridge/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
+
+  - name: Southern Brew dba 7 Brew
+    url: https://7brewsouthern.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Southwest Mississippi Regional Medical Center
     url: https://fa-evlp-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
@@ -4556,6 +5692,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Springwell
+    url: https://springwell.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: SRC Texas Scottish Rite for Children
     url: https://src.wd1.myworkdayjobs.com/ScottishRiteforChildren
     ats: workday
@@ -4566,6 +5707,16 @@ companies:
   - name: SSA Group, LLC
     url: https://jobs.dayforcehcm.com/ssagroup/CANDIDATEPORTAL
     ats: dayforce
+    countries: [US]
+
+  - name: St Ives Country Club
+    url: https://stivescountryclub.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: ST Three
+    url: https://stthreellc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: St Vincent's Care Services
@@ -4638,6 +5789,11 @@ companies:
     options:
       location: ''
 
+  - name: Stars and Strikes
+    url: https://starsandstrikes.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: State & Main
     url: https://jobs.dayforcehcm.com/recipe/STATEANDMAINCAREERS
     ats: dayforce
@@ -4649,6 +5805,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: State of OK JD McCarty Center
+    url: https://stateofokjdmccartycenter.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Station Casinos
     url: https://ejfh.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Durango/jobs
@@ -4682,6 +5843,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Stonehenge Management
+    url: https://stonehengemanagement.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Stormont-Vail HealthCare
     url: https://stormontvail.wd1.myworkdayjobs.com/SVH
     ats: workday
@@ -4692,6 +5858,11 @@ companies:
   - name: Strategic HR Client
     url: https://job-boards.greenhouse.io/strategichr
     ats: greenhouse
+    countries: [US]
+
+  - name: Strategic Workforce Development
+    url: https://strategicworkforcedevelopmentinc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Stratford Festival
@@ -4706,12 +5877,27 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Stray Dog Bar & Grill
+    url: https://thestraydog.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Study Hotels
+    url: https://studyhotels.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Stumptown Coffee
     url: https://peets.wd12.myworkdayjobs.com/Stumptown
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Suburban Inns
+    url: https://suburbaninns.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Suffolkcountyny
     url: https://suffolkcountyny.wd1.myworkdayjobs.com/Suffolkcounty1
@@ -4720,6 +5906,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: SUGAR&SPICE Bake Shoppe
+    url: https://sugarspicebakeshoppe1.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Sugarbush Mountain Resort
     url: https://alterra.wd1.myworkdayjobs.com/SugarbushResort
     ats: workday
@@ -4727,9 +5918,19 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sun Nutraceuticals
+    url: https://sunnutraceuticals.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Sundae Artisan Ice Cream
     url: https://apply.workable.com/sundae/
     ats: workable
+    countries: [US]
+
+  - name: Sunny
+    url: https://thesunny.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Sunrise Senior Living Mgmt
@@ -4744,9 +5945,19 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Sunshine Cafe
+    url: https://sunshinecafewsp.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Sunshine House
     url: https://apply.workable.com/sunshine-house/
     ats: workable
+    countries: [US]
+
+  - name: Swamp Chicken Missouri City Bar & Restaurant
+    url: https://swampchickenmissouricitybarrestaurantllc1.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: sweetgreen
@@ -4786,6 +5997,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Tapestry Senior Living
+    url: https://tapestryseniorliving.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Target
     url: https://target.wd5.myworkdayjobs.com/targetcareers
     ats: workday
@@ -4799,6 +6015,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: tastebuds & suds
+    url: https://tastebudssuds.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Tazza D'oro
+    url: https://tazzadoro.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: TCS Transwestern Commercial Services, L.L.C
     url: https://transwestern.wd1.myworkdayjobs.com/TWCareers
@@ -4848,6 +6074,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Texas Hotel Management
+    url: https://texashotelmanagement9b.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: TFE Hotels / Adina Apartment Hotels
     url: https://jobs.dayforcehcm.com/en-AU/tfehotels/CANDIDATEPORTAL
     ats: dayforce
@@ -4862,6 +6093,11 @@ companies:
     url: https://jobs.dayforcehcm.com/en-AU/tfehotels/HANNAHSTCANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
+
+  - name: TGiS Catering Services
+    url: https://tgiscateringservicesinc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: The Associated and its Agencies
     url: https://jobs.dayforcehcm.com/associated/PEARLCANDIDPORTAL
@@ -4967,6 +6203,16 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Thind Management
+    url: https://thindmanagement.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Tillie's Restaurant
+    url: https://tilliesrestaurant.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Tilray Brands
     url: https://tilray.wd3.myworkdayjobs.com/Tilray
     ats: workday
@@ -4986,6 +6232,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: TL verma
+    url: https://tlvermacorporation.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Tlingit Haida Tribal Business
     url: https://job-boards.greenhouse.io/thtbc
     ats: greenhouse
@@ -5002,6 +6253,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Tobias Solutions
+    url: https://teamtobiasllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Tommy Bahama Group
     url: https://oxford.wd5.myworkdayjobs.com/TommyBahamaUS
@@ -5033,6 +6289,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: TopView Sightseeing
+    url: https://topviewsightseeing.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Touchmark
     url: https://jobs.dayforcehcm.com/tlc/CANDIDATEPORTAL
@@ -5068,6 +6329,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Traders Village
+    url: https://jcpaceltdtradersvillage.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Transat
     url: https://careers.smartrecruiters.com/transatat1
     ats: smartrecruiters
@@ -5094,6 +6360,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Tres LA Group
+    url: https://treslagroup.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Triangle Stop
+    url: https://legacymarketsllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Tricoci University
     url: https://apply.workable.com/tricoci-university/
     ats: workable
@@ -5104,10 +6380,20 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Tru by Hilton Port St. Lucie
+    url: https://trubyhiltonportstlucie.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: True Food Kitchen
     url: https://jobs.dayforcehcm.com/truefood/CANDIDATEPORTAL
     ats: dayforce
     countries: [US]
+
+  - name: Trusted Media Brands
+    url: https://tmb.applytojob.com/apply
+    ats: jazzhr
+    countries: [US, IN]
 
   - name: Trustees of Reservations
     url: https://apply.workable.com/thetrustees/
@@ -5164,12 +6450,22 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Umbrella Family and Child Centres of Hamilton
+    url: https://umbrellafamilyandchildcentresofhamilton.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
   - name: UNIQLO New Jersey
     url: https://fastretailing.wd3.myworkdayjobs.com/retail_us_Uniqlo
     ats: workday
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: United Methodist Communities
+    url: https://unitedmethodistcommunities.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: United Regional
     url: https://iaoxqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/unitedregionalcareers/jobs
@@ -5253,6 +6549,16 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: US Ghost Adventures
+    url: https://usghostadventures.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Ussery Bloomberg Ellison
+    url: https://usserybloombergellisoninc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: UVM Medical Center
     url: https://uvmhealth.wd1.myworkdayjobs.com/external
     ats: workday
@@ -5275,6 +6581,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Valley Care Management
+    url: https://valleycaremanagement.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Vancouver Coastal Health
     url: https://careers-vch.icims.com/jobs/search
     ats: icims
@@ -5291,6 +6602,21 @@ companies:
     url: https://ecsr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Vantage Living
+    url: https://vantagelivinginc.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
+
+  - name: Veritas Investments
+    url: https://veritasinv.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: VG Meats
+    url: https://vgmeats.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
 
   - name: Victoria University
     url: https://jobs.dayforcehcm.com/victoriauniversity/CANDIDATEPORTAL
@@ -5311,6 +6637,18 @@ companies:
     url: https://harmonyseniorservices.wd108.myworkdayjobs.com/Harmony_Careers
     ats: workday
     countries: [US]
+    options:
+      max_jobs: 200
+
+  - name: Vista Prairie Communities
+    url: https://vistaprairiecommunities.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Vivus Education
+    url: https://internationalschools.wd3.myworkdayjobs.com/ISPCareers
+    ats: workday
+    countries: [US, CA, IN]
     options:
       max_jobs: 200
 
@@ -5353,6 +6691,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Walden On Lake Conroe
+    url: https://waldenonthelakeconroe.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Warhorsecasino
     url: https://careers-warhorsecasino.icims.com/jobs/search
     ats: icims
@@ -5372,6 +6715,16 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Wasserhund Brewing Company
+    url: https://wasserhundbrewingcompany.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: Watch Me Grow
+    url: https://watchmegrow.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Waverly Health Center
     url: https://waverlyhealthcenter.wd12.myworkdayjobs.com/WHC
     ats: workday
@@ -5382,6 +6735,11 @@ companies:
   - name: Wayne County
     url: https://emqz.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Wealshire
+    url: https://thewealshirellc.applytojob.com/apply
+    ats: jazzhr
     countries: [US]
 
   - name: Weekender Hotels
@@ -5416,10 +6774,25 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Wesley Willows
+    url: https://wesleywillows.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: West Edmonton Mall
     url: https://jobs.dayforcehcm.com/en-CA/wem/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
+
+  - name: West Shore
+    url: https://westshore.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
+  - name: West Side Federation FOR Senior AND Supportive Housing
+    url: https://wsfssh.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Westborough Behavioral Healthcare Hospital
     url: https://apply.workable.com/westborough-behavioral-healthcare-hospital-1/
@@ -5430,6 +6803,11 @@ companies:
     url: https://jobs.dayforcehcm.com/westcorp/CANDIDATEPORTAL
     ats: dayforce
     countries: [CA]
+
+  - name: Westdale Asset Management
+    url: https://westdaleassetmanagement.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Westerkirk
     url: https://jobs.dayforcehcm.com/westerkirk/PACIFICSKYCORPORATECAREERS
@@ -5445,6 +6823,11 @@ companies:
     url: https://ats.rippling.com/western-camps-inc/jobs
     ats: rippling
     countries: [US]
+
+  - name: Westerner Park
+    url: https://westernerpark.applytojob.com/apply
+    ats: jazzhr
+    countries: [CA]
 
   - name: Westfield
     url: https://fa-exdv-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Careers/jobs
@@ -5475,6 +6858,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: White Birch Communities
+    url: https://whitebirchcommunities.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Wilderness Resort
     url: https://jobs.dayforcehcm.com/whri/CANDIDATEPORTAL
     ats: dayforce
@@ -5502,6 +6890,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Wing Joint
+    url: https://thewingjointllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Wingstop Global Support Center
     url: https://iaxmqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/Wingstop-GSC/jobs
     ats: oracle_hcm
@@ -5526,6 +6919,11 @@ companies:
     url: https://recruiting.ultipro.ca/WIN5001WNSP/JobBoard/0ee2c49f-be5a-4fb6-9069-5c834c672fd0/
     platform: ukg
     enabled: false
+
+  - name: Wintzell's Oyster House
+    url: https://wintzellsoysterhouse.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
 
   - name: Wleeflowers
     url: https://careers-wleeflowers.icims.com/jobs/search
@@ -5554,10 +6952,22 @@ companies:
     ats: rippling
     countries: [CA]
 
+  - name: Workman's Travel Centers
+    url: https://workmanstravelcentersllc.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: World Travel Holdings
     url: https://careers-wth.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Wright Canada Holdings
+    url: https://wsc.wd1.myworkdayjobs.com/WCH
+    ats: workday
+    countries: [CA]
+    options:
+      max_jobs: 200
 
   - name: WSH Group
     url: https://careers.smartrecruiters.com/wshgroup
@@ -5621,7 +7031,17 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Zeiterion Theatre
+    url: https://zeiterion.applytojob.com/apply
+    ats: jazzhr
+    countries: [US]
+
   - name: Zeta Charter Schools
     url: https://job-boards.greenhouse.io/zetacharterschools
     ats: greenhouse
+    countries: [US]
+
+  - name: Zipfizz
+    url: https://zipfizzcorporation.applytojob.com/apply
+    ats: jazzhr
     countries: [US]

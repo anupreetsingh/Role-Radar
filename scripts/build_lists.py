@@ -99,7 +99,9 @@ NOT_HOSPITALITY = re.compile(
     r"site configuration documentation|karriere bei mcdonald|kh india|kraft heinz|pladis|treehouse foods|nestl[eé]|"
     r"ingredion|unilever|mars$|tyson foods|general mills|delimex|toppan|jdi$|red bull|us foods|nidec|abbott$|"
     r"jpmorgan|jabil|veeva|nbcuniversal|fidelity investments|cox enterprises|edison international|lls lineage|"
-    r"albus laundry|holland america group|private destinations|all community$|jd sports|jdsf|mobilize ?jobs)", re.I)
+    r"albus laundry|holland america group|private destinations|all community$|jd sports|jdsf|mobilize ?jobs|"
+    r"abbott medical|fronius|anord mardix|holman automotive|unisys|quadreal|cushman|land o.lakes|stand out for good|"
+    r"linkedin|company3|follett)", re.I)
 HOSPITALITY_CORE = JobFilter(include_keywords=[t for t in PROFESSIONS["hospitality"]["titles"]
                                                if t not in SHARED_HOSPITALITY_TITLES],
                              exclude_keywords=PROFESSIONS["hospitality"]["exclude"])
