@@ -892,9 +892,11 @@ companies:
       max_jobs: 200
 
   - name: Cactus Club Cafe
-    url: https://www.cactusclubcafe.com/hiring/
-    platform: pushoperations
-    enabled: false
+    url: https://app-elb.pushoperations.com/ats/job-postings/7451d7d1-c69d-4d94-96b1-ee099013bddc
+    ats: push
+    countries: [US, CA]
+    options:
+      organization: ce47d6b6-b689-47b0-bcde-6ba738695224
 
   - name: Caesars Entertainment
     url: https://edmn.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
@@ -1872,9 +1874,11 @@ companies:
     countries: [US]
 
   - name: Earls Kitchen + Bar
-    url: https://earls.ca/careers/
-    platform: custom
-    enabled: false
+    url: https://app-elb.pushoperations.com/ats/job-postings/868b7c79-5474-445e-9bb3-6cc9ba9050ab
+    ats: push
+    countries: [US, CA]
+    options:
+      organization: e5544bca-e0e9-4c1b-9c80-b3700d63d8f5
 
   - name: Earth AND Sugar
     url: https://earthandsugarllc.applytojob.com/apply
@@ -2614,6 +2618,13 @@ companies:
     url: https://greenbriergolfcountryclub.applytojob.com/apply
     ats: jazzhr
     countries: [US]
+
+  - name: Greta Bar
+    url: https://app-elb.pushoperations.com/ats/job-postings/9c762c66-5d3f-478c-8451-a8f5f45c38d4
+    ats: push
+    countries: [CA]
+    options:
+      organization: 856a4ba9-6fe6-46e6-a1c3-8a40bfe43415
 
   - name: Grey County
     url: https://jobs.dayforcehcm.com/en-CA/greycounty/CANDIDATEPORTAL
@@ -4060,6 +4071,13 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: MRG Group
+    url: https://app-elb.pushoperations.com/ats/job-postings/bfd58568-cfbe-4128-9a98-f749abc0a575
+    ats: push
+    countries: [CA]
+    options:
+      organization: 8a5c40ab-bf3e-48ae-931c-2edaf29beb6b
+
   - name: MSL Community Management
     url: https://mbk.wd5.myworkdayjobs.com/MSLCareers
     ats: workday
@@ -5056,6 +5074,13 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Revelry Food+Music Hub
+    url: https://app-elb.pushoperations.com/ats/job-postings/5c17295e-4534-41cd-959b-309e6ef4f24e
+    ats: push
+    countries: [CA]
+    options:
+      organization: 8a736ec6-7119-438c-a993-4e28b61eb3d8
+
   - name: Revera
     url: https://revera.wd3.myworkdayjobs.com/talemetry_external
     ats: workday
@@ -5680,6 +5705,13 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Sooke Harbour House
+    url: https://app-elb.pushoperations.com/ats/job-postings/cb6cf4be-cebd-42dc-a8fc-3dd7f3de2b6a
+    ats: push
+    countries: [CA]
+    options:
+      organization: 1aca1aa6-7f6a-4bb2-a491-47ed4a74eeb3
+
   - name: Sorrel River Ranch
     url: https://sorrelriverranch.applytojob.com/apply
     ats: jazzhr
@@ -6263,6 +6295,13 @@ companies:
     options:
       max_jobs: 200
 
+  - name: The Warehouse Group
+    url: https://app-elb.pushoperations.com/ats/job-postings/47e5bb4a-ba47-44a5-b535-3e385fee7590
+    ats: push
+    countries: [CA]
+    options:
+      organization: cd9f71b7-a12d-47fa-b09e-a80dd515c2a6
+
   - name: Theracare
     url: https://careers.smartrecruiters.com/theracareinc
     ats: smartrecruiters
@@ -6354,6 +6393,13 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Toptable Group
+    url: https://app-elb.pushoperations.com/ats/job-postings/94cedabb-26b7-46b0-a765-b3d74e621bc7
+    ats: push
+    countries: [CA]
+    options:
+      organization: a993889e-4c8f-45fe-895a-dda72ba18760
 
   - name: TopView Sightseeing
     url: https://topviewsightseeing.applytojob.com/apply

@@ -893,3 +893,21 @@ def test_selectminds_landing_page_lists_its_newest_jobs():
     assert not result.complete  # only the newest page: jobs dropping off it aren't removed
     assert (service.job_id, service.title, service.location) == ("599661", "Food Service I", "Calgary Zone, Calgary, Rockyview General Hospital")
     assert (cook.url, cook.location) == ("https://careers.example.ca/jobs/cook-i-599683", None)
+
+
+def test_push_reads_every_location_of_an_organization_in_one_request():
+    body = {"data": [
+        {"uuid": "loc-1", "name": "Earls Bankers Hall", "city": "Calgary", "province": "AB", "country": "CA",
+         "jobPostings": {"data": [{"id": 1, "externalPositionName": "Server", "employmentType": "part-time",
+                                   "createdAt": "2026-10-20 10:00:00", "body": "1 year serving"},
+                                  {"id": 2, "externalPositionName": None, "description": "Line Cook",
+                                   "position": {"data": {"name": "Cook"}}}]}},
+        {"uuid": "loc-2", "name": "Earls Boston", "city": "Boston", "province": "MA", "country": "US", "jobPostings": {"data": []}}]}
+    seen = []
+    result = scrape("push", "https://app-elb.pushoperations.com/ats/job-postings/loc-1",
+                    {"/api/v2/organizations/org-9/companies/public": body}, seen=seen, organization="org-9")
+    server, cook = result.jobs
+    assert (server.job_id, server.title, server.location, server.department) == ("1", "Server", "Calgary, AB, Canada", "Earls Bankers Hall")
+    assert (server.employment_type, server.date_posted, server.extra["description"]) == ("part-time", date(2026, 10, 20), "1 year serving")
+    assert cook.title == "Cook" and cook.url == "https://app-elb.pushoperations.com/ats/job-postings/loc-1"
+    assert seen == ["https://app-elb.pushoperations.com/api/v2/organizations/org-9/companies/public?include=jobPostings.position.location"]
