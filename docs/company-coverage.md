@@ -611,8 +611,10 @@ government boards. The 803 Workday boards with Canadian jobs not on the list (th
 other lists' Canadian ones) were each searched once for hospitality words with Workday's OR search
 (one request a second, no rate limiting): only five real hospitality employers joined, so Canada's
 Workday employers were mostly found already. Workable's public job search (jobs.workable.com) matches
-words in descriptions, so its Canadian results were mostly noise. The list then had 1,287 read
-employers, 231 posting in Canada.
+words in descriptions, so its Canadian results were mostly noise. Oak View Group's Canadian iCIMS
+portal lists the same jobs (same numbers) as its main one, which already covers Canada, so only the
+main one stays. The list then had 1,286 read employers, 230 posting in Canada, and a check for
+Calgary found 330 matching jobs open.
 
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job

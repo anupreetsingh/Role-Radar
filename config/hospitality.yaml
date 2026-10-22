@@ -4320,11 +4320,6 @@ companies:
     ats: icims
     countries: [US, CA]
 
-  - name: Oak View Group Canada
-    url: https://careers-ovgcan.icims.com/jobs/search
-    ats: icims
-    countries: [CA]
-
   - name: OakBend Medical Center
     url: https://careers-obmc.icims.com/jobs/search
     ats: icims
