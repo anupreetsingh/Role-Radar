@@ -538,6 +538,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Basecamp Resorts
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=e932c80b-a93e-47f9-8359-e65d510aa70f&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [US, CA]
+
   - name: Bass Pro Shops
     url: https://basspro.wd1.myworkdayjobs.com/careers
     ats: workday
@@ -1029,6 +1034,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Carleton University Students' Association
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=3cb9869c-8651-4129-8071-d6193c11030a&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: CARMELO'S Restaurant
     url: https://carmelosrestaurantllc.applytojob.com/apply
     ats: jazzhr
@@ -1128,6 +1138,11 @@ companies:
     ats: rippling
     countries: [US, CA]
 
+  - name: Century Casinos
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=173aba72-539f-4fa3-8bf8-0fb14421606c&ccId=9151441767464_3426&lang=en_US
+    ats: adp
+    countries: [US, CA]
+
   - name: CF Montréal
     url: https://careers.smartrecruiters.com/cfmontreal
     ats: smartrecruiters
@@ -1152,6 +1167,11 @@ companies:
     url: https://charlottescoffeehouse.applytojob.com/apply
     ats: jazzhr
     countries: [US]
+
+  - name: Chartright Air Group
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=7ea870be-b6a1-44b8-ad4c-1e7250f907d6&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Chartwell Retirement Residences
     url: https://hcrw.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
@@ -1702,6 +1722,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Det'on Cho Management
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=91d700c5-b16a-41b1-a828-445c2cfa1516&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Devereux
     url: https://careers-devereux.icims.com/jobs/search
     ats: icims
@@ -2082,6 +2107,11 @@ companies:
     url: https://apply.workable.com/experience-sl-co/
     ats: workable
     countries: [US]
+
+  - name: Explore Edmonton
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=27fb8288-1d17-4f41-aeb7-a89d00194a02&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Explorers Early Learning
     url: https://jobs.dayforcehcm.com/en-AU/explorers/CANDIDATEPORTAL
@@ -2477,6 +2507,11 @@ companies:
     url: https://hourlynoassessment-goldkeyphr.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: GolfBC Group
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=45e435f6-9c0d-4396-896f-2a98895be76e&ccId=168170003389_4175&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: GolfNorth Properties
     url: https://golfnorth-properties-inc.breezy.hr/
@@ -3579,6 +3614,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Louis Brier Home and Hospital
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=d570c199-c04e-4a45-9c54-17a8cc0a513d&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: LPQ
     url: https://convive.wd12.myworkdayjobs.com/convive
@@ -4690,6 +4730,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Peake of Catering
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=ec961047-b7cd-4eef-8879-882c3774b068&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: PeakMade Real Estate
     url: https://apply.workable.com/peak-made/
     ats: workable
@@ -4944,6 +4989,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Putt Social & Kingpin
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=5a312740-8c7b-44b7-80ad-50a35fbb25d3&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Pyramid Foods
     url: https://hungryjacks.wd105.myworkdayjobs.com/HungryJacksCareers
     ats: workday
@@ -5017,6 +5067,11 @@ companies:
     url: https://apply.workable.com/therecoveryvillage/
     ats: workable
     countries: [US]
+
+  - name: RED Mountain Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=97f8a81f-8a2f-4ea7-b9fa-1811551ba41c&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Red Robin International
     url: https://redrobin.wd1.myworkdayjobs.com/RedRobin_Careers
@@ -5144,9 +5199,19 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Ripley Entertainment
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=9d0cc011-eed5-448b-83d8-8c2d439ed9dd&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US, CA]
+
   - name: River Cree Resort
     url: https://careers-rivercree.icims.com/jobs/search
     ats: icims
+    countries: [CA]
+
+  - name: River Rock Casino Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=05b09df3-238b-48f4-91cc-ebdeb2928e0c&ccId=19000101_000001&lang=en_CA
+    ats: adp
     countries: [CA]
 
   - name: RiverBridge Specialty Hospital
@@ -5379,6 +5444,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Seasons Retirement Communities
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=219770c4-ab2f-45ab-a6e8-538af675d52d&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Sedanos
     url: https://careers-sedanos.icims.com/jobs/search
@@ -6010,6 +6080,11 @@ companies:
     ats: workable
     countries: [US]
 
+  - name: Sundial Hotel Whistler
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=5dfa2209-1aeb-447a-883a-02de88801e15&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Sunny
     url: https://thesunny.applytojob.com/apply
     ats: jazzhr
@@ -6156,6 +6231,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Terroni
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=7ac65d5c-bd51-4a1d-b997-7a8e748f5837&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Texas Hotel Management
     url: https://texashotelmanagement9b.applytojob.com/apply
     ats: jazzhr
@@ -6180,6 +6260,16 @@ companies:
     url: https://tgiscateringservicesinc.applytojob.com/apply
     ats: jazzhr
     countries: [US]
+
+  - name: The Adventure Group (Whistler)
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=3865c012-6da2-4ab5-b0aa-c941fdf4a4d5&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
+  - name: The Alex Community Health Centre
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=cb6a96a3-b8ef-4caa-93f0-498f05f4851f&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: The Associated and its Agencies
     url: https://jobs.dayforcehcm.com/associated/PEARLCANDIDPORTAL
@@ -6302,10 +6392,20 @@ companies:
     options:
       organization: cd9f71b7-a12d-47fa-b09e-a80dd515c2a6
 
+  - name: The Westin Resort & Spa, Whistler
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=7b46b031-e520-44c5-b80d-7bc967ea24e1&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Theracare
     url: https://careers.smartrecruiters.com/theracareinc
     ats: smartrecruiters
     countries: [US]
+
+  - name: Thermëa by Nordik
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=b0ed2582-382c-4558-a5a6-be185625046e&ccId=168215231511_9449&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Thind Management
     url: https://thindmanagement.applytojob.com/apply
@@ -6749,6 +6849,11 @@ companies:
     ats: smartrecruiters
     countries: [US]
 
+  - name: Vintage Hotels
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=2c962c4f-4957-4b12-9ebe-216613f4dfae&ccId=19000101_000001&lang=en_CA
+    ats: adp
+    countries: [CA]
+
   - name: Virginia Beach Operations
     url: https://harmonyseniorservices.wd108.myworkdayjobs.com/Harmony_Careers
     ats: workday
@@ -6966,6 +7071,11 @@ companies:
     url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=1c7fb0ee-a452-42a0-bb0d-786747fc0bb0
     ats: adp
     countries: [US]
+
+  - name: Westmont Hospitality Group (Canada)
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=e833b55f-b247-451e-a5f4-91782d76485c&ccId=9200353446576_2&lang=en_CA
+    ats: adp
+    countries: [CA]
 
   - name: Whataburger Restaurants
     url: https://whataburger.wd5.myworkdayjobs.com/WAB_CAREERS

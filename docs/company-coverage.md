@@ -616,12 +616,25 @@ portal lists the same jobs (same numbers) as its main one, which already covers 
 main one stays. The list then had 1,286 read employers, 230 posting in Canada, and a check for
 Calgary found 330 matching jobs open.
 
+**ADP, Push and Alberta Health Services (same day).** With the user's AWS login, one Athena query over
+Common Crawl's URL index (crawls 2026-30 to -43; the table now lives under `cc-index/table/cc-main/warc/`,
+0.2 GB scanned, everything it made deleted afterwards) listed 5,056 ADP Workforce Now career centers and
+168 Dayforce boards not seen before. Each ADP career center was read once (newest 100 jobs, 0.5 s
+apart, no rate limiting): 36 had hospitality jobs in Canada and 22 of them joined, named by hand from
+their jobs (ADP shows a client's name only to signed-in users): Century Casinos, Basecamp Resorts,
+Seasons Retirement Communities, Westmont's Canadian hotels, River Rock Casino Resort, Whistler hotels...
+The 369 elsewhere wait for a better way to name them. A second query found Push Operations boards:
+Earls and Cactus Club Cafe hire through Push, and the new `push` reader reads every location of an
+organization in one request (Earls: 84 locations, 9 in Calgary). Alberta Health Services' careers site
+(Oracle SelectMinds) answers 403 to its search, but its Nutrition & Food landing page lists the newest
+jobs (`selectminds` reader). The list then had 1,332 read employers, 262 posting in Canada.
+
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
 search behind each board (the board's page shows only a few featured jobs); Workstream (Moxie's),
 Push Operations (Cactus Club Cafe), Njoyn (Grey Eagle Resort & Casino), HigherMe (Tim Hortons),
-Taleo (Alberta Health Services); and Earls, The Keg, Hyatt (careers.hyatt.com answers 403) and IHG,
-whose pages load their jobs some other way. Also checked: Gateway Casinos' Jobvite board is empty,
+and The Keg, Hyatt (careers.hyatt.com answers 403) and IHG, whose pages load their jobs some other
+way. Also checked: Gateway Casinos' Jobvite board is empty,
 Basecamp Resorts' ADP board had no jobs, and Bethany Care Society, Calgary Co-op, Air Canada and
 Wyndham had no hospitality openings that day.
 
