@@ -49,8 +49,10 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
    - **Countries** and **Companies:** the countries you want (United States, Canada, Australia,
      India), and optionally cities. Only companies that post jobs in those countries are
      checked, and jobs alert from anywhere in them, or only from your cities. On the Companies
-     page, **Find a company** searches the list: untick one to stop tracking it (with nothing
-     typed, it lists those turned off). **Add a company you want** takes a name, and a careers
+     page, **All companies** folds out the whole list for your countries, each with a tick box as
+     a job has in Live Tracking: untick one to stop tracking it, or use the box above them all to
+     tick or untick every one. **Find a company** searches the list (with nothing typed, it lists
+     those turned off). **Add a company you want** takes a name, and a careers
      page if known: one listed already says so (turned back on if it was off); otherwise it's
      tracked if Role Radar can read the page (read once to check), and either way it goes to the
      maintainer's suggestions box for a later version (see below).

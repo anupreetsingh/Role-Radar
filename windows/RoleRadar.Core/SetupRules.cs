@@ -13,6 +13,10 @@ public static class SetupRules
     {
         ["oracle_hcm"] = "Oracle", ["smartrecruiters"] = "SmartRecruiters", ["icims"] = "iCIMS",
         ["bamboohr"] = "BambooHR", ["hrmdirect"] = "HRM Direct", ["tiktok"] = "TikTok",
+        ["successfactors"] = "SuccessFactors", ["jazzhr"] = "JazzHR", ["easyapply"] = "EasyApply",
+        ["selectminds"] = "SelectMinds", ["taleo_be"] = "Taleo", ["talentnest"] = "TalentNest",
+        ["symphony"] = "Symphony Talent", ["adp"] = "ADP", ["push"] = "Push Operations",
+        ["jobposting"] = "Own site", ["deshaw"] = "D. E. Shaw", ["mathworks"] = "MathWorks",
     };
 
     /// <summary>The boxes for what's saved: the offered ones ticked (any capitalization), and their own after.</summary>
@@ -64,6 +68,25 @@ public static class SetupRules
         if (company.Why is { } why && !company.Off)
         {
             parts.Add($"not tracked: {why}");
+        }
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>The line beside the Companies page's fold: "275 tracked · 2 turned off · 10 can't be read yet",
+    /// with each company `tracked` as last ticked.</summary>
+    public static string ListSummary(IReadOnlyCollection<CompanyRow> companies, Func<CompanyRow, bool> tracked)
+    {
+        var readable = companies.Where(c => c.Readable).ToList();
+        var on = readable.Count(tracked);
+        var unreadable = companies.Count - readable.Count;
+        var parts = new List<string> { $"{Describe.Number(on)} tracked" };
+        if (readable.Count > on)
+        {
+            parts.Add($"{Describe.Number(readable.Count - on)} turned off");
+        }
+        if (unreadable > 0)
+        {
+            parts.Add($"{Describe.Number(unreadable)} can't be read yet");
         }
         return string.Join(" · ", parts);
     }

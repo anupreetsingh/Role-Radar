@@ -91,6 +91,17 @@ public class WordsTests
         Assert.Equal("iCIMS · not tracked: it doesn't post jobs in your countries",
             SetupRules.About(new CompanyRow { Site = "icims", Why = "it doesn't post jobs in your countries" }));
         Assert.Equal("", SetupRules.About(new CompanyRow { Site = "generic", Off = true, Why = "you turned it off" }));
+        Assert.Equal("EasyApply · CA", SetupRules.About(new CompanyRow { Site = "easyapply", Countries = ["CA"] }));
+    }
+
+    [Fact]
+    public void TheCompanyListSaysHowManyAreTrackedTurnedOffAndUnreadable()
+    {
+        List<CompanyRow> list = [new() { Name = "A", Readable = true }, new() { Name = "B", Readable = true, Off = true },
+                                 new() { Name = "C", Readable = false }];
+        Assert.Equal("1 tracked · 1 turned off · 1 can't be read yet", SetupRules.ListSummary(list, c => !c.Off));
+        Assert.Equal("2 tracked · 1 can't be read yet", SetupRules.ListSummary(list, _ => true)); // B ticked again
+        Assert.Equal("1,200 tracked", SetupRules.ListSummary(Enumerable.Range(0, 1200).Select(i => new CompanyRow { Readable = true }).ToList(), _ => true));
     }
 
     [Fact]

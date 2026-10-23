@@ -848,7 +848,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "companies: add companies from the AI's answer (stdin); email: save Gmail settings (JSON on stdin); "
                         "discord: save a Discord webhook (JSON on stdin); "
                         "recipients: who else gets the alerts (JSON on stdin); "
-                        'find: search the companies ({"query", "limit", "offset", "which": "off"}); '
+                        'find: search the companies ({"query", "limit", "offset", "which": "off" or "countries"}); '
                         'track: turn companies on or off ({"names": [...], "tracked": false}); '
                         'add: track a company they want ({"name", "url"}; also suggested for everyone\'s list '
                         'unless "suggest": false); '

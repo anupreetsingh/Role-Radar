@@ -2351,7 +2351,12 @@ struct SetupView: View {
     @State private var found: CompanySearch?
     @State private var shown = 50  // how many results to list
     @State private var searching: Task<Void, Never>?
-    @State private var turning: Set<String> = []  // companies being turned on or off
+    // ...and every company for their countries, folded away until they open it.
+    @State private var listOpen = false
+    @State private var everyone: CompanySearch?
+    @State private var listShown = 200  // how many of them to draw
+    @State private var wanted: [String: Bool] = [:]  // tracked or not as last ticked, until saved and read back
+    @State private var tracking: Task<Void, Never>?  // the latest change to save, after the ones before it
     @State private var newCompany = ""
     @State private var newCareers = ""
 
@@ -2547,7 +2552,7 @@ struct SetupView: View {
     private var companiesPage: some View {
         let count = trackedCount ?? setup?.companies ?? 0
         return VStack(alignment: .leading, spacing: 18) {
-            if count == 0 {
+            if count == 0 && everyone?.results.isEmpty != false {  // no list (not one they've turned all off)
                 section("No \(profession?.name ?? "") companies yet", "Role Radar doesn't have a list of \(profession?.name ?? "") "
                         + "employers yet. A later version adds them, and checking starts then.") { EmptyView() }
             } else {
@@ -2558,6 +2563,7 @@ struct SetupView: View {
                          + "within minutes of them being posted.")
                         .scaledFont(13).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
+                companyList
                 section("By country", nil) {
                     ForEach((setup?.country_options ?? []).filter { countries.contains($0.code) }, id: \.code) { country in
                         HStack {
@@ -2576,7 +2582,10 @@ struct SetupView: View {
             }
             addSection
         }
-        .task { await search() }
+        .task {
+            await search()
+            await loadList()
+        }
         .onChange(of: query) { _, _ in
             searching?.cancel()
             shown = 50
@@ -2617,20 +2626,88 @@ struct SetupView: View {
         }
     }
 
+    /// Every company for their countries, under a fold: a box on each, as on a job in Live Tracking
+    /// (ticked: tracked), and one above them all to tick or untick every one.
+    private var companyList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { listOpen.toggle() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right").scaledFont(11, weight: .semibold).foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(listOpen ? 90 : 0)).animation(.easeOut(duration: 0.15), value: listOpen)
+                        .frame(width: 14)
+                    Text("All companies").scaledFont(13, weight: .medium)
+                    if let everyone { Text(summary(everyone)).scaledFont(12).foregroundStyle(.secondary).monospacedDigit() }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(listOpen ? "expanded" : "collapsed")
+            if listOpen, let everyone {
+                VStack(alignment: .leading, spacing: 6) {
+                    listHeader(everyone)
+                    ForEach(everyone.results.prefix(listShown)) { company in companyRow(company) }
+                    if everyone.results.count > listShown {
+                        Button("Show More") { listShown += 200 }.controlSize(.small)
+                    }
+                }
+                .padding(.leading, 20)  // under the fold's label
+            }
+            if let note = notes["list"] {
+                Label(note.text, systemImage: "exclamationmark.triangle").scaledFont(11).foregroundStyle(.red)
+            }
+        }
+    }
+
+    /// The box above the list, as Live Tracking's: ticked when every company it can read is tracked;
+    /// clicking it tracks them all, or (all ticked) stops tracking them all.
+    private func listHeader(_ list: CompanySearch) -> some View {
+        let readable = list.results.filter(\.readable)
+        let on = readable.filter(isTracked).count
+        let all = Binding(get: { !readable.isEmpty && on == readable.count },
+                          set: { tick in setTracked(readable.filter { isTracked($0) != tick }.map(\.name), tick) })
+        return HStack(spacing: 8) {
+            SelectBox(on: all, mixed: on > 0 && on < readable.count)
+                .padding(.leading, -6)  // in line with the companies' boxes
+                .help(on == readable.count ? "Stop tracking all" : "Track all")
+            Text("\(on.formatted()) of \(readable.count.formatted()) tracked")
+                .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
+        }
+    }
+
+    /// "275 tracked · 2 turned off · 10 can't be read yet".
+    private func summary(_ list: CompanySearch) -> String {
+        let readable = list.results.filter(\.readable)
+        let on = readable.filter(isTracked).count
+        let unreadable = list.results.count - readable.count
+        return (["\(on.formatted()) tracked"]
+                + (readable.count > on ? ["\((readable.count - on).formatted()) turned off"] : [])
+                + (unreadable > 0 ? ["\(unreadable.formatted()) can't be read yet"] : [])).joined(separator: " · ")
+    }
+
+    /// Whether a company is tracked, as last ticked.
+    private func isTracked(_ company: CompanySearch.Company) -> Bool { wanted[company.name] ?? !company.off }
+
+    /// A company with its box, as a job has in Live Tracking: ticked (and tinted), it's tracked.
     private func companyRow(_ company: CompanySearch.Company) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Toggle("", isOn: Binding(get: { !company.off }, set: { on in Task { await setTracked(company, on) } }))
-                .toggleStyle(.checkbox).labelsHidden()
-                .disabled(!company.readable || turning.contains(company.name))
+        let on = company.readable && isTracked(company)
+        return HStack(alignment: .center, spacing: 10) {
+            SelectBox(on: Binding(get: { on }, set: { setTracked([company.name], $0) }))
+                .padding(.leading, -6)
+                .disabled(!company.readable)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(company.name).scaledFont(13)
+                    Text(company.name).scaledFont(13, weight: .medium)
                     if company.own { Text("Yours").scaledFont(10, weight: .medium).foregroundStyle(.secondary) }
                 }
                 Text(Self.about(company)).scaledFont(11).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 2)
+        .opacity(on ? 1 : 0.55)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(on ? 0.12 : 0))
+            .padding(.horizontal, -8).padding(.vertical, -2))
     }
 
     /// "Workday · US, CA", and why it isn't tracked unless they turned it off themselves.
@@ -2645,7 +2722,11 @@ struct SetupView: View {
     }
 
     private static let siteNames = ["oracle_hcm": "Oracle", "smartrecruiters": "SmartRecruiters", "icims": "iCIMS",
-                                    "bamboohr": "BambooHR", "hrmdirect": "HRM Direct", "tiktok": "TikTok"]
+                                    "bamboohr": "BambooHR", "hrmdirect": "HRM Direct", "tiktok": "TikTok",
+                                    "successfactors": "SuccessFactors", "jazzhr": "JazzHR", "easyapply": "EasyApply",
+                                    "selectminds": "SelectMinds", "taleo_be": "Taleo", "talentnest": "TalentNest",
+                                    "symphony": "Symphony Talent", "adp": "ADP", "push": "Push Operations",
+                                    "jobposting": "Own site", "deshaw": "D. E. Shaw", "mathworks": "MathWorks"]
 
     /// A company they want: tracked at once if Role Radar can read its job site, and either way suggested
     /// for everyone's list (the maintainer's suggestions box), unless it's listed already.
@@ -3087,12 +3168,32 @@ struct SetupView: View {
         }
     }
 
-    private func setTracked(_ company: CompanySearch.Company, _ on: Bool) async {
-        turning.insert(company.name)
-        let problem = await model.setupStep(["track"], stdin: json(["names": [company.name], "tracked": on]))
-        turning.remove(company.name)
-        notes["find"] = problem.map { ($0, false) }
-        await search()
+    /// Every company for their countries: tracked, turned off, or on a job site Role Radar can't read yet.
+    private func loadList() async {
+        let result = await model.setupCommand(["find"], stdin: json(["query": "", "limit": 1_000_000, "which": "countries"]))
+        switch result {
+        case .success(let data):
+            if let list = try? JSONDecoder().decode(CompanySearch.self, from: data) { everyone = list }
+            notes["list"] = everyone == nil ? ("Unexpected reply from role-radar", false) : nil
+        case .failure(let message):
+            notes["list"] = (message, false)
+        }
+    }
+
+    /// Turn companies on or off. Their boxes change at once; the changes are saved one after another (each
+    /// rewrites the profile), then the lists are read again (saving brings back the count at the top).
+    private func setTracked(_ names: [String], _ on: Bool) {
+        guard !names.isEmpty else { return }
+        for name in names { wanted[name] = on }
+        let before = tracking
+        tracking = Task {
+            await before?.value
+            let problem = await model.setupStep(["track"], stdin: json(["names": names, "tracked": on]))
+            notes["list"] = problem.map { ($0, false) }
+            await search()
+            await loadList()
+            for name in names where wanted[name] == on { wanted[name] = nil }
+        }
     }
 
     private func addCompany() async {

@@ -419,6 +419,13 @@ def test_finding_companies_says_which_are_tracked_and_why_not(config, lists):
     assert [r["name"] for r in onboarding.find_companies(config, "lever math")["results"]] == ["MathWorks"]  # by its job site too
     page = onboarding.find_companies(config, "", limit=2, offset=2)
     assert page["total"] == 5 and [r["name"] for r in page["results"]] == ["MathWorks", "Untagged Co"]
+    # Setup's list: all but those posting only elsewhere, the ones it can't read and the ones turned off included.
+    onboarding.set_tracked(config, ["Flipkart Labs"], False)
+    listed = onboarding.find_companies(config, which="countries", limit=10**6)
+    assert [r["name"] for r in listed["results"]] == ["Flipkart Labs", "MathWorks", "Untagged Co"]
+    assert [r["name"] for r in listed["results"] if r["tracked"]] == ["MathWorks", "Untagged Co"]
+    onboarding.save_profile(config, ["software engineer"], ["senior"], [], 2, countries=["IN", "AU"])
+    assert [r["name"] for r in onboarding.find_companies(config, which="countries")["results"]][0] == "Canva"
 
 
 def test_a_company_turned_off_is_never_checked_until_turned_back_on(config, lists, monkeypatch):

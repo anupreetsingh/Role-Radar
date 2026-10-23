@@ -29,7 +29,12 @@ public sealed class SetupView : Grid
     private readonly HashSet<string> countries = [];
     private CompanySearch? found;
     private int shownResults = 50;
-    private readonly HashSet<string> turning = []; // companies being turned on or off
+    // ...and every company for their countries, folded away until they open it.
+    private CompanySearch? everyone;
+    private bool listOpen;
+    private int listShown = 200; // how many of them to show
+    private readonly Dictionary<string, bool> wanted = new(); // tracked or not as last ticked, until saved and read back
+    private Task tracking = Task.CompletedTask; // the latest change to save, after the ones before it
     private readonly DispatcherTimer searchSoon = new() { Interval = TimeSpan.FromMilliseconds(300) };
 
     private readonly WrapPanel markers = new(); // the steps, wrapping onto a second line with big text in a small window
@@ -55,6 +60,15 @@ public sealed class SetupView : Grid
     // page 3
     private readonly StackPanel companiesHead = Ui.Column(6), byCountry = Ui.Column(6), results = Ui.Column(6);
     private readonly StackPanel findSection;
+    private readonly StackPanel companyList = Ui.Column(8), listBody = Ui.Column(2), listRows = Ui.Column(2);
+    private readonly TextBlock listChevron = Ui.Glyph(Glyphs.ChevronRight, 11, Theme.Secondary), listSummary = Ui.Secondary("", 12);
+    private readonly CheckBox listAll = new()
+    {
+        MinWidth = 0, Padding = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+    };
+    private readonly TextBlock listCount = Ui.Secondary("", 11);
+    private readonly Button listMore;
+    private readonly TextBlock listProblem = Ui.Text("", 11, brush: Theme.Critical);
     private readonly TextBox query = new() { Width = 320, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly TextBlock foundNote = Ui.Secondary("", 11);
     private readonly TextBlock findProblem = Ui.Text("", 11, brush: Theme.Critical);
@@ -100,6 +114,11 @@ public sealed class SetupView : Grid
         {
             shownResults += 50;
             _ = Search();
+        }, 11);
+        listMore = Ui.Button("Show More", () =>
+        {
+            listShown += 200;
+            ShowList();
         }, 11);
         addRow = Action("add", "Add", AddCompany);
         emailRow = Action("email", "Save", SaveEmail);
@@ -422,7 +441,104 @@ public sealed class SetupView : Grid
         var add = Section("Add a company you want", "Not on the list? Give its name, and its careers page if you know it. If Role "
                           + "Radar can read its job site, it's tracked right away; if not, we'll work on it.", newCompany, newCareers, addRow);
         findSection.Tag = find;
-        return Ui.Column(18, companiesHead, byCountry, find, add);
+        return Ui.Column(18, companiesHead, CompanyList(), byCountry, find, add);
+    }
+
+    /// <summary>Every company for their countries, under a fold: a box on each, as on a job in Live Tracking
+    /// (ticked: tracked), and one above them all to tick or untick every one.</summary>
+    private StackPanel CompanyList()
+    {
+        var fold = new Button
+        {
+            Content = Ui.Row(6, listChevron, Ui.Text("All companies", 13, FontWeights.SemiBold), listSummary),
+            Background = System.Windows.Media.Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0, 2, 4, 2),
+            HorizontalAlignment = HorizontalAlignment.Left, Cursor = Cursors.Hand,
+        };
+        System.Windows.Automation.AutomationProperties.SetName(fold, "All companies");
+        fold.Click += (_, _) =>
+        {
+            listOpen = !listOpen;
+            ShowList();
+        };
+        // The box above the list, as Live Tracking's: clicking it tracks them all, or (all ticked) stops tracking them all.
+        listAll.Click += (_, _) =>
+        {
+            var readable = everyone?.Results.Where(c => c.Readable).ToList() ?? [];
+            var tick = readable.Any(c => !IsTracked(c));
+            SetTracked(readable.Where(c => IsTracked(c) != tick).Select(c => c.Name).ToList(), tick);
+        };
+        var bar = new Grid();
+        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        bar.Children.Add(listAll);
+        listCount.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(listCount, 1);
+        bar.Children.Add(listCount);
+        foreach (var part in new UIElement[] { bar, listRows, listMore })
+        {
+            Ui.Add(listBody, part, 6);
+        }
+        listBody.Margin = new Thickness(14, 0, 0, 0); // under the fold's label
+        foreach (var part in new UIElement[] { fold, listBody, listProblem })
+        {
+            Ui.Add(companyList, part, 8);
+        }
+        listProblem.Visible(false);
+        return companyList;
+    }
+
+    /// <summary>Whether a company is tracked, as last ticked.</summary>
+    private bool IsTracked(CompanyRow company) => wanted.TryGetValue(company.Name, out var on) ? on : !company.Off;
+
+    private void ShowList()
+    {
+        companyList.Visible(everyone is { Results.Count: > 0 });
+        listChevron.Text = listOpen ? Glyphs.ChevronDown : Glyphs.ChevronRight;
+        listBody.Visible(listOpen && everyone is not null);
+        if (everyone is not { } list)
+        {
+            return;
+        }
+        listSummary.Text = SetupRules.ListSummary(list.Results, IsTracked);
+        var readable = list.Results.Where(c => c.Readable).ToList();
+        var on = readable.Count(IsTracked);
+        listAll.IsChecked = on == 0 ? false : on == readable.Count ? true : null;
+        listAll.ToolTip = on == readable.Count ? "Stop tracking all" : "Track all";
+        listCount.Text = $"{Describe.Number(on)} of {Describe.Number(readable.Count)} tracked";
+        listRows.Children.Clear();
+        if (listOpen)
+        {
+            foreach (var company in list.Results.Take(listShown))
+            {
+                listRows.Children.Add(CompanyLine(company));
+            }
+        }
+        listMore.Visible(listOpen && list.Results.Count > listShown);
+    }
+
+    /// <summary>A company with its box, as a job has in Live Tracking: ticked (and shaded), it's tracked.</summary>
+    private Border CompanyLine(CompanyRow company)
+    {
+        var on = company.Readable && IsTracked(company);
+        var box = new CheckBox
+        {
+            IsChecked = on, IsEnabled = company.Readable, MinWidth = 0, Padding = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+        };
+        System.Windows.Automation.AutomationProperties.SetName(box, company.Name);
+        box.Click += (_, _) => SetTracked([company.Name], box.IsChecked == true);
+        var words = Ui.Column(2, Ui.Row(6, Ui.Text(company.Name, 13, FontWeights.SemiBold), company.Own ? Ui.Secondary("Yours", 10) : null),
+                              Ui.Secondary(SetupRules.About(company), 11));
+        words.VerticalAlignment = VerticalAlignment.Center;
+        words.Opacity = on ? 1 : 0.55;
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.Children.Add(box);
+        Grid.SetColumn(words, 1);
+        grid.Children.Add(words);
+        var row = new Border { Child = grid, CornerRadius = new CornerRadius(6), Padding = new Thickness(0, 6, 0, 6) };
+        return on ? row.Colored(Theme.SubtlePressed, Border.BackgroundProperty) : row;
     }
 
     private void ShowCompanies()
@@ -432,7 +548,7 @@ public sealed class SetupView : Grid
         var name = Profession?.Name ?? "";
         companiesHead.Children.Clear();
         byCountry.Children.Clear();
-        if (count == 0)
+        if (count == 0 && everyone is not { Results.Count: > 0 }) // no list (not one they've turned all off)
         {
             Ui.Add(companiesHead, Section($"No {name} companies yet",
                 $"Role Radar doesn't have a list of {name} employers yet. A later version adds them, and checking starts then."));
@@ -456,7 +572,8 @@ public sealed class SetupView : Grid
             }
             Ui.Add(byCountry, Section("By country", null, lines));
         }
-        ((UIElement)findSection.Tag).Visible(count > 0);
+        ((UIElement)findSection.Tag).Visible(count > 0 || everyone is { Results.Count: > 0 });
+        ShowList();
         ShowAdd();
     }
 
@@ -511,31 +628,70 @@ public sealed class SetupView : Grid
         foundNote.Visible(foundNote.Text.Length > 0);
         foreach (var company in search.Results)
         {
-            var box = new CheckBox
-            {
-                IsChecked = !company.Off, IsEnabled = company.Readable && !turning.Contains(company.Name), VerticalAlignment = VerticalAlignment.Top,
-                MinWidth = 0, Margin = new Thickness(0, 2, 8, 0),
-            };
-            System.Windows.Automation.AutomationProperties.SetName(box, company.Name);
-            box.Click += (_, _) => _ = SetTracked(company, box.IsChecked == true);
-            var title = Ui.Row(6, Ui.Text(company.Name, 13), company.Own ? Ui.Secondary("Yours", 10) : null);
-            var row = new DockPanel();
-            DockPanel.SetDock(box, Dock.Left);
-            row.Children.Add(box);
-            row.Children.Add(Ui.Column(1, title, Ui.Secondary(SetupRules.About(company), 11)));
-            Ui.Add(results, row, 6);
+            Ui.Add(results, CompanyLine(company), 2);
         }
         more.Visible(search.Total > search.Results.Count);
     }
 
-    private async Task SetTracked(CompanyRow company, bool on)
+    /// <summary>Every company for their countries: tracked, turned off, or on a job site Role Radar can't read yet.</summary>
+    private async Task LoadList()
     {
-        turning.Add(company.Name);
-        var problem = await model.SetupStepAsync(["track"], new Dictionary<string, object> { ["names"] = new[] { company.Name }, ["tracked"] = on });
-        turning.Remove(company.Name);
-        findProblem.Text = problem ?? "";
-        findProblem.Visible(problem is not null);
-        await Search();
+        var result = await model.SetupCommandAsync(["find"], Json.Write(new Dictionary<string, object>
+        {
+            ["query"] = "", ["limit"] = 1_000_000, ["which"] = "countries",
+        }));
+        var problem = "";
+        if (result.Ok)
+        {
+            try
+            {
+                everyone = result.Read<CompanySearch>();
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                problem = "Unexpected reply from role-radar";
+            }
+        }
+        else
+        {
+            problem = result.Message;
+        }
+        listProblem.Text = problem;
+        listProblem.Visible(problem.Length > 0);
+        ShowCompanies();
+    }
+
+    /// <summary>Turn companies on or off. Their boxes change at once; the changes are saved one after another (each
+    /// rewrites the profile), then the lists are read again (saving brings back the count at the top).</summary>
+    private void SetTracked(List<string> names, bool on)
+    {
+        if (names.Count == 0)
+        {
+            return;
+        }
+        foreach (var name in names)
+        {
+            wanted[name] = on;
+        }
+        ShowList();
+        ShowResults();
+        tracking = Save(tracking);
+
+        async Task Save(Task before)
+        {
+            await before;
+            var problem = await model.SetupStepAsync(["track"], new Dictionary<string, object> { ["names"] = names, ["tracked"] = on });
+            listProblem.Text = problem ?? "";
+            listProblem.Visible(problem is not null);
+            await Search();
+            await LoadList();
+            foreach (var name in names.Where(n => wanted.TryGetValue(n, out var w) && w == on).ToList())
+            {
+                wanted.Remove(name);
+            }
+            ShowList();
+            ShowResults();
+        }
     }
 
     private async Task<(string, bool)> AddCompany()
@@ -834,6 +990,7 @@ public sealed class SetupView : Grid
         if (target == 2)
         {
             await Search();
+            await LoadList();
         }
     }
 

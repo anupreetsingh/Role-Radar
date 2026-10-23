@@ -720,7 +720,8 @@ def import_companies(config: Path, text: str, *, replace: bool = False, check: b
 def find_companies(config: Path, query: str = "", limit: int = 50, offset: int = 0, which: str = "all") -> dict[str, Any]:
     """The profession's companies and the person's own whose name or job site contains every word of
     `query`, those starting with it first, then A to Z; each says whether checks read it, and if not, why.
-    `which`: "off" for only those they turned off."""
+    `which`: "off" for only those they turned off; "countries" for all but those posting only in countries
+    they didn't pick (the list Setup shows: tracked, turned off, or on a job site Role Radar can't read)."""
     settings = _read_yaml(profile_path(config)).get("settings") or {}
     picked = {str(c) for c in settings.get("countries") or []}
     off = {str(name) for name in settings.get("untracked") or []}
@@ -731,11 +732,18 @@ def find_companies(config: Path, query: str = "", limit: int = 50, offset: int =
     words = query.casefold().split()
     rows = [_company_row(c, is_own, off, picked) for c, is_own in [(c, True) for c in own] + [(c, False) for c in listed]
             if all(w in f"{c['name']} {urlsplit(c['url']).hostname or ''}".casefold() for w in words)
-            and (which != "off" or str(c["name"]) in off)]
+            and (which != "off" or str(c["name"]) in off)
+            and (which != "countries" or not _elsewhere(c, picked))]
     start = query.casefold().strip()
     rows.sort(key=lambda r: (not r["name"].casefold().startswith(start), r["name"].casefold()))
     return {"query": query, "total": len(rows), "results": rows[max(offset, 0):max(offset, 0) + max(limit, 0)],
             "untracked": len(off)}
+
+
+def _elsewhere(company: dict[str, Any], picked: set[str]) -> bool:
+    """It posts jobs only in countries they didn't pick (one whose countries aren't known posts everywhere)."""
+    countries = set(company.get("countries") or [])
+    return bool(picked and countries and not picked & countries)
 
 
 def _company_row(company: dict[str, Any], own: bool, off: set[str], picked: set[str]) -> dict[str, Any]:
@@ -744,7 +752,7 @@ def _company_row(company: dict[str, Any], own: bool, off: set[str], picked: set[
         why = "Role Radar can't read its job site yet"
     elif name in off:
         why = "you turned it off"
-    elif picked and countries and not picked & set(countries):
+    elif _elsewhere(company, picked):
         why = "it doesn't post jobs in your countries"
     else:
         why = None
