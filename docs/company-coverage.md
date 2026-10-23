@@ -648,7 +648,13 @@ whose job sites carry a business's own name (Yellowstone Club, Soboba Casino, In
 Julien Hotel & Spa...) joined; the rest stay out until their names are known. Checked and left out:
 Milestones (each location lists the same nine standing positions), OEB Breakfast (one job on its own
 site), Employment Hero (14 Calgary jobs, none in hospitality), Collage and 7shifts (no public job
-pages for restaurants). The list then had 1,387 employers switched on, 275 posting in Canada.
+pages for restaurants). The list then had 1,387 employers switched on, 275 posting in Canada, and the
+same Calgary check found 482 matching jobs open (389 the day before). Of the 458 Calgary jobs that
+didn't match, restaurants' expeditor, expo and bar porter jobs were the clearest misses, so Setup's food
+and beverage titles gained those three (101 more Canadian jobs, nearly all at restaurants); general
+manager, assistant manager and shift leader would have brought more gas station and grocery jobs than
+restaurant ones, so they aren't titles. No Calgary job was titled crew member or team member: the
+chains that use those titles (Tim Hortons, McDonald's) can't be read.
 
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
