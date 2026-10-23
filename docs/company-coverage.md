@@ -654,7 +654,12 @@ didn't match, restaurants' expeditor, expo and bar porter jobs were the clearest
 and beverage titles gained those three (101 more Canadian jobs, nearly all at restaurants); general
 manager, assistant manager and shift leader would have brought more gas station and grocery jobs than
 restaurant ones, so they aren't titles. No Calgary job was titled crew member or team member: the
-chains that use those titles (Tim Hortons, McDonald's) can't be read.
+chains that use those titles (Tim Hortons, McDonald's) can't be read. Marriott's site lists 13,401 jobs
+worldwide and a check reads the newest 500, which held one Calgary job; `Marriott (Canada)` reads its
+283 Canadian jobs (Oracle's `location_id` for Canada; 20 in Calgary), and the worldwide entry no
+longer counts Canada. Hilton's site lists no Canadian hotels. Aramark's sitemap holds its 565
+Canadian jobs (42 in Calgary) as bare links, so a fresh count can't place them in Calgary; new ones
+get their own page read for title and place, as on every SuccessFactors site.
 
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job

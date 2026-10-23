@@ -3951,7 +3951,14 @@ companies:
   - name: Marriott
     url: https://ejwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
     ats: oracle_hcm
-    countries: [US, CA, AU, IN]
+    countries: [US, AU, IN]
+
+  - name: Marriott (Canada)
+    url: https://ejwl.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
+    ats: oracle_hcm
+    countries: [CA]
+    options:
+      location_id: 300000000295575
 
   - name: Martin & Bayley, Inc., DBA Huck's Market
     url: https://jobs.dayforcehcm.com/hucks/HUCKSMARKET
