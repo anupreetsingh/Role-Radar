@@ -592,6 +592,8 @@ def test_parse_date_formats():
     assert parse_date("Posted Yesterday", today) == date(2026, 9, 24)
     assert parse_date("Posted 3 Days Ago", today) == date(2026, 9, 22)
     assert parse_date("Posted 30+ Days Ago", today) == date(2026, 8, 26)
+    assert parse_date("Tue, 20 Oct 2026 19:42:29 +0000") == date(2026, 10, 20)  # RSS
+    assert parse_date("Thu, 22 Oct 2026 23:12:34 GMT") == date(2026, 10, 22)
     assert parse_date("sometime") is None
 
 
@@ -911,3 +913,120 @@ def test_push_reads_every_location_of_an_organization_in_one_request():
     assert (server.employment_type, server.date_posted, server.extra["description"]) == ("part-time", date(2026, 10, 20), "1 year serving")
     assert cook.title == "Cook" and cook.url == "https://app-elb.pushoperations.com/ats/job-postings/loc-1"
     assert seen == ["https://app-elb.pushoperations.com/api/v2/organizations/org-9/companies/public?include=jobPostings.position.location"]
+
+
+def test_easyapply_reads_the_boards_feed():
+    feed = """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Heritage Park</title>
+      <item><title>Dining  Server</title><description><![CDATA[<p>Serve guests</p>]]></description>
+        <pubDate>Mon, 28 Sep 2026 15:54:12 +0000</pubDate><link>https://easyapply.co/job/dining-server-36</link>
+        <guid>https://easyapply.co/job/dining-server-36</guid><category>Calgary, AB</category></item>
+      <item><title>1st Cook</title><link>https://easyapply.co/job/1st-cook-22</link></item></channel></rss>"""
+    seen = []
+    result = scrape("easyapply", "https://heritagepark.easyapply.co/", {"/rss": feed}, seen=seen)
+    server, cook = result.jobs
+    assert (server.job_id, server.title, server.location, server.date_posted) == ("dining-server-36", "Dining Server", "Calgary, AB",
+                                                                                  date(2026, 9, 28))
+    assert server.url == "https://easyapply.co/job/dining-server-36" and server.extra["description"] == "<p>Serve guests</p>"
+    assert (cook.job_id, cook.location) == ("1st-cook-22", None)
+    assert seen == ["https://heritagepark.easyapply.co/rss"]
+    with pytest.raises(ScraperError, match="no EasyApply board"):  # a closed board's feed redirects to a web page
+        scrape("easyapply", "https://closed.easyapply.co/", {"/rss": "<!doctype html><html>Find a job</html>"})
+
+
+def test_taleo_business_edition_reads_the_career_sites_feed():
+    # Some feeds write an emoji as its two UTF-16 halves, which XML forbids; and the odd control character.
+    feed = """<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:TBE="urn:TBERss"><channel>
+      <title>Banff Centre Job Feed</title>
+      <item><title>Casual Bartender</title>
+        <link>https://phe.tbe.taleo.net/phe02/ats/careers/requisition.jsp?org=BANFFCENTRE&amp;cws=39&amp;rid=6224</link>
+        <description>&#55356;&#57317; Now hiring\x0b</description>
+        <pubDate>Thu, 22 Oct 2026 21:44:22 GMT</pubDate><TBE:reqId>6224</TBE:reqId><TBE:location>AB- Banff</TBE:location>
+        <TBE:locationCountry>CA</TBE:locationCountry><TBE:locationState>Alberta</TBE:locationState>
+        <TBE:locationCity>Banff</TBE:locationCity><TBE:department>Food and Beverage</TBE:department>
+        <TBE:html-description>&lt;p&gt;1 year behind a bar&lt;/p&gt;</TBE:html-description></item></channel></rss>"""
+    seen = []
+    result = scrape("taleo_be", "https://phe.tbe.taleo.net/phe02/ats/careers/v2/searchResults?org=BANFFCENTRE&cws=39",
+                    {"/phe02/ats/servlet/Rss": feed}, seen=seen)
+    (bartender,) = result.jobs
+    assert (bartender.job_id, bartender.title, bartender.location) == ("6224", "Casual Bartender", "Banff, Alberta, Canada")
+    assert (bartender.department, bartender.date_posted) == ("Food and Beverage", date(2026, 10, 22))
+    assert bartender.url.endswith("requisition.jsp?org=BANFFCENTRE&cws=39&rid=6224")
+    assert bartender.extra["description"] == "<p>1 year behind a bar</p>"
+    assert seen == ["https://phe.tbe.taleo.net/phe02/ats/servlet/Rss?org=BANFFCENTRE&cws=39&WebPage=SRCHR_V2&WebVersion=0&_rss_version=2"]
+    with pytest.raises(ScraperError):
+        scrape("taleo_be", "https://phe.tbe.taleo.net/phe02/ats/careers/v2/searchResults", {})
+
+
+def test_talentnest_pages_through_the_listing():
+    def row(job_id, title, unit, place):
+        return (f"<div class='job-row row-fluid' data-job-row-url='/posting/{job_id}' id='job-{job_id}'>"
+                f"<div class='posting-cell span4'><div class='posting-cell-content label job-title'>"
+                f'<a class="job-link" href="/posting/{job_id}">{title} </a></div></div>'
+                f"<div class='posting-cell-content business-unit'>\n<div class='posting-heading'>Business Unit</div>\n{unit}\n</div>"
+                f"<div class='posting-cell-content location'>\n<div class='posting-heading'>Location</div>\n{place}\n</div></div>")
+
+    pages = {"1": row(244976, "Laundry Attendant", "Pomeroy Inn &amp; Suites Chetwynd", "chetwynd, British Columbia")
+                  + '<a class="page next_page" rel="next" href="/en?page=2">Next</a>',
+             "2": row(244958, "Lead Bartender", "The Westin Calgary Airport", "Calgary, Alberta")
+                  + '<a class="disabled page next_page" rel="next" onclick="return false;" href="/en?page=2">Next</a>'}
+    posting = "<div class='field rich-text-doc'><p>1 year in a hotel</p></div><div class='field' style='text-align: center;'>"
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path == "/en":
+            return httpx.Response(200, text=pages.get(request.url.params["page"], ""))
+        if request.url.path == "/en/posting/244976":
+            return httpx.Response(200, text=posting)
+        return httpx.Response(404)
+
+    async def go():
+        async with make_client(handler) as http:
+            scraper = SCRAPERS["talentnest"](company(url="https://pomeroylodging.talentnest.com/en"), http)
+            result = await scraper.fetch_jobs()
+            return result, await scraper.fetch_description(result.jobs[0])
+
+    result, description = asyncio.run(go())
+    laundry, bartender = result.jobs
+    assert result.complete
+    assert (laundry.job_id, laundry.title, laundry.location) == ("244976", "Laundry Attendant", "Chetwynd, British Columbia")
+    assert (laundry.department, laundry.url) == ("Pomeroy Inn & Suites Chetwynd", "https://pomeroylodging.talentnest.com/en/posting/244976")
+    assert (bartender.title, bartender.location, bartender.department) == ("Lead Bartender", "Calgary, Alberta", "The Westin Calgary Airport")
+    assert description == "<p>1 year in a hotel</p></div>"
+    assert seen[:2] == ["https://pomeroylodging.talentnest.com/en?page=1", "https://pomeroylodging.talentnest.com/en?page=2"]
+
+
+def test_symphony_pages_through_the_job_search_its_site_calls():
+    def item(job_id, title, city, state, **more):
+        return {"id": job_id, "title": title, "primary_city": city, "primary_state": state, "primary_country": "CA",
+                "url": f"https://careers.example.ca/job/{job_id}/x", "open_date": "2026-10-22T19:15:06.3Z", **more}
+
+    pages = {"1": {"totalHits": 3, "queryResult": [
+                 item(24044560, "Cook  Seasonal Full Time", "Calgary", "AB", brand="Levy", employment_type="Full-time",
+                      description="<p>1 year in a kitchen</p>",
+                      addtnl_locations=[{"addtnl_city": "Banff", "addtnl_state": "AB", "addtnl_country": "CA"}]),
+                 item(24043161, "Barista", "Edmonton", "AB")]},
+             "3": {"totalHits": 3, "queryResult": [item(24045531, "Second Cook", "Kitimat", "BC", function="Food Services")]}}
+    page = '<script>var cws_opts = {"org":"2052","smartPost_org":"2052","api":"https://jobsapi-internal.m-cloud.io/api/"};</script>'
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.host == "jobsapi-internal.m-cloud.io":
+            assert request.url.params["Organization"] == "2052" and request.url.params["limit"] == "100"
+            return httpx.Response(200, json=pages[request.url.params["offset"]])
+        return httpx.Response(200, text=page)
+
+    async def go():
+        async with make_client(handler) as http:  # no options.organization: the careers page names it
+            return await SCRAPERS["symphony"](company(url="https://careers.example.ca/job-search-results/"), http).fetch_jobs()
+
+    result = asyncio.run(go())
+    cook, barista, second = result.jobs
+    assert result.complete and [j.job_id for j in result.first_page] == ["24044560", "24043161"]
+    assert (cook.title, cook.location, cook.department) == ("Cook Seasonal Full Time", "Calgary, AB, Canada; Banff, AB, Canada", "Levy")
+    assert (cook.url, cook.employment_type, cook.date_posted) == ("https://careers.example.ca/job/24044560/x", "Full-time", date(2026, 10, 22))
+    assert cook.extra["description"] == "<p>1 year in a kitchen</p>"
+    assert (barista.location, second.department) == ("Edmonton, AB, Canada", "Food Services")
+    assert [u.split("?")[0] for u in seen] == ["https://careers.example.ca/job-search-results/",
+                                               "https://jobsapi-internal.m-cloud.io/api/job", "https://jobsapi-internal.m-cloud.io/api/job"]

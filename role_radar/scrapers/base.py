@@ -6,6 +6,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, ClassVar, Mapping
 from urllib.parse import urlsplit
 
@@ -89,6 +90,7 @@ class BaseScraper(ABC):
 # -- helpers ----------------------------------------------------------------
 
 _RELATIVE = re.compile(r"(\d+)\+?\s+(day|week|month)s?\s+ago", re.I)
+_RFC2822 = re.compile(r"(?:[A-Z][a-z]{2},\s*)?\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}\s+\d{1,2}:\d{2}")
 # Countries for places a job site gives with an ISO code: "Banff, AB, CA" would read as California.
 COUNTRY_NAMES = {"CA": "Canada", "US": "United States", "AU": "Australia", "IN": "India", "GB": "United Kingdom",
                  "IE": "Ireland", "NZ": "New Zealand", "MX": "Mexico", "PH": "Philippines"}
@@ -117,7 +119,7 @@ def parse_date(value: Any, today: date | None = None) -> date | None:
         return date.fromisoformat(text[:10])
     except ValueError:
         pass
-    named = _named_month_date(text)
+    named = _named_month_date(text) or _rss_date(text)
     if named:
         return named
     lowered = text.lower()
@@ -141,6 +143,32 @@ def _named_month_date(text: str) -> date | None:
         except ValueError:
             pass
     return None
+
+
+def _rss_date(text: str) -> date | None:
+    """ "Tue, 20 Oct 2026 19:42:29 +0000" (RSS feeds)."""
+    if not _RFC2822.match(text):
+        return None
+    try:
+        return parsedate_to_datetime(text).date()
+    except (TypeError, ValueError):
+        return None
+
+
+_SURROGATE_REF = re.compile(r"&#(?:x(d[89a-f][0-9a-f]{2})|(5[5-7]\d{3}));", re.I)
+_XML_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def mend_xml(text: str) -> str:
+    """A job feed with what XML forbids put right: an emoji written as its two UTF-16 halves (&#55356;&#57317;),
+    which some feeds send, and control characters."""
+    def half(m: re.Match[str]) -> str:
+        code = int(m[1], 16) if m[1] else int(m[2])
+        return chr(code) if 0xD800 <= code <= 0xDFFF else m[0]
+
+    if "&#" in text:
+        text = _SURROGATE_REF.sub(half, text).encode("utf-16", "surrogatepass").decode("utf-16", "replace")
+    return _XML_CONTROL.sub("", text)
 
 
 def join_nonempty(*parts: str | None, sep: str = ", ") -> str | None:

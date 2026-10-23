@@ -7,7 +7,7 @@
 
 Watches company careers pages and collects the new jobs that match what you're looking for.
 It comes with four company lists, one per profession: about 8,000 for Tech, 3,900 for
-Accounting & Finance, 1,800 for Healthcare and 800 for Hospitality, and you can add your own. Most companies are
+Accounting & Finance, 1,800 for Healthcare and 1,400 for Hospitality, and you can add your own. Most companies are
 checked every 20 minutes. Workday boards get a full check every 6 hours and a quick look at
 their newest jobs every 20 minutes. A new match shows up in **Live Tracking** as soon as its
 company's check finishes. If you set up email or Discord, the matches are also sent every 10
@@ -41,7 +41,7 @@ For a Mac with Apple Silicon (M1 or newer) and macOS 14 Sonoma or later:
 3. Its window walks through Setup's pages:
    - **Profession:** Tech, Accounting & Finance, Healthcare or Hospitality. Each comes with its own
      list of companies, built into the app and refreshed with each version (Tech's has about 8,000,
-     Accounting & Finance's about 3,900, Healthcare's about 1,800, Hospitality's about 800: hotels,
+     Accounting & Finance's about 3,900, Healthcare's about 1,800, Hospitality's about 1,400: hotels,
      restaurants, bars, catering, casinos, resorts and airlines).
      Changing it later deletes nothing: the other profession's saved jobs stay, and every
      company's next check starts quietly, recording the jobs already open instead of alerting
@@ -413,6 +413,10 @@ alert again. The previous version behaved the same way.
 | JazzHR | `{company}.applytojob.com/apply`, one page of every job with its place and team | a match's description |
 | Push Operations | `app-elb.pushoperations.com/api/v2/organizations/{organization}/companies/public`: every location's jobs in one request (Cactus Club Cafe, Earls); set `options.organization`; checked hourly | no |
 | SelectMinds | A landing page's newest jobs (Alberta Health Services; the site's search answers 403 to programs, so only its newest page is read) | no |
+| EasyApply | `{company}.easyapply.co/rss`, every job with its place and description in one request (Heritage Park, Mount Norquay) | no |
+| Taleo Business Edition | `{dc}.tbe.taleo.net/{instance}/ats/servlet/Rss?org={org}&cws={cws}`, the career site's feed: every job with its place, department and description (Banff Centre) | no |
+| TalentNest | `{company}.talentnest.com/en?page=N`, twenty jobs a page with their place and business unit (Pomeroy Lodging; robots.txt closes the API) | a match's description |
+| Symphony Talent | `jobsapi-internal.m-cloud.io/api/job?Organization={org}`, the job search a career site's pages call: 100 jobs a page, newest first, with places and descriptions (Compass Group Canada); set `ats: symphony` and `options.organization` (the page's `cws_opts` org); checked hourly | no |
 | Comeet | The hosted careers page `www.comeet.com/jobs/{company}/{uid}`, whose `COMPANY_POSITIONS_DATA` holds every position, its place and usually its description | a match's description, when the list lacks it |
 | Deel | The board page `jobs.deel.com/{org}`: its streamed Next.js data holds every job and its description (robots.txt closes the API) | no |
 | Rippling | `ats.rippling.com/api/v2/board/{board}/jobs` (a job with several locations is listed once per location; merged by ID) | only if the filter uses employment type |

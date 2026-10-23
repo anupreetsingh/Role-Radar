@@ -598,7 +598,7 @@ Canada (Northland's own CANDIDATEPORTAL board was dropped: it repeats its brands
 posting numbers). A Dayforce board answers in the culture it's asked for, so Quebec boards carry
 theirs (`/fr-CA/`); asked in en-US, Le Groupe Maurice's showed no jobs. Not reached: the Government of Canada's Job Bank (its server doesn't answer this laptop),
 ADP Workforce Now boards (Common Crawl's index server timed out; an Athena query would list them),
-Compass Group Canada (its site lists jobs through an API it doesn't publish), and Workday boards
+Compass Group Canada (read later through its site's Symphony Talent search), and Workday boards
 with Canadian jobs (535 not yet searched for hospitality titles).
 
 **Still more (same day, with the user's go-ahead for maximum coverage).** Target titles now match
@@ -629,12 +629,32 @@ organization in one request (Earls: 84 locations, 9 in Calgary). Alberta Health 
 (Oracle SelectMinds) answers 403 to its search, but its Nutrition & Food landing page lists the newest
 jobs (`selectminds` reader). The list then had 1,332 read employers, 262 posting in Canada.
 
+**EasyApply, Taleo Business Edition, TalentNest and Symphony Talent (same day).** About 80 more
+Alberta employers' careers pages (hotels, attractions, golf clubs, Banff and Jasper resorts, Calgary
+restaurant groups) were opened once. Three Calgary restaurant groups hire through Push (Vintage Group:
+Chairman's Steakhouse, Moose's Beanery, Fleetwood; Teatro Group; Phil & Sebastian), Recipe's Original
+Joe's has its own Dayforce board, and Marmot Basin is on Dayforce too. Four new readers came out of
+it: `easyapply` (`{company}.easyapply.co/rss`: Heritage Park, Mount Norquay, Canadian Rocky Mountain
+Resorts), `taleo_be` (Taleo Business Edition's per-site feed: Banff Centre), `talentnest` (Pomeroy
+Lodging, with The Westin Calgary Airport) and `symphony` (the job search behind Symphony Talent career
+sites: Compass Group Canada, 948 jobs, 436 of them hospitality jobs at its ESS camps, Chartwells,
+Levy and Eurest sites). A second Athena query (4.5 GB scanned, about 2 cents) listed 129 EasyApply
+boards, 35 TalentNest sites and 447 Taleo Business Edition career sites; each was read once. 30
+joined: Ace Casinos (Calgary's Casino Calgary and Blackfoot, 13 Calgary jobs), Frontiers North, 13
+RAM Hotels properties, Alyeska Resort, Grand Sierra Resort, Barona Resort & Casino, Telluride Ski &
+Golf, Hamilton Island... Feeds that write an emoji as its two UTF-16 halves (`&#55356;&#57317;`),
+which XML forbids, are mended before parsing. Of the 369 ADP career centers outside Canada, the 14
+whose job sites carry a business's own name (Yellowstone Club, Soboba Casino, Innisbrook Resort, St
+Julien Hotel & Spa...) joined; the rest stay out until their names are known. Checked and left out:
+Milestones (each location lists the same nine standing positions), OEB Breakfast (one job on its own
+site), Employment Hero (14 Calgary jobs, none in hospitality), Collage and 7shifts (no public job
+pages for restaurants). The list then had 1,387 employers switched on, 275 posting in Canada.
+
 Not read yet, so switched off with their `platform`: UKG Pro (Calgary Stampede, Concorde Group,
 Germain Hotels, WinSport, Calgary Sports and Entertainment), whose robots.txt rules out the job
-search behind each board (the board's page shows only a few featured jobs); Workstream (Moxie's),
-Push Operations (Cactus Club Cafe), Njoyn (Grey Eagle Resort & Casino), HigherMe (Tim Hortons),
-and The Keg, Hyatt (careers.hyatt.com answers 403) and IHG, whose pages load their jobs some other
-way. Also checked: Gateway Casinos' Jobvite board is empty,
+search behind each board (the board's page shows only a few featured jobs); Njoyn (Grey Eagle
+Resort & Casino), whose job pages sit behind a bot check (Radware); HigherMe (Tim Hortons); and The
+Keg, Hyatt (careers.hyatt.com answers 403) and IHG, whose pages load their jobs some other way. Also checked: Gateway Casinos' Jobvite board is empty,
 Basecamp Resorts' ADP board had no jobs, and Bethany Care Society, Calgary Co-op, Air Canada and
 Wyndham had no hospitality openings that day.
 

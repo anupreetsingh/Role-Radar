@@ -33,8 +33,8 @@ PROFESSIONS = ("tech", "accounting", "healthcare", "hospitality")
 # Check intervals for job sites whose every check is a big download, in minutes, used unless
 # settings.check_interval_by_ats names the site (or check_interval_minutes is longer).
 # SuccessFactors, Radancy and other sitemap-read sites send their whole listing (up to a few MB) each check, as
-# Push Operations does every job's description.
-DEFAULT_CHECK_INTERVAL_BY_ATS = {"successfactors": 60.0, "radancy": 60.0, "jobposting": 60.0, "push": 60.0}
+# Push Operations and Symphony Talent do every job's description.
+DEFAULT_CHECK_INTERVAL_BY_ATS = {"successfactors": 60.0, "radancy": 60.0, "jobposting": 60.0, "push": 60.0, "symphony": 60.0}
 
 
 @dataclass

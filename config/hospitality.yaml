@@ -44,6 +44,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: AC Hotel Columbus (RAM Hotels)
+    url: https://rambroadwayhospitalityllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Accessible Space
     url: https://jobs.dayforcehcm.com/accessible/CANDIDATEPORTAL
     ats: dayforce
@@ -70,6 +75,11 @@ companies:
     url: https://jobs.dayforcehcm.com/accorpacific/CANDIDATEPORTAL
     ats: dayforce
     countries: [AU]
+
+  - name: Ace Casinos
+    url: https://calgarycasinolimitedpartnership.easyapply.co/
+    ats: easyapply
+    countries: [CA]
 
   - name: Ace Hardware
     url: https://acehardware.wd1.myworkdayjobs.com/External
@@ -196,6 +206,11 @@ companies:
     countries: [AU]
     options:
       max_jobs: 200
+
+  - name: Alyeska Resort
+    url: https://alyeskaresort.talentnest.com/en
+    ats: talentnest
+    countries: [US]
 
   - name: American Baptist Homes of the Midwest
     url: https://americanbaptisthomes.applytojob.com/apply
@@ -427,6 +442,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Audubon Nature Institute
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=2a3564c1-3dc4-4eaf-b5a4-197ca9050c50&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Austin Community College District
     url: https://austincc.wd1.myworkdayjobs.com/External
     ats: workday
@@ -513,6 +533,11 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Banff Centre
+    url: https://phe.tbe.taleo.net/phe02/ats/careers/v2/searchResults?org=BANFFCENTRE&cws=39
+    ats: taleo_be
+    countries: [CA]
+
   - name: Banff Hospitality Collective
     url: https://apply.workable.com/banffcollective/
     ats: workable
@@ -531,6 +556,11 @@ companies:
   - name: Baptist
     url: https://fa-ewpe-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Barona Resort & Casino
+    url: https://phg.tbe.taleo.net/phg04/ats/careers/v2/searchResults?org=BARONA&cws=46
+    ats: taleo_be
     countries: [US]
 
   - name: Basecamp Resorts
@@ -962,6 +992,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Campbell's Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=1e8305a2-ef4d-4b70-8f02-f18ddce85299&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Canada's National Ballet School
     url: https://canadasnationalballetschool.applytojob.com/apply
     ats: jazzhr
@@ -972,9 +1007,19 @@ companies:
     ats: jazzhr
     countries: [CA]
 
+  - name: Canadian Rocky Mountain Resorts
+    url: https://crmr.easyapply.co/
+    ats: easyapply
+    countries: [CA]
+
   - name: cancel
     url: https://ecimanagementgroup.applytojob.com/apply
     ats: jazzhr
+    countries: [US]
+
+  - name: Candlewood Suites Montgomery (RAM Hotels)
+    url: https://rajkrupahotelllc.easyapply.co/
+    ats: easyapply
     countries: [US]
 
   - name: Canyon County
@@ -1283,6 +1328,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: CIVANA Wellness Resort & Spa
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=8b0eac9f-6017-4d88-ad3c-edd546d3fb73&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Civeo
     url: https://fa-esyi-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
@@ -1397,9 +1447,11 @@ companies:
     countries: [US, CA]
 
   - name: Compass Group Canada
-    url: https://careers.compass-canada.com/
-    platform: custom
-    enabled: false
+    url: https://careers.compass-canada.com/job-search-results/
+    ats: symphony
+    countries: [CA]
+    options:
+      organization: '2052'
 
   - name: Comstock
     url: https://job-boards.greenhouse.io/comstock
@@ -1563,6 +1615,16 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Courtyard by Marriott Auburn (RAM Hotels)
+    url: https://ramauburnhospitalityllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
+  - name: Courtyard by Marriott Raynham
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=dc2c1d37-7cc1-4e74-be02-b2ae8006199c&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
 
   - name: Coury Hospitality
     url: https://jobs.dayforcehcm.com/couryhospitality/CANDIDATEPORTAL
@@ -1804,6 +1866,11 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Dora Hospitality
+    url: https://dorahospitality.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: DotDash Meredith
     url: https://meredith.wd5.myworkdayjobs.com/EXT
     ats: workday
@@ -1817,6 +1884,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: DoubleTree by Hilton Dothan (RAM Hotels)
+    url: https://rajrishabhotelllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
 
   - name: Dough Zone USA
     url: https://doughzoneusa.applytojob.com/apply
@@ -2355,6 +2427,11 @@ companies:
     ats: dayforce
     countries: [US]
 
+  - name: Frontiers North Adventures
+    url: https://frontiersnorthadventures.easyapply.co/
+    ats: easyapply
+    countries: [CA]
+
   - name: Frothy Monkey
     url: https://frothymonkey.applytojob.com/apply
     ats: jazzhr
@@ -2575,6 +2652,11 @@ companies:
     ats: rippling
     countries: [US]
 
+  - name: Grand Sierra Resort
+    url: https://phe.tbe.taleo.net/phe02/ats/careers/v2/searchResults?org=GRANDSIERRARESORT&cws=54
+    ats: taleo_be
+    countries: [US]
+
   - name: Grand Terrace
     url: https://ensign.wd1.myworkdayjobs.com/GrandTerraceHealthCareerSite
     ats: workday
@@ -2678,6 +2760,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: GroundUP Restaurants
+    url: https://grounduprestaurants.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Groupe CH
     url: https://jobs.dayforcehcm.com/fr-CA/groupech/CANDIDATEPORTAL
     ats: dayforce
@@ -2744,6 +2831,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Hamilton Island
+    url: https://phh.tbe.taleo.net/phh04/ats/careers/v2/searchResults?org=HAMILTONISLAND&cws=42
+    ats: taleo_be
+    countries: [AU]
+
   - name: Hamister Group
     url: https://jobs.dayforcehcm.com/hamistergroup/HEALTHCARE
     ats: dayforce
@@ -2787,6 +2879,11 @@ companies:
   - name: Happy Camper
     url: https://happycamper.applytojob.com/apply
     ats: jazzhr
+    countries: [US]
+
+  - name: Harbor View Hotel
+    url: https://harborviewhotel.easyapply.co/
+    ats: easyapply
     countries: [US]
 
   - name: Harlem Children's Zone
@@ -2873,6 +2970,11 @@ companies:
     ats: greenhouse
     countries: [US, CA, AU]
 
+  - name: Hemingway's Tavern
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=73d03fa7-b27a-4a73-91a7-a0073f20f024&ccId=9200524045974_2&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Hen & Egg-Jackson
     url: https://heneggjacksonllc.applytojob.com/apply
     ats: jazzhr
@@ -2882,6 +2984,11 @@ companies:
     url: https://careers.smartrecruiters.com/henryfordhealth1
     ats: smartrecruiters
     countries: [US]
+
+  - name: Heritage Park
+    url: https://heritagepark.easyapply.co/
+    ats: easyapply
+    countries: [CA]
 
   - name: Hersha Hospitality Management
     url: https://careers-hhmlp.icims.com/jobs/search
@@ -2930,6 +3037,11 @@ companies:
     ats: oracle_hcm
     countries: [US, CA, AU, IN]
 
+  - name: Hilton Garden Inn Liberty Park (RAM Hotels)
+    url: https://rajajithotelllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Hilton Grand Vacations
     url: https://efuq.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
     ats: oracle_hcm
@@ -2938,6 +3050,16 @@ companies:
   - name: Hoag
     url: https://iaucqy.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs
     ats: oracle_hcm
+    countries: [US]
+
+  - name: Holiday Inn Express & Suites Montgomery Eastchase (RAM Hotels)
+    url: https://rajshrimadhotelllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
+  - name: Holiday Inn Express Phenix City (RAM Hotels)
+    url: https://rajchandrahotelllc.easyapply.co/
+    ats: easyapply
     countries: [US]
 
   - name: Holiday Inn Express, Plattsburgh
@@ -2950,10 +3072,20 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: Home2 Suites by Hilton Dallas DeSoto
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=2382794a-8205-416a-bb15-1d64bbdc2eda&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Home2 Suites by Hilton Fort St. John
     url: https://home2suitesfortstjohn.applytojob.com/apply
     ats: jazzhr
     countries: [CA]
+
+  - name: Home2 Suites Columbus (RAM Hotels)
+    url: https://niravanahospitalityllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
 
   - name: Home2 Suites, Queensbury
     url: https://home2suitesqueensbury.applytojob.com/apply
@@ -3133,6 +3265,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Innisbrook Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=578dfba1-ed37-4867-a90f-3f2127e8947a&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Innisfree Hotels
     url: https://innisfree.wd5.myworkdayjobs.com/Innisfree
     ats: workday
@@ -3238,6 +3375,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: J.F. Shea Family of Companies
+    url: https://phf.tbe.taleo.net/phf02/ats/careers/v2/searchResults?org=SHEA&cws=51
+    ats: taleo_be
+    countries: [US]
 
   - name: Jack Link's Protein Snacks
     url: https://careers.smartrecruiters.com/jacklinksproteinsnacks
@@ -3468,6 +3610,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Leelanau Sands Casino
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=5ef688a4-c740-4962-9a36-73b350f325b3&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Legacy Health Services
     url: https://jobs.dayforcehcm.com/lhs/PLEASANTLAKEVILLA
     ats: dayforce
@@ -3519,6 +3666,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: LexLive
+    url: https://lexlive.easyapply.co/
+    ats: easyapply
+    countries: [US]
 
   - name: Liberty Behavioral & Community Services
     url: https://apply.workable.com/liberty-behavioraland-community-services-inc/
@@ -3609,6 +3761,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Lost Valley Ski Area
+    url: https://lostvalleymanagementllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
 
   - name: Louis Brier Home and Hospital
     url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=d570c199-c04e-4a45-9c54-17a8cc0a513d&ccId=19000101_000001&lang=en_CA
@@ -3780,6 +3937,11 @@ companies:
     countries: [US]
     options:
       max_jobs: 200
+
+  - name: Marmot Basin
+    url: https://jobs.dayforcehcm.com/en-US/rmsijtac/CANDIDATEPORTAL
+    ats: dayforce
+    countries: [CA]
 
   - name: Marquette Transportation Company, LLC
     url: https://jobs.dayforcehcm.com/marquette/CANDIDATEPORTAL
@@ -4080,6 +4242,11 @@ companies:
     url: https://mnh-ibosjb.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/MountNittanyHealthCareers/jobs
     ats: oracle_hcm
     countries: [US]
+
+  - name: Mount Norquay
+    url: https://mountnorquay.easyapply.co/
+    ats: easyapply
+    countries: [CA]
 
   - name: Mount Sinai
     url: https://ejis.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/jobs
@@ -4553,6 +4720,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Original Joe's
+    url: https://jobs.dayforcehcm.com/recipe/ORIGINALJOESCAREERS
+    ats: dayforce
+    countries: [CA]
+
   - name: Original X Productions
     url: https://ogx.applytojob.com/apply
     ats: jazzhr
@@ -4791,6 +4963,13 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Phil & Sebastian Coffee Roasters
+    url: https://app-elb.pushoperations.com/ats/job-postings/d098a5cb-b008-477b-9247-5c062dd7c37b
+    ats: push
+    countries: [CA]
+    options:
+      organization: 5215c8d4-86b4-409d-94b5-544edbb79d3a
+
   - name: Phil's BBQ
     url: https://jobs.dayforcehcm.com/philsbbq/CAREERS
     ats: dayforce
@@ -4884,6 +5063,11 @@ companies:
     url: https://careers-polkcountysheriffsoffice.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Pomeroy Lodging
+    url: https://pomeroylodging.talentnest.com/en
+    ats: talentnest
+    countries: [CA]
 
   - name: Ponca City Development Authority
     url: https://poncaworks.applytojob.com/apply
@@ -5288,6 +5472,11 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Rustler Lodge
+    url: https://rustlerlodge.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Ruvilla Solutions
     url: https://job-boards.greenhouse.io/ruvillasolutionsllc
     ats: greenhouse
@@ -5614,6 +5803,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: Sierra Nevada Brewing Co.
+    url: https://phh.tbe.taleo.net/phh03/ats/careers/v2/searchResults?org=SIERRANEVADABREWINGCO&cws=39
+    ats: taleo_be
+    countries: [US]
+
   - name: Siesta Suites
     url: https://jobs.dayforcehcm.com/en-CA/lcm/SIESTASUITESPOSTINGSITE
     ats: dayforce
@@ -5731,6 +5925,11 @@ companies:
     ats: dayforce
     countries: [CA]
 
+  - name: Soboba Casino Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=31069345-62ed-470d-8681-79fa2638dadd&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Sodexo
     url: https://careers.smartrecruiters.com/sodexo
     ats: smartrecruiters
@@ -5839,6 +6038,21 @@ companies:
     ats: greenhouse
     countries: [US]
 
+  - name: SpringHill Suites Birmingham Colonnade (RAM Hotels)
+    url: https://rajpadmaprabhahotelllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
+  - name: SpringHill Suites Dothan
+    url: https://springhillsuitesdothanal.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
+  - name: SpringHill Suites Millbrook (RAM Hotels)
+    url: https://rammillbrookhospitalityllc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Springwell
     url: https://springwell.applytojob.com/apply
     ats: jazzhr
@@ -5859,6 +6073,11 @@ companies:
   - name: St Ives Country Club
     url: https://stivescountryclub.applytojob.com/apply
     ats: jazzhr
+    countries: [US]
+
+  - name: St Julien Hotel & Spa
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=d6e5e025-d0ba-49b3-abcd-217dc993eff5&ccId=19000101_000001&lang=en_US
+    ats: adp
     countries: [US]
 
   - name: ST Three
@@ -5932,9 +6151,15 @@ companies:
   - name: Starbucks
     url: https://starbucks.eightfold.ai/careers
     ats: eightfold
-    countries: [US, CA]
+    countries: [US]
+
+  - name: Starbucks (Canada)
+    url: https://starbucks.eightfold.ai/careers
+    ats: eightfold
+    countries: [CA]
     options:
-      location: ''
+      location: Canada
+      max_jobs: 200
 
   - name: Stars and Strikes
     url: https://starsandstrikes.applytojob.com/apply
@@ -6178,6 +6403,11 @@ companies:
     ats: jazzhr
     countries: [US]
 
+  - name: TC North Shore
+    url: https://tcnorthshore.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: TCS Transwestern Commercial Services, L.L.C
     url: https://transwestern.wd1.myworkdayjobs.com/TWCareers
     ats: workday
@@ -6189,6 +6419,13 @@ companies:
     url: https://careers-ho-chunk.icims.com/jobs/search
     ats: icims
     countries: [US]
+
+  - name: Teatro Group
+    url: https://app-elb.pushoperations.com/ats/job-postings/cf5fa4a9-477d-4536-b190-066700d51b1e
+    ats: push
+    countries: [CA]
+    options:
+      organization: fbb8a878-4eed-4d43-af30-97be14f38957
 
   - name: Ted Turner Driver
     url: https://valorhospitality.wd503.myworkdayjobs.com/who-we-are
@@ -6213,6 +6450,11 @@ companies:
     url: https://jobs.dayforcehcm.com/teeg/KINGPINCAREERS
     ats: dayforce
     countries: [AU]
+
+  - name: Telluride Ski & Golf
+    url: https://phe.tbe.taleo.net/phe02/ats/careers/v2/searchResults?org=TELRIDE&cws=38
+    ats: taleo_be
+    countries: [US]
 
   - name: Tenet Healthcare
     url: https://eodr.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs
@@ -6280,6 +6522,11 @@ companies:
     url: https://the-berkeley.breezy.hr/
     ats: breezy
     countries: [CA]
+
+  - name: The Country Club of North Carolina
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=72092c3c-860f-4222-a0ad-2fa4b8edd707&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
 
   - name: The Explorer Hotel
     url: https://jobs.dayforcehcm.com/nun/EXPLORERHOTEL
@@ -6586,9 +6833,19 @@ companies:
     ats: oracle_hcm
     countries: [US]
 
+  - name: Tru by Hilton Auburn (RAM Hotels)
+    url: https://ramauburnhospitalitytwollc.easyapply.co/
+    ats: easyapply
+    countries: [US]
+
   - name: Tru by Hilton Port St. Lucie
     url: https://trubyhiltonportstlucie.applytojob.com/apply
     ats: jazzhr
+    countries: [US]
+
+  - name: Tru by Hilton Prattville (RAM Hotels)
+    url: https://ramprattvillehosptialityllc.easyapply.co/
+    ats: easyapply
     countries: [US]
 
   - name: True Food Kitchen
@@ -6843,6 +7100,13 @@ companies:
     url: https://careers.smartrecruiters.com/villagegreen1
     ats: smartrecruiters
     countries: [US]
+
+  - name: Vintage Group
+    url: https://app-elb.pushoperations.com/ats/job-postings/ba6fc907-7a1e-4489-9430-3db242da7ad7
+    ats: push
+    countries: [CA]
+    options:
+      organization: 0e637658-37ed-45c0-9ddf-72a086fed800
 
   - name: Vintage Hotels
     url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=2c962c4f-4957-4b12-9ebe-216613f4dfae&ccId=19000101_000001&lang=en_CA
@@ -7111,6 +7375,11 @@ companies:
     ats: icims
     countries: [US]
 
+  - name: Wine Valley Inn and sister hotels
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=1fa9ee52-0072-4086-9bf8-244a95227c4a&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Wing Joint
     url: https://thewingjointllc.applytojob.com/apply
     ats: jazzhr
@@ -7163,6 +7432,11 @@ companies:
     options:
       max_jobs: 200
 
+  - name: Woodstock Inn & Resort
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=d0196d67-38c4-428d-84b6-3449b5ae45b8&ccId=19000101_000001&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Woongjin
     url: https://careers.smartrecruiters.com/wjcompany
     ats: smartrecruiters
@@ -7205,6 +7479,11 @@ companies:
     ats: greenhouse
     countries: [US, CA, AU]
 
+  - name: Yellowstone Club
+    url: https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=9f96b6c6-5572-42fc-b716-683e2528a349&ccId=9200590284666_2&lang=en_US
+    ats: adp
+    countries: [US]
+
   - name: Yiros Shop
     url: https://careers.smartrecruiters.com/theyirosshop
     ats: smartrecruiters
@@ -7245,6 +7524,11 @@ companies:
   - name: Young Minds Development Center
     url: https://job-boards.greenhouse.io/youngmindsdc
     ats: greenhouse
+    countries: [US]
+
+  - name: Your 3rd Spot Atlanta
+    url: https://thirdspotatlantallc.easyapply.co/
+    ats: easyapply
     countries: [US]
 
   - name: Your Hospitality Career Journey Starts Here
