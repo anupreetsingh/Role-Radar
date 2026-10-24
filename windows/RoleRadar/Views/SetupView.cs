@@ -108,6 +108,8 @@ public sealed class SetupView : Grid
         searchSoon.Tick += (_, _) =>
         {
             searchSoon.Stop();
+            listShown = 200;
+            ShowList(); // the open list narrows to what's typed
             _ = Search();
         };
         more = Ui.Button("Show More", () =>
@@ -428,7 +430,9 @@ public sealed class SetupView : Grid
             searchSoon.Stop();
             searchSoon.Start(); // once they pause typing
         };
-        foreach (var part in new UIElement[] { Ui.Row(6, Ui.Glyph(Glyphs.Search, 13, Theme.Secondary), query), foundNote, results, more, findProblem })
+        // Under the search, the fold opens the whole list for their countries, which the search then narrows; closed,
+        // the search lists what it finds (nothing typed: the ones turned off).
+        foreach (var part in new UIElement[] { Ui.Row(6, Ui.Glyph(Glyphs.Search, 13, Theme.Secondary), query), CompanyList(), foundNote, results, more, findProblem })
         {
             Ui.Add(findSection, part, 10);
         }
@@ -441,7 +445,7 @@ public sealed class SetupView : Grid
         var add = Section("Add a company you want", "Not on the list? Give its name, and its careers page if you know it. If Role "
                           + "Radar can read its job site, it's tracked right away; if not, we'll work on it.", newCompany, newCareers, addRow);
         findSection.Tag = find;
-        return Ui.Column(18, companiesHead, CompanyList(), byCountry, find, add);
+        return Ui.Column(18, companiesHead, byCountry, find, add);
     }
 
     /// <summary>Every company for their countries, under a fold: a box on each, as on a job in Live Tracking
@@ -459,11 +463,13 @@ public sealed class SetupView : Grid
         {
             listOpen = !listOpen;
             ShowList();
+            ShowResults();
         };
-        // The box above the list, as Live Tracking's: clicking it tracks them all, or (all ticked) stops tracking them all.
+        // The box above the list, as Live Tracking's: clicking it tracks them all, or (all ticked) stops tracking them
+        // all. With a search, those it found.
         listAll.Click += (_, _) =>
         {
-            var readable = everyone?.Results.Where(c => c.Readable).ToList() ?? [];
+            var readable = Matching().Where(c => c.Readable).ToList();
             var tick = readable.Any(c => !IsTracked(c));
             SetTracked(readable.Where(c => IsTracked(c) != tick).Select(c => c.Name).ToList(), tick);
         };
@@ -487,6 +493,26 @@ public sealed class SetupView : Grid
         return companyList;
     }
 
+    /// <summary>The list's companies whose name or job site has every word typed, those starting with it first (as the
+    /// search's).</summary>
+    private List<CompanyRow> Matching()
+    {
+        var companies = everyone?.Results ?? [];
+        var typed = query.Text.Trim().ToLowerInvariant();
+        var words = typed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
+        {
+            return companies;
+        }
+        var hits = companies.Where(c =>
+        {
+            var host = Uri.TryCreate(c.Url, UriKind.Absolute, out var uri) ? uri.Host : "";
+            var text = $"{c.Name} {host}".ToLowerInvariant();
+            return words.All(text.Contains);
+        }).ToList();
+        return hits.Where(c => c.Name.ToLowerInvariant().StartsWith(typed)).Concat(hits.Where(c => !c.Name.ToLowerInvariant().StartsWith(typed))).ToList();
+    }
+
     /// <summary>Whether a company is tracked, as last ticked.</summary>
     private bool IsTracked(CompanyRow company) => wanted.TryGetValue(company.Name, out var on) ? on : !company.Off;
 
@@ -500,20 +526,24 @@ public sealed class SetupView : Grid
             return;
         }
         listSummary.Text = SetupRules.ListSummary(list.Results, IsTracked);
-        var readable = list.Results.Where(c => c.Readable).ToList();
+        var shown = Matching();
+        var readable = shown.Where(c => c.Readable).ToList();
         var on = readable.Count(IsTracked);
+        var searching = query.Text.Trim().Length > 0;
         listAll.IsChecked = on == 0 ? false : on == readable.Count ? true : null;
-        listAll.ToolTip = on == readable.Count ? "Stop tracking all" : "Track all";
-        listCount.Text = $"{Describe.Number(on)} of {Describe.Number(readable.Count)} tracked";
+        listAll.IsEnabled = readable.Count > 0;
+        listAll.ToolTip = (on == readable.Count ? "Stop tracking all" : "Track all") + (searching ? " found" : "");
+        listCount.Text = shown.Count == 0 ? "No company on the list matches. Add it below, or ask for it."
+            : (searching ? $"{Describe.Number(shown.Count)} found · " : "") + $"{Describe.Number(on)} of {Describe.Number(readable.Count)} tracked";
         listRows.Children.Clear();
         if (listOpen)
         {
-            foreach (var company in list.Results.Take(listShown))
+            foreach (var company in shown.Take(listShown))
             {
                 listRows.Children.Add(CompanyLine(company));
             }
         }
-        listMore.Visible(listOpen && list.Results.Count > listShown);
+        listMore.Visible(listOpen && shown.Count > listShown);
     }
 
     /// <summary>A company with its box, as a job has in Live Tracking: ticked (and shaded), it's tracked.</summary>
@@ -618,7 +648,7 @@ public sealed class SetupView : Grid
         results.Children.Clear();
         foundNote.Visible(false);
         more.Visible(false);
-        if (found is not { } search)
+        if (found is not { } search || listOpen)
         {
             return;
         }

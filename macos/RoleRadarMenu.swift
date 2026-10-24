@@ -2563,7 +2563,6 @@ struct SetupView: View {
                          + "within minutes of them being posted.")
                         .scaledFont(13).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                companyList
                 section("By country", nil) {
                     ForEach((setup?.country_options ?? []).filter { countries.contains($0.code) }, id: \.code) { country in
                         HStack {
@@ -2589,6 +2588,7 @@ struct SetupView: View {
         .onChange(of: query) { _, _ in
             searching?.cancel()
             shown = 50
+            listShown = 200
             searching = Task {
                 try? await Task.sleep(nanoseconds: 300_000_000)  // once they pause typing
                 if !Task.isCancelled { await search() }
@@ -2596,14 +2596,17 @@ struct SetupView: View {
         }
     }
 
-    /// Search the list; untick one to stop tracking it. With nothing typed, the ones turned off.
+    /// Search the list; untick one to stop tracking it. Under the search, the fold opens the whole list for their
+    /// countries, which the search then narrows; closed, the search lists what it finds (nothing typed: the ones
+    /// turned off).
     private var findSection: some View {
         section("Find a company", "Untick a company to stop tracking it; tick it again to bring it back.") {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search companies", text: $query).textFieldStyle(.roundedBorder).frame(maxWidth: 320)
             }
-            if let found {
+            companyList
+            if !listOpen, let found {
                 if query.isEmpty {
                     if !found.results.isEmpty {
                         Text("Turned off (\(found.total))").scaledFont(11, weight: .medium).foregroundStyle(.secondary)
@@ -2643,10 +2646,16 @@ struct SetupView: View {
             .buttonStyle(.plain)
             .accessibilityValue(listOpen ? "expanded" : "collapsed")
             if listOpen, let everyone {
+                let shown = matching(everyone.results)
                 VStack(alignment: .leading, spacing: 6) {
-                    listHeader(everyone)
-                    ForEach(everyone.results.prefix(listShown)) { company in companyRow(company) }
-                    if everyone.results.count > listShown {
+                    if shown.isEmpty {
+                        Text("No company on the list matches. Add it below, or ask for it.")
+                            .scaledFont(12).foregroundStyle(.secondary)
+                    } else {
+                        listHeader(shown)
+                    }
+                    ForEach(shown.prefix(listShown)) { company in companyRow(company) }
+                    if shown.count > listShown {
                         Button("Show More") { listShown += 200 }.controlSize(.small)
                     }
                 }
@@ -2658,20 +2667,34 @@ struct SetupView: View {
         }
     }
 
-    /// The box above the list, as Live Tracking's: ticked when every company it can read is tracked;
-    /// clicking it tracks them all, or (all ticked) stops tracking them all.
-    private func listHeader(_ list: CompanySearch) -> some View {
-        let readable = list.results.filter(\.readable)
+    /// The box above the list, as Live Tracking's: ticked when every company shown that it can read is tracked;
+    /// clicking it tracks them all, or (all ticked) stops tracking them all. With a search, those it found.
+    private func listHeader(_ shown: [CompanySearch.Company]) -> some View {
+        let readable = shown.filter(\.readable)
         let on = readable.filter(isTracked).count
         let all = Binding(get: { !readable.isEmpty && on == readable.count },
                           set: { tick in setTracked(readable.filter { isTracked($0) != tick }.map(\.name), tick) })
+        let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
         return HStack(spacing: 8) {
             SelectBox(on: all, mixed: on > 0 && on < readable.count)
                 .padding(.leading, -6)  // in line with the companies' boxes
-                .help(on == readable.count ? "Stop tracking all" : "Track all")
-            Text("\(on.formatted()) of \(readable.count.formatted()) tracked")
+                .help((on == readable.count ? "Stop tracking all" : "Track all") + (searching ? " found" : ""))
+                .disabled(readable.isEmpty)
+            Text((searching ? "\(shown.count.formatted()) found · " : "") + "\(on.formatted()) of \(readable.count.formatted()) tracked")
                 .scaledFont(11).foregroundStyle(.secondary).monospacedDigit()
         }
+    }
+
+    /// The companies whose name or job site has every word typed, those starting with it first (as the search's).
+    private func matching(_ companies: [CompanySearch.Company]) -> [CompanySearch.Company] {
+        let typed = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let words = typed.split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return companies }
+        let hits = companies.filter { company in
+            let text = (company.name + " " + (URL(string: company.url)?.host ?? "")).lowercased()
+            return words.allSatisfy(text.contains)
+        }
+        return hits.filter { $0.name.lowercased().hasPrefix(typed) } + hits.filter { !$0.name.lowercased().hasPrefix(typed) }
     }
 
     /// "275 tracked · 2 turned off · 10 can't be read yet".
